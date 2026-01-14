@@ -1,0 +1,157 @@
+.header {
+  /* Фиксация сверху */
+  position: sticky;
+  top: 0;
+  z-index: 1000; /* Чтобы он был поверх всех остальных элементов */
+  
+  /* Полупрозрачность */
+  background-color: rgba(248, 245, 242, 0.75); /* Цвет фона с прозрачностью 0.75 */
+  backdrop-filter: blur(10px); /* Эффект размытия фона под хедером (матовое стекло) */
+  
+  /* Остальные стили */
+  padding: 1rem 0;
+  border-bottom: 1px solid rgba(229, 229, 229, 0.5); /* Полупрозрачная граница */
+  transition: all 0.3s ease; /* Плавность изменений */
+}
+
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.header__container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header__logo {
+  font-family: 'Georgia', serif; /* Или другой шрифт с засечками */
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #4a2c2a; /* Темно-коричневый */
+  text-decoration: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+}
+
+.header__year {
+  font-size: 0.8rem;
+  font-weight: normal;
+  margin-top: 2px;
+}
+
+.header__nav {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+.header__link {
+  text-decoration: none;
+  color: #333;
+  font-weight: 500;
+  text-transform: uppercase;
+  font-size: 0.9rem;
+  letter-spacing: 0.05em;
+}
+
+.header__search {
+  display: flex;
+  align-items: center;
+  border: 1px solid #dcdcdc;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  background: white;
+  margin-left: 1rem;
+}
+
+.header__search input {
+  border: none;
+  outline: none;
+  font-size: 0.9rem;
+  width: 200px;
+}
+
+.header__search button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #666;
+  display: flex;
+}
+
+.header__actions {
+  display: flex;
+  gap: 1.2rem;
+  align-items: center;
+}
+
+.header__icon-btn {
+  color: #4a2c2a;
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.cart-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background-color: #a0522d;
+  color: white;
+  font-size: 0.7rem;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.header__menu-btn {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+/* Когда страница прокручена */
+.header.scrolled {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); /* Легкая тень */
+  padding: 0.8rem 0; /* Немного уменьшим высоту для компактности */
+  background-color: rgba(248, 245, 242, 0.9); /* Делаем чуть менее прозрачным при скролле для читаемости */
+}
+
+
+/* Адаптив */
+@media (max-width: 768px) {
+  .header__nav {
+    display: none; /* Скрываем меню на мобильных пока не нажата кнопка */
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    background: white;
+    flex-direction: column;
+    padding: 1rem;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    z-index: 10;
+  }
+  
+  .header__nav.active {
+    display: flex;
+  }
+
+  .header__menu-btn {
+    display: block;
+  }
+  
+  .header__search input {
+    width: 100%;
+  }
+}

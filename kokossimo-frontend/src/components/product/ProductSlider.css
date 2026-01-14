@@ -1,0 +1,108 @@
+.product-slider {
+  padding: 3rem 0;
+  background-color: white;
+}
+
+.product-slider__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.product-slider__wrapper {
+  position: relative;
+}
+
+.product-slider__grid {
+  display: flex;
+  gap: 1.5rem;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  padding: 1rem 0;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+  
+  /* Плавная прокрутка с анимацией */
+  scroll-snap-type: x proximity;
+  transition: scroll 0.5s ease;
+}
+
+.product-slider__grid::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
+/* Карточки товаров */
+.product-slider__grid {
+  display: flex;
+  gap: 1.5rem;
+  overflow-x: auto;
+  padding: 1rem 0;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  
+  /* Убираем резкие рывки */
+  scroll-behavior: auto; /* Меняем на auto, так как анимируем через JS */
+  -webkit-overflow-scrolling: touch; /* Плавность на iOS */
+}
+
+.slider-control {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transition: all 0.2s;
+}
+
+.slider-control.left {
+  left: -20px;
+}
+
+.slider-control.right {
+  right: -20px;
+}
+
+.slider-control:hover {
+  background-color: #f5f5f5;
+  border-color: #8B4513;
+}
+
+/* Адаптивность */
+@media (max-width: 1400px) {
+  .product-slider__grid > * {
+    flex: 0 0 calc((100% - 4.5rem) / 4); /* 4 товара на средних экранах */
+  }
+}
+
+@media (max-width: 1024px) {
+  .product-slider__grid > * {
+    flex: 0 0 calc((100% - 3rem) / 3); /* 3 товара на планшетах */
+  }
+}
+
+@media (max-width: 768px) {
+  .product-slider__grid > * {
+    flex: 0 0 calc((100% - 1.5rem) / 2); /* 2 товара на телефонах */
+  }
+  
+  .slider-control {
+    display: none; /* Прячем стрелки на мобильных */
+  }
+}
+
+@media (max-width: 480px) {
+  .product-slider__grid > * {
+    flex: 0 0 100%; /* 1 товар на маленьких экранах */
+    min-width: auto;
+  }
+}

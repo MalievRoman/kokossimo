@@ -1,0 +1,225 @@
+.hero {
+  background-color: #dcbcb9; /* Примерный розовый цвет с макета */
+  background: linear-gradient(90deg, #dcbcb9 0%, #e8cfcd 100%);
+  position: relative;
+  overflow: hidden;
+  padding: 4rem 0;
+  min-height: 500px; /* Высота баннера */
+  display: flex;
+  align-items: center;
+}
+
+.hero__container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  position: relative;
+  z-index: 2;
+}
+
+.hero__content {
+  max-width: 600px;
+  padding-right: 2rem;
+  
+  /* Добавляем flex-контейнер, чтобы выстроить элементы в колонку */
+  display: flex;
+  flex-direction: column; 
+  align-items: flex-start; /* Прижимаем всё влево */
+  justify-content: center;
+}
+
+.hero__title {
+  color: white;
+  font-size: 2.5rem;
+  font-weight: 600;
+  line-height: 1.3;
+  text-transform: uppercase;
+  margin-bottom: 2.5rem;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+}
+
+.hero__btn {
+  display: inline-block;
+  border: 1px solid #8B4513; /* Коричневая рамка */
+  color: #4a2c2a;
+  padding: 1rem 2.5rem;
+  text-decoration: none;
+  text-transform: uppercase;
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+  background-color: transparent;
+}
+
+.hero__btn:hover {
+  background-color: #8B4513;
+  color: white;
+}
+
+.hero__image-wrapper {
+  flex-grow: 1;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.hero__image {
+  max-width: 100%;
+  max-height: 450px;
+  object-fit: contain;
+  /* Добавим тень, чтобы отделить объект от фона */
+  filter: drop-shadow(0 10px 20px rgba(0,0,0,0.15));
+}
+
+/* Декоративные элементы управления слайдером */
+.hero__controls {
+  position: static; /* Убираем абсолютное позиционирование */
+  margin-top: 2rem; /* Отступ от кнопки "Смотреть" */
+  display: flex;
+  gap: 1rem;
+  /* Убираем right, left, bottom если были */
+}
+
+/* Стили для кнопок оставляем те же, но можно чуть поправить */
+/* Кнопки */
+.slider-btn {
+  width: 44px;
+  height: 44px;
+  border: 1px solid white;
+  background: transparent;
+  color: white;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  
+  /* Убираем position: absolute, если он там был */
+  position: static; 
+}
+
+.slider-btn:hover {
+  background: white;
+  color: #8B4513;
+}
+
+.slider-btn {
+  width: 40px;
+  height: 40px;
+  border: 1px solid white;
+  background: transparent;
+  color: white;
+  border-radius: 50%;
+  font-size: 1.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-bottom: 4px; /* Коррекция вертикального выравнивания */
+}
+
+.hero__dots {
+  position: absolute;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 0.5rem;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  background-color: rgba(255,255,255,0.5);
+  border-radius: 50%;
+}
+
+.dot.active {
+  background-color: white;
+}
+
+/* Адаптив */
+@media (max-width: 768px) {
+  .hero__container {
+    flex-direction: column-reverse;
+    text-align: center;
+  }
+
+  .hero__content {
+    padding-right: 0;
+    margin-top: 2rem;
+  }
+
+  .hero__title {
+    font-size: 1.8rem;
+  }
+
+  .hero__controls {
+    display: none;
+  }
+}
+
+/* Добавить в конец файла */
+.hero__image-placeholder {
+  width: 400px;
+  height: 400px;
+  background-color: rgba(255, 255, 255, 0.3);
+  border: 2px dashed rgba(255, 255, 255, 0.5);
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 1.5rem;
+}
+
+/* Добавьте/обновите эти стили в HeroBlock.css */
+
+.hero {
+  /* ... старые стили ... */
+  transition: background 0.5s ease; /* Плавная смена фона если нужно */
+}
+
+/* Анимация контейнера */
+.hero__container {
+  opacity: 1;
+  transition: opacity 0.4s ease-in-out, transform 0.4s ease-in-out;
+  transform: translateX(0);
+}
+
+/* Состояние "исчезновения" перед сменой слайда */
+.hero__container.fade-out {
+  opacity: 0;
+  transform: translateX(-20px); /* Небольшой сдвиг влево для динамики */
+}
+
+/* Состояние "появления" */
+.hero__container.fade-in {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* Убедитесь, что кнопки работают */
+.slider-btn {
+  /* ... старые стили ... */
+  z-index: 20; /* Поверх контента */
+  background: rgba(255, 255, 255, 0.2); /* Полупрозрачный фон */
+  border: 1px solid white;
+  transition: all 0.2s;
+}
+
+.slider-btn:hover {
+  background: white;
+  color: #8B4513; /* Коричневый цвет стрелки при наведении */
+}
+
+.dot {
+  cursor: pointer; /* Делаем точки кликабельными */
+  transition: all 0.3s;
+}
+
+.dot:hover {
+  transform: scale(1.2); /* Увеличение при наведении */
+}

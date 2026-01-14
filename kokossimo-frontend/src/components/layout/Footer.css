@@ -1,0 +1,111 @@
+.footer {
+  background-color: #FFEDE8; /* Кремовый фон как на макете */
+  padding: 4rem 0 2rem;
+  color: #333;
+}
+
+.footer__container {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2rem;
+  margin-bottom: 4rem;
+}
+
+.footer__title {
+  font-size: 1rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-bottom: 1.5rem;
+  color: #000;
+}
+
+.footer__list {
+  list-style: none;
+  padding: 0;
+}
+
+.footer__list li {
+  margin-bottom: 0.8rem;
+}
+
+.footer__list a {
+  text-decoration: none;
+  color: #4a2c2a;
+  font-size: 0.9rem;
+  transition: color 0.2s;
+}
+
+.footer__list a:hover {
+  color: #8B4513;
+  text-decoration: underline;
+}
+
+.sale-link {
+  color: #c00 !important; /* Красный цвет для SALE */
+  font-weight: bold;
+}
+
+.footer__socials {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.social-icon {
+  width: 36px;
+  height: 36px;
+  background-color: #8B0000; /* Темно-бордовый фон иконок */
+  color: white;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s;
+}
+
+.social-icon:hover {
+  opacity: 0.9;
+}
+
+.footer__meta-text {
+  font-size: 0.7rem;
+  color: #999;
+  margin-top: 1rem;
+  line-height: 1.4;
+}
+
+.footer__bottom {
+  text-align: center;
+  border-top: 1px solid rgba(0,0,0,0.05);
+  padding-top: 2rem;
+}
+
+.footer__logo {
+  font-family: 'Georgia', serif;
+  font-size: 2rem;
+  color: #8B0000;
+  margin-bottom: 0.5rem;
+}
+
+.footer__year {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+/* Адаптив */
+@media (max-width: 900px) {
+  .footer__container {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 500px) {
+  .footer__container {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+  
+  .footer__socials {
+    justify-content: center;
+  }
+}
