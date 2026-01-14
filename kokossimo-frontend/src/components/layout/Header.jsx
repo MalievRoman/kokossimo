@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, ShoppingCart, Heart, User, Menu, X } from 'lucide-react';
+import { useCart } from '../../context/CartContext';
+import { useFavorites } from '../../context/FavoritesContext';
 import './Header.css';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const { getTotalItems } = useCart();
+  const { getFavoritesCount } = useFavorites();
 
   // Отслеживаем скролл для эффекта прозрачности/тени
   useEffect(() => {
@@ -49,12 +53,17 @@ const Header = () => {
 
         {/* Иконки справа */}
         <div className="header__actions">
-          <Link to="/favorites" className="header__icon-btn">
+          <Link to="/favorites" className="header__icon-btn cart-btn">
             <Heart size={24} />
+            {getFavoritesCount() > 0 && (
+              <span className="cart-badge">{getFavoritesCount()}</span>
+            )}
           </Link>
           <Link to="/cart" className="header__icon-btn cart-btn">
             <ShoppingCart size={24} />
-            <span className="cart-badge">0</span>
+            {getTotalItems() > 0 && (
+              <span className="cart-badge">{getTotalItems()}</span>
+            )}
           </Link>
           <Link to="/profile" className="header__icon-btn">
             <User size={24} />

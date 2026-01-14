@@ -1,0 +1,1647 @@
+[
+  {
+    "model": "shop.category",
+    "pk": 1,
+    "fields": {
+      "name": "Лицо",
+      "slug": "face",
+      "image": "categories/face.jpg"
+    }
+  },
+  {
+    "model": "shop.category",
+    "pk": 2,
+    "fields": {
+      "name": "Тело",
+      "slug": "body",
+      "image": "categories/body.jpg"
+    }
+  },
+  {
+    "model": "shop.category",
+    "pk": 3,
+    "fields": {
+      "name": "Волосы",
+      "slug": "hair",
+      "image": "categories/hair.jpg"
+    }
+  },
+  {
+    "model": "shop.category",
+    "pk": 4,
+    "fields": {
+      "name": "Макияж",
+      "slug": "makeup",
+      "image": "categories/makeup.jpg"
+    }
+  },
+  {
+    "model": "shop.category",
+    "pk": 5,
+    "fields": {
+      "name": "Парфюмерия",
+      "slug": "perfume",
+      "image": "categories/perfume.jpg"
+    }
+  },
+  {
+    "model": "shop.category",
+    "pk": 6,
+    "fields": {
+      "name": "Руки и ноги",
+      "slug": "hands-feet",
+      "image": "categories/hands-feet.jpg"
+    }
+  },
+  {
+    "model": "shop.category",
+    "pk": 7,
+    "fields": {
+      "name": "Солнцезащита",
+      "slug": "sun-protection",
+      "image": "categories/sun-protection.jpg"
+    }
+  },
+
+  {
+    "model": "shop.product",
+    "pk": 1,
+    "fields": {
+      "category": 1,
+      "name": "Очищающая пенка",
+      "description": "Мягкая пенка без сульфатов, не сушит кожу.",
+      "price": "590.00",
+      "image": "products/foam.jpg",
+      "is_bestseller": true,
+      "is_new": true,
+      "discount": 10,
+      "created_at": "2025-01-01T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 2,
+    "fields": {
+      "category": 1,
+      "name": "Увлажняющий крем",
+      "description": "Легкий крем с ниацинамидом и пептидами.",
+      "price": "890.00",
+      "image": "products/cream.jpg",
+      "is_bestseller": false,
+      "is_new": true,
+      "discount": 0,
+      "created_at": "2025-01-02T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 3,
+    "fields": {
+      "category": 1,
+      "name": "Тоник для лица",
+      "description": "Очищающий тоник с экстрактом ромашки и алоэ вера.",
+      "price": "650.00",
+      "image": "products/toner.jpg",
+      "is_bestseller": false,
+      "is_new": false,
+      "discount": 0,
+      "created_at": "2025-01-06T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 4,
+    "fields": {
+      "category": 1,
+      "name": "Сыворотка с витамином C",
+      "description": "Осветляющая сыворотка для сияния кожи.",
+      "price": "1290.00",
+      "image": "products/vitamin-c-serum.jpg",
+      "is_bestseller": true,
+      "is_new": true,
+      "discount": 15,
+      "created_at": "2025-01-07T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 5,
+    "fields": {
+      "category": 1,
+      "name": "Маска-пленка для лица",
+      "description": "Очищающая маска с активированным углем.",
+      "price": "750.00",
+      "image": "products/face-mask.jpg",
+      "is_bestseller": false,
+      "is_new": true,
+      "discount": 5,
+      "created_at": "2025-01-08T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 6,
+    "fields": {
+      "category": 1,
+      "name": "Крем для век",
+      "description": "Антивозрастной крем с ретинолом и пептидами.",
+      "price": "1150.00",
+      "image": "products/eye-cream.jpg",
+      "is_bestseller": true,
+      "is_new": false,
+      "discount": 0,
+      "created_at": "2025-01-09T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 7,
+    "fields": {
+      "category": 1,
+      "name": "Мицеллярная вода",
+      "description": "Нежная мицеллярная вода для снятия макияжа.",
+      "price": "520.00",
+      "image": "products/micellar-water.jpg",
+      "is_bestseller": false,
+      "is_new": false,
+      "discount": 0,
+      "created_at": "2025-01-10T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 8,
+    "fields": {
+      "category": 1,
+      "name": "Скраб для лица",
+      "description": "Мягкий скраб с частицами жожоба и экстрактом зеленого чая.",
+      "price": "680.00",
+      "image": "products/face-scrub.jpg",
+      "is_bestseller": false,
+      "is_new": true,
+      "discount": 0,
+      "created_at": "2025-01-11T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 9,
+    "fields": {
+      "category": 1,
+      "name": "Солнцезащитный крем SPF 50",
+      "description": "Легкий крем с высокой защитой от UVA и UVB лучей.",
+      "price": "950.00",
+      "image": "products/sunscreen.jpg",
+      "is_bestseller": true,
+      "is_new": false,
+      "discount": 10,
+      "created_at": "2025-01-12T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 10,
+    "fields": {
+      "category": 1,
+      "name": "Гиалуроновая сыворотка",
+      "description": "Интенсивное увлажнение с гиалуроновой кислотой.",
+      "price": "1100.00",
+      "image": "products/hyaluronic-serum.jpg",
+      "is_bestseller": true,
+      "is_new": true,
+      "discount": 12,
+      "created_at": "2025-01-13T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 11,
+    "fields": {
+      "category": 1,
+      "name": "Пилинг-маска с AHA",
+      "description": "Отшелушивающая маска с гликолевой кислотой.",
+      "price": "820.00",
+      "image": "products/aha-peel.jpg",
+      "is_bestseller": false,
+      "is_new": true,
+      "discount": 0,
+      "created_at": "2025-01-14T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 12,
+    "fields": {
+      "category": 1,
+      "name": "Ночной крем",
+      "description": "Питательный ночной крем с пептидами и ретинолом.",
+      "price": "1250.00",
+      "image": "products/night-cream.jpg",
+      "is_bestseller": true,
+      "is_new": false,
+      "discount": 0,
+      "created_at": "2025-02-02T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 13,
+    "fields": {
+      "category": 1,
+      "name": "Эссенция для лица",
+      "description": "Легкая эссенция с ферментированными ингредиентами.",
+      "price": "980.00",
+      "image": "products/essence.jpg",
+      "is_bestseller": false,
+      "is_new": true,
+      "discount": 8,
+      "created_at": "2025-02-03T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 14,
+    "fields": {
+      "category": 1,
+      "name": "Патчи для глаз",
+      "description": "Охлаждающие патчи с гиалуроновой кислотой и коллагеном.",
+      "price": "450.00",
+      "image": "products/eye-patches.jpg",
+      "is_bestseller": false,
+      "is_new": true,
+      "discount": 0,
+      "created_at": "2025-02-04T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 15,
+    "fields": {
+      "category": 1,
+      "name": "Масло для лица",
+      "description": "Питательное масло с аргановым и жожоба маслами.",
+      "price": "1050.00",
+      "image": "products/face-oil.jpg",
+      "is_bestseller": true,
+      "is_new": false,
+      "discount": 15,
+      "created_at": "2025-02-05T10:00:00Z"
+    }
+  },
+
+  {
+    "model": "shop.product",
+    "pk": 16,
+    "fields": {
+      "category": 2,
+      "name": "Питательный лосьон для тела",
+      "description": "С маслом ши и витамином Е, быстро впитывается.",
+      "price": "720.00",
+      "image": "products/body-lotion.jpg",
+      "is_bestseller": true,
+      "is_new": false,
+      "discount": 5,
+      "created_at": "2025-01-03T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 17,
+    "fields": {
+      "category": 2,
+      "name": "Скраб для тела",
+      "description": "Очищающий скраб с морской солью и маслом кокоса.",
+      "price": "650.00",
+      "image": "products/body-scrub.jpg",
+      "is_bestseller": false,
+      "is_new": false,
+      "discount": 0,
+      "created_at": "2025-01-15T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 18,
+    "fields": {
+      "category": 2,
+      "name": "Масло для тела",
+      "description": "Питательное масло с аргановым и жожоба маслами.",
+      "price": "890.00",
+      "image": "products/body-oil.jpg",
+      "is_bestseller": true,
+      "is_new": true,
+      "discount": 8,
+      "created_at": "2025-01-16T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 19,
+    "fields": {
+      "category": 2,
+      "name": "Гель для душа",
+      "description": "Нежный гель с экстрактом лаванды и алоэ вера.",
+      "price": "580.00",
+      "image": "products/shower-gel.jpg",
+      "is_bestseller": false,
+      "is_new": false,
+      "discount": 0,
+      "created_at": "2025-01-17T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 20,
+    "fields": {
+      "category": 2,
+      "name": "Крем для рук",
+      "description": "Интенсивное увлажнение для сухой кожи рук.",
+      "price": "450.00",
+      "image": "products/hand-cream.jpg",
+      "is_bestseller": false,
+      "is_new": true,
+      "discount": 0,
+      "created_at": "2025-01-18T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 21,
+    "fields": {
+      "category": 2,
+      "name": "Антицеллюлитный крем",
+      "description": "Улучшает тонус кожи с кофеином и экстрактом плюща.",
+      "price": "980.00",
+      "image": "products/cellulite-cream.jpg",
+      "is_bestseller": true,
+      "is_new": false,
+      "discount": 12,
+      "created_at": "2025-01-19T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 22,
+    "fields": {
+      "category": 2,
+      "name": "Молочко для тела",
+      "description": "Легкое молочко с витамином D и маслом какао.",
+      "price": "680.00",
+      "image": "products/body-milk.jpg",
+      "is_bestseller": false,
+      "is_new": false,
+      "discount": 0,
+      "created_at": "2025-01-20T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 23,
+    "fields": {
+      "category": 2,
+      "name": "Соль для ванны",
+      "description": "Расслабляющая соль с эфирными маслами лаванды и эвкалипта.",
+      "price": "550.00",
+      "image": "products/bath-salt.jpg",
+      "is_bestseller": false,
+      "is_new": true,
+      "discount": 5,
+      "created_at": "2025-01-21T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 24,
+    "fields": {
+      "category": 2,
+      "name": "Крем для ног",
+      "description": "Увлажняющий крем с ментолом для усталых ног.",
+      "price": "620.00",
+      "image": "products/foot-cream.jpg",
+      "is_bestseller": false,
+      "is_new": false,
+      "discount": 0,
+      "created_at": "2025-01-22T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 25,
+    "fields": {
+      "category": 2,
+      "name": "Пена для ванны",
+      "description": "Нежная пена с ароматом ванили и жасмина.",
+      "price": "590.00",
+      "image": "products/bath-foam.jpg",
+      "is_bestseller": true,
+      "is_new": true,
+      "discount": 0,
+      "created_at": "2025-01-23T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 26,
+    "fields": {
+      "category": 2,
+      "name": "Крем для декольте",
+      "description": "Антивозрастной крем для области декольте и шеи.",
+      "price": "1050.00",
+      "image": "products/decollete-cream.jpg",
+      "is_bestseller": false,
+      "is_new": true,
+      "discount": 10,
+      "created_at": "2025-01-24T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 27,
+    "fields": {
+      "category": 2,
+      "name": "Масло для массажа",
+      "description": "Теплое масло для массажа с эфирными маслами.",
+      "price": "850.00",
+      "image": "products/massage-oil.jpg",
+      "is_bestseller": false,
+      "is_new": false,
+      "discount": 0,
+      "created_at": "2025-02-06T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 28,
+    "fields": {
+      "category": 2,
+      "name": "Крем для упругости тела",
+      "description": "Улучшает упругость и эластичность кожи.",
+      "price": "1120.00",
+      "image": "products/firmness-cream.jpg",
+      "is_bestseller": true,
+      "is_new": true,
+      "discount": 12,
+      "created_at": "2025-02-07T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 29,
+    "fields": {
+      "category": 2,
+      "name": "Глицериновое мыло",
+      "description": "Мягкое мыло с глицерином и медом.",
+      "price": "380.00",
+      "image": "products/glycerin-soap.jpg",
+      "is_bestseller": false,
+      "is_new": false,
+      "discount": 0,
+      "created_at": "2025-02-08T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 30,
+    "fields": {
+      "category": 2,
+      "name": "Крем для растяжек",
+      "description": "Профилактика и уменьшение растяжек с маслом какао.",
+      "price": "920.00",
+      "image": "products/stretch-mark-cream.jpg",
+      "is_bestseller": false,
+      "is_new": true,
+      "discount": 8,
+      "created_at": "2025-02-09T10:00:00Z"
+    }
+  },
+
+  {
+    "model": "shop.product",
+    "pk": 31,
+    "fields": {
+      "category": 3,
+      "name": "Шампунь для объема",
+      "description": "Без сульфатов, с кератином и экстрактом бамбука.",
+      "price": "650.00",
+      "image": "products/shampoo.jpg",
+      "is_bestseller": false,
+      "is_new": true,
+      "discount": 0,
+      "created_at": "2025-01-04T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 32,
+    "fields": {
+      "category": 3,
+      "name": "Маска для волос",
+      "description": "Глубокое восстановление с аргановым маслом.",
+      "price": "940.00",
+      "image": "products/hair-mask.jpg",
+      "is_bestseller": true,
+      "is_new": false,
+      "discount": 15,
+      "created_at": "2025-01-05T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 33,
+    "fields": {
+      "category": 3,
+      "name": "Кондиционер для волос",
+      "description": "Увлажняющий кондиционер с силиконами и маслом авокадо.",
+      "price": "680.00",
+      "image": "products/conditioner.jpg",
+      "is_bestseller": false,
+      "is_new": false,
+      "discount": 0,
+      "created_at": "2025-01-25T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 34,
+    "fields": {
+      "category": 3,
+      "name": "Масло для волос",
+      "description": "Питательное масло с аргановым и кокосовым маслами.",
+      "price": "850.00",
+      "image": "products/hair-oil.jpg",
+      "is_bestseller": true,
+      "is_new": true,
+      "discount": 10,
+      "created_at": "2025-01-26T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 35,
+    "fields": {
+      "category": 3,
+      "name": "Спрей для объема",
+      "description": "Текстурирующий спрей для создания объема у корней.",
+      "price": "520.00",
+      "image": "products/volume-spray.jpg",
+      "is_bestseller": false,
+      "is_new": true,
+      "discount": 0,
+      "created_at": "2025-01-27T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 36,
+    "fields": {
+      "category": 3,
+      "name": "Термозащитный спрей",
+      "description": "Защита волос от высоких температур укладки.",
+      "price": "720.00",
+      "image": "products/heat-protection.jpg",
+      "is_bestseller": true,
+      "is_new": false,
+      "discount": 8,
+      "created_at": "2025-01-28T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 37,
+    "fields": {
+      "category": 3,
+      "name": "Сухой шампунь",
+      "description": "Быстрое очищение волос без воды с рисовым порошком.",
+      "price": "590.00",
+      "image": "products/dry-shampoo.jpg",
+      "is_bestseller": false,
+      "is_new": false,
+      "discount": 0,
+      "created_at": "2025-01-29T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 38,
+    "fields": {
+      "category": 3,
+      "name": "Сыворотка для кончиков",
+      "description": "Восстанавливающая сыворотка для секущихся кончиков.",
+      "price": "750.00",
+      "image": "products/ends-serum.jpg",
+      "is_bestseller": false,
+      "is_new": true,
+      "discount": 5,
+      "created_at": "2025-01-30T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 39,
+    "fields": {
+      "category": 3,
+      "name": "Шампунь для окрашенных волос",
+      "description": "Бережный уход за окрашенными волосами с УФ-фильтром.",
+      "price": "720.00",
+      "image": "products/color-shampoo.jpg",
+      "is_bestseller": true,
+      "is_new": false,
+      "discount": 0,
+      "created_at": "2025-01-31T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 40,
+    "fields": {
+      "category": 3,
+      "name": "Бальзам-ополаскиватель",
+      "description": "Интенсивное увлажнение с кератином и протеинами.",
+      "price": "680.00",
+      "image": "products/hair-balm.jpg",
+      "is_bestseller": false,
+      "is_new": true,
+      "discount": 0,
+      "created_at": "2025-02-01T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 41,
+    "fields": {
+      "category": 3,
+      "name": "Шампунь для жирных волос",
+      "description": "Очищающий шампунь с мятой и чайным деревом.",
+      "price": "640.00",
+      "image": "products/oily-hair-shampoo.jpg",
+      "is_bestseller": false,
+      "is_new": false,
+      "discount": 0,
+      "created_at": "2025-02-10T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 42,
+    "fields": {
+      "category": 3,
+      "name": "Лак для волос",
+      "description": "Фиксирующий лак с защитой от влажности.",
+      "price": "480.00",
+      "image": "products/hairspray.jpg",
+      "is_bestseller": false,
+      "is_new": true,
+      "discount": 0,
+      "created_at": "2025-02-11T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 43,
+    "fields": {
+      "category": 3,
+      "name": "Пенка для укладки",
+      "description": "Легкая пенка для создания объема и текстуры.",
+      "price": "560.00",
+      "image": "products/styling-mousse.jpg",
+      "is_bestseller": true,
+      "is_new": false,
+      "discount": 5,
+      "created_at": "2025-02-12T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 44,
+    "fields": {
+      "category": 3,
+      "name": "Шампунь для сухих волос",
+      "description": "Питательный шампунь с маслом арганы и кокоса.",
+      "price": "680.00",
+      "image": "products/dry-hair-shampoo.jpg",
+      "is_bestseller": false,
+      "is_new": true,
+      "discount": 8,
+      "created_at": "2025-02-13T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 45,
+    "fields": {
+      "category": 3,
+      "name": "Спрей для блеска",
+      "description": "Придает волосам здоровый блеск и сияние.",
+      "price": "720.00",
+      "image": "products/shine-spray.jpg",
+      "is_bestseller": true,
+      "is_new": false,
+      "discount": 0,
+      "created_at": "2025-02-14T10:00:00Z"
+    }
+  },
+
+  {
+    "model": "shop.product",
+    "pk": 46,
+    "fields": {
+      "category": 4,
+      "name": "Тональный крем",
+      "description": "Легкое покрытие с SPF 15, подходит для всех типов кожи.",
+      "price": "1250.00",
+      "image": "products/foundation.jpg",
+      "is_bestseller": true,
+      "is_new": false,
+      "discount": 0,
+      "created_at": "2025-02-15T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 47,
+    "fields": {
+      "category": 4,
+      "name": "Пудра компактная",
+      "description": "Матовая пудра для фиксации макияжа.",
+      "price": "890.00",
+      "image": "products/compact-powder.jpg",
+      "is_bestseller": false,
+      "is_new": true,
+      "discount": 5,
+      "created_at": "2025-02-16T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 48,
+    "fields": {
+      "category": 4,
+      "name": "Румяна",
+      "description": "Нежные румяна с перламутровым отливом.",
+      "price": "750.00",
+      "image": "products/blush.jpg",
+      "is_bestseller": false,
+      "is_new": false,
+      "discount": 0,
+      "created_at": "2025-02-17T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 49,
+    "fields": {
+      "category": 4,
+      "name": "Тушь для ресниц",
+      "description": "Объемная тушь с эффектом наращивания.",
+      "price": "680.00",
+      "image": "products/mascara.jpg",
+      "is_bestseller": true,
+      "is_new": true,
+      "discount": 10,
+      "created_at": "2025-02-18T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 50,
+    "fields": {
+      "category": 4,
+      "name": "Помада матовая",
+      "description": "Долгоиграющая матовая помада насыщенных оттенков.",
+      "price": "920.00",
+      "image": "products/matte-lipstick.jpg",
+      "is_bestseller": true,
+      "is_new": false,
+      "discount": 0,
+      "created_at": "2025-02-19T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 51,
+    "fields": {
+      "category": 4,
+      "name": "Подводка для глаз",
+      "description": "Стойкая подводка с кисточкой для идеальных стрелок.",
+      "price": "650.00",
+      "image": "products/eyeliner.jpg",
+      "is_bestseller": false,
+      "is_new": true,
+      "discount": 0,
+      "created_at": "2025-02-20T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 52,
+    "fields": {
+      "category": 4,
+      "name": "Тени для век",
+      "description": "Палитра теней с 12 оттенками для создания любого образа.",
+      "price": "1450.00",
+      "image": "products/eyeshadow-palette.jpg",
+      "is_bestseller": true,
+      "is_new": false,
+      "discount": 15,
+      "created_at": "2025-02-21T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 53,
+    "fields": {
+      "category": 4,
+      "name": "Хайлайтер",
+      "description": "Светящийся хайлайтер для скул и переносицы.",
+      "price": "850.00",
+      "image": "products/highlighter.jpg",
+      "is_bestseller": false,
+      "is_new": true,
+      "discount": 8,
+      "created_at": "2025-02-22T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 54,
+    "fields": {
+      "category": 4,
+      "name": "Консилер",
+      "description": "Плотное покрытие для маскировки несовершенств.",
+      "price": "780.00",
+      "image": "products/concealer.jpg",
+      "is_bestseller": false,
+      "is_new": false,
+      "discount": 0,
+      "created_at": "2025-02-23T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 55,
+    "fields": {
+      "category": 4,
+      "name": "Блеск для губ",
+      "description": "Блестящий бальзам для губ с увлажняющим эффектом.",
+      "price": "520.00",
+      "image": "products/lip-gloss.jpg",
+      "is_bestseller": false,
+      "is_new": true,
+      "discount": 0,
+      "created_at": "2025-02-24T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 56,
+    "fields": {
+      "category": 4,
+      "name": "Карандаш для бровей",
+      "description": "Тонкий карандаш для естественного заполнения бровей.",
+      "price": "580.00",
+      "image": "products/brow-pencil.jpg",
+      "is_bestseller": true,
+      "is_new": false,
+      "discount": 5,
+      "created_at": "2025-02-25T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 57,
+    "fields": {
+      "category": 4,
+      "name": "Гель для бровей",
+      "description": "Фиксирующий гель для укладки бровей.",
+      "price": "450.00",
+      "image": "products/brow-gel.jpg",
+      "is_bestseller": false,
+      "is_new": false,
+      "discount": 0,
+      "created_at": "2025-02-26T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 58,
+    "fields": {
+      "category": 4,
+      "name": "Праймер для век",
+      "description": "База под тени для стойкости и яркости цвета.",
+      "price": "620.00",
+      "image": "products/eye-primer.jpg",
+      "is_bestseller": false,
+      "is_new": true,
+      "discount": 0,
+      "created_at": "2025-02-27T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 59,
+    "fields": {
+      "category": 4,
+      "name": "Пудра для лица",
+      "description": "Рыхлая пудра для матового финиша.",
+      "price": "950.00",
+      "image": "products/loose-powder.jpg",
+      "is_bestseller": true,
+      "is_new": false,
+      "discount": 12,
+      "created_at": "2025-02-28T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 60,
+    "fields": {
+      "category": 4,
+      "name": "Бронзер",
+      "description": "Пудра-бронзер для создания загорелого вида.",
+      "price": "880.00",
+      "image": "products/bronzer.jpg",
+      "is_bestseller": false,
+      "is_new": true,
+      "discount": 0,
+      "created_at": "2025-03-01T10:00:00Z"
+    }
+  },
+
+  {
+    "model": "shop.product",
+    "pk": 61,
+    "fields": {
+      "category": 5,
+      "name": "Духи цветочные",
+      "description": "Нежный цветочный аромат с нотами жасмина и розы.",
+      "price": "2450.00",
+      "image": "products/floral-perfume.jpg",
+      "is_bestseller": true,
+      "is_new": false,
+      "discount": 0,
+      "created_at": "2025-03-02T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 62,
+    "fields": {
+      "category": 5,
+      "name": "Туалетная вода",
+      "description": "Легкий свежий аромат с цитрусовыми нотами.",
+      "price": "1850.00",
+      "image": "products/eau-de-toilette.jpg",
+      "is_bestseller": false,
+      "is_new": true,
+      "discount": 10,
+      "created_at": "2025-03-03T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 63,
+    "fields": {
+      "category": 5,
+      "name": "Парфюмированная вода",
+      "description": "Стойкий аромат с древесными и ванильными нотами.",
+      "price": "2200.00",
+      "image": "products/eau-de-parfum.jpg",
+      "is_bestseller": true,
+      "is_new": true,
+      "discount": 15,
+      "created_at": "2025-03-04T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 64,
+    "fields": {
+      "category": 5,
+      "name": "Духи восточные",
+      "description": "Теплый восточный аромат с амброй и пачули.",
+      "price": "2650.00",
+      "image": "products/oriental-perfume.jpg",
+      "is_bestseller": false,
+      "is_new": false,
+      "discount": 0,
+      "created_at": "2025-03-05T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 65,
+    "fields": {
+      "category": 5,
+      "name": "Миниатюра духов",
+      "description": "Компактная версия популярных духов для сумочки.",
+      "price": "890.00",
+      "image": "products/perfume-mini.jpg",
+      "is_bestseller": true,
+      "is_new": true,
+      "discount": 0,
+      "created_at": "2025-03-06T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 66,
+    "fields": {
+      "category": 5,
+      "name": "Спрей для тела",
+      "description": "Легкий ароматический спрей для тела.",
+      "price": "650.00",
+      "image": "products/body-spray.jpg",
+      "is_bestseller": false,
+      "is_new": false,
+      "discount": 0,
+      "created_at": "2025-03-07T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 67,
+    "fields": {
+      "category": 5,
+      "name": "Духи фруктовые",
+      "description": "Свежий фруктовый аромат с нотами персика и груши.",
+      "price": "1950.00",
+      "image": "products/fruity-perfume.jpg",
+      "is_bestseller": false,
+      "is_new": true,
+      "discount": 8,
+      "created_at": "2025-03-08T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 68,
+    "fields": {
+      "category": 5,
+      "name": "Парфюмированное масло",
+      "description": "Концентрированное масло с долгим ароматом.",
+      "price": "1250.00",
+      "image": "products/perfume-oil.jpg",
+      "is_bestseller": true,
+      "is_new": false,
+      "discount": 12,
+      "created_at": "2025-03-09T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 69,
+    "fields": {
+      "category": 5,
+      "name": "Духи унисекс",
+      "description": "Универсальный аромат для мужчин и женщин.",
+      "price": "2100.00",
+      "image": "products/unisex-perfume.jpg",
+      "is_bestseller": false,
+      "is_new": true,
+      "discount": 0,
+      "created_at": "2025-03-10T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 70,
+    "fields": {
+      "category": 5,
+      "name": "Твердые духи",
+      "description": "Компактные твердые духи в удобной упаковке.",
+      "price": "750.00",
+      "image": "products/solid-perfume.jpg",
+      "is_bestseller": false,
+      "is_new": false,
+      "discount": 0,
+      "created_at": "2025-03-11T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 71,
+    "fields": {
+      "category": 5,
+      "name": "Духи летние",
+      "description": "Легкий свежий аромат для жаркой погоды.",
+      "price": "1750.00",
+      "image": "products/summer-perfume.jpg",
+      "is_bestseller": true,
+      "is_new": true,
+      "discount": 10,
+      "created_at": "2025-03-12T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 72,
+    "fields": {
+      "category": 5,
+      "name": "Духи вечерние",
+      "description": "Интенсивный аромат для особых случаев.",
+      "price": "2350.00",
+      "image": "products/evening-perfume.jpg",
+      "is_bestseller": false,
+      "is_new": false,
+      "discount": 0,
+      "created_at": "2025-03-13T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 73,
+    "fields": {
+      "category": 5,
+      "name": "Парфюмированный крем",
+      "description": "Увлажняющий крем с любимым ароматом.",
+      "price": "980.00",
+      "image": "products/perfumed-cream.jpg",
+      "is_bestseller": false,
+      "is_new": true,
+      "discount": 5,
+      "created_at": "2025-03-14T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 74,
+    "fields": {
+      "category": 5,
+      "name": "Духи романтические",
+      "description": "Нежный романтический аромат с нотами розы.",
+      "price": "2050.00",
+      "image": "products/romantic-perfume.jpg",
+      "is_bestseller": true,
+      "is_new": false,
+      "discount": 15,
+      "created_at": "2025-03-15T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 75,
+    "fields": {
+      "category": 5,
+      "name": "Парфюмированная пудра",
+      "description": "Тонкая пудра с легким ароматом.",
+      "price": "720.00",
+      "image": "products/perfumed-powder.jpg",
+      "is_bestseller": false,
+      "is_new": false,
+      "discount": 0,
+      "created_at": "2025-03-16T10:00:00Z"
+    }
+  },
+
+  {
+    "model": "shop.product",
+    "pk": 76,
+    "fields": {
+      "category": 6,
+      "name": "Крем для рук интенсивный",
+      "description": "Глубокое увлажнение для очень сухой кожи рук.",
+      "price": "580.00",
+      "image": "products/intensive-hand-cream.jpg",
+      "is_bestseller": true,
+      "is_new": false,
+      "discount": 0,
+      "created_at": "2025-03-17T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 77,
+    "fields": {
+      "category": 6,
+      "name": "Крем для ног с ментолом",
+      "description": "Охлаждающий крем для усталых ног.",
+      "price": "650.00",
+      "image": "products/menthol-foot-cream.jpg",
+      "is_bestseller": false,
+      "is_new": true,
+      "discount": 8,
+      "created_at": "2025-03-18T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 78,
+    "fields": {
+      "category": 6,
+      "name": "Скраб для рук",
+      "description": "Мягкий скраб для удаления огрубевшей кожи.",
+      "price": "520.00",
+      "image": "products/hand-scrub.jpg",
+      "is_bestseller": false,
+      "is_new": false,
+      "discount": 0,
+      "created_at": "2025-03-19T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 79,
+    "fields": {
+      "category": 6,
+      "name": "Пилинг для ног",
+      "description": "Интенсивный пилинг для удаления натоптышей.",
+      "price": "720.00",
+      "image": "products/foot-peel.jpg",
+      "is_bestseller": true,
+      "is_new": true,
+      "discount": 10,
+      "created_at": "2025-03-20T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 80,
+    "fields": {
+      "category": 6,
+      "name": "Масло для кутикулы",
+      "description": "Питательное масло для ухода за кутикулой.",
+      "price": "450.00",
+      "image": "products/cuticle-oil.jpg",
+      "is_bestseller": false,
+      "is_new": true,
+      "discount": 0,
+      "created_at": "2025-03-21T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 81,
+    "fields": {
+      "category": 6,
+      "name": "Крем для пяток",
+      "description": "Интенсивное увлажнение для сухих пяток.",
+      "price": "680.00",
+      "image": "products/heel-cream.jpg",
+      "is_bestseller": false,
+      "is_new": false,
+      "discount": 0,
+      "created_at": "2025-03-22T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 82,
+    "fields": {
+      "category": 6,
+      "name": "Парафиновая ванночка для рук",
+      "description": "Набор для парафинотерапии в домашних условиях.",
+      "price": "1250.00",
+      "image": "products/paraffin-bath.jpg",
+      "is_bestseller": true,
+      "is_new": false,
+      "discount": 15,
+      "created_at": "2025-03-23T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 83,
+    "fields": {
+      "category": 6,
+      "name": "Крем для рук с SPF",
+      "description": "Защита рук от солнца с увлажняющим эффектом.",
+      "price": "750.00",
+      "image": "products/spf-hand-cream.jpg",
+      "is_bestseller": false,
+      "is_new": true,
+      "discount": 0,
+      "created_at": "2025-03-24T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 84,
+    "fields": {
+      "category": 6,
+      "name": "Маска для ног",
+      "description": "Восстанавливающая маска для усталых ног.",
+      "price": "850.00",
+      "image": "products/foot-mask.jpg",
+      "is_bestseller": false,
+      "is_new": false,
+      "discount": 0,
+      "created_at": "2025-03-25T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 85,
+    "fields": {
+      "category": 6,
+      "name": "Сыворотка для ногтей",
+      "description": "Укрепляющая сыворотка для роста ногтей.",
+      "price": "620.00",
+      "image": "products/nail-serum.jpg",
+      "is_bestseller": true,
+      "is_new": true,
+      "discount": 8,
+      "created_at": "2025-03-26T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 86,
+    "fields": {
+      "category": 6,
+      "name": "Крем для рук ночной",
+      "description": "Интенсивное восстановление кожи рук за ночь.",
+      "price": "780.00",
+      "image": "products/night-hand-cream.jpg",
+      "is_bestseller": false,
+      "is_new": false,
+      "discount": 0,
+      "created_at": "2025-03-27T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 87,
+    "fields": {
+      "category": 6,
+      "name": "Скраб для ног",
+      "description": "Очищающий скраб с пемзой для гладких ног.",
+      "price": "590.00",
+      "image": "products/foot-scrub.jpg",
+      "is_bestseller": false,
+      "is_new": true,
+      "discount": 5,
+      "created_at": "2025-03-28T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 88,
+    "fields": {
+      "category": 6,
+      "name": "Бальзам для рук",
+      "description": "Защитный бальзам от трещин и сухости.",
+      "price": "550.00",
+      "image": "products/hand-balm.jpg",
+      "is_bestseller": true,
+      "is_new": false,
+      "discount": 0,
+      "created_at": "2025-03-29T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 89,
+    "fields": {
+      "category": 6,
+      "name": "Крем для ног с арникой",
+      "description": "Успокаивающий крем для снятия усталости ног.",
+      "price": "720.00",
+      "image": "products/arnica-foot-cream.jpg",
+      "is_bestseller": false,
+      "is_new": true,
+      "discount": 0,
+      "created_at": "2025-03-30T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 90,
+    "fields": {
+      "category": 6,
+      "name": "Масло для массажа рук",
+      "description": "Питательное масло для массажа и ухода за руками.",
+      "price": "680.00",
+      "image": "products/hand-massage-oil.jpg",
+      "is_bestseller": false,
+      "is_new": false,
+      "discount": 0,
+      "created_at": "2025-03-31T10:00:00Z"
+    }
+  },
+
+  {
+    "model": "shop.product",
+    "pk": 91,
+    "fields": {
+      "category": 7,
+      "name": "Солнцезащитный крем SPF 30",
+      "description": "Ежедневная защита от солнца для лица и тела.",
+      "price": "850.00",
+      "image": "products/spf30-cream.jpg",
+      "is_bestseller": true,
+      "is_new": false,
+      "discount": 0,
+      "created_at": "2025-04-01T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 92,
+    "fields": {
+      "category": 7,
+      "name": "Солнцезащитный спрей SPF 50",
+      "description": "Легкий спрей с высокой защитой для активного отдыха.",
+      "price": "920.00",
+      "image": "products/spf50-spray.jpg",
+      "is_bestseller": true,
+      "is_new": true,
+      "discount": 12,
+      "created_at": "2025-04-02T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 93,
+    "fields": {
+      "category": 7,
+      "name": "Солнцезащитный крем для детей",
+      "description": "Безопасная защита SPF 50+ для детской кожи.",
+      "price": "780.00",
+      "image": "products/kids-sunscreen.jpg",
+      "is_bestseller": false,
+      "is_new": false,
+      "discount": 0,
+      "created_at": "2025-04-03T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 94,
+    "fields": {
+      "category": 7,
+      "name": "Солнцезащитный стик для лица",
+      "description": "Компактный стик для защиты чувствительных зон.",
+      "price": "650.00",
+      "image": "products/sunscreen-stick.jpg",
+      "is_bestseller": false,
+      "is_new": true,
+      "discount": 0,
+      "created_at": "2025-04-04T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 95,
+    "fields": {
+      "category": 7,
+      "name": "Солнцезащитный крем для лица",
+      "description": "Нежирный крем с матирующим эффектом SPF 50.",
+      "price": "980.00",
+      "image": "products/face-sunscreen.jpg",
+      "is_bestseller": true,
+      "is_new": false,
+      "discount": 10,
+      "created_at": "2025-04-05T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 96,
+    "fields": {
+      "category": 7,
+      "name": "Солнцезащитное молочко",
+      "description": "Легкое молочко для всего тела SPF 30.",
+      "price": "720.00",
+      "image": "products/sunscreen-milk.jpg",
+      "is_bestseller": false,
+      "is_new": false,
+      "discount": 0,
+      "created_at": "2025-04-06T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 97,
+    "fields": {
+      "category": 7,
+      "name": "Солнцезащитный гель",
+      "description": "Нежирный гель для жирной кожи SPF 40.",
+      "price": "850.00",
+      "image": "products/sunscreen-gel.jpg",
+      "is_bestseller": false,
+      "is_new": true,
+      "discount": 8,
+      "created_at": "2025-04-07T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 98,
+    "fields": {
+      "category": 7,
+      "name": "Солнцезащитный крем водостойкий",
+      "description": "Защита SPF 50+ для плавания и активного спорта.",
+      "price": "1050.00",
+      "image": "products/waterproof-sunscreen.jpg",
+      "is_bestseller": true,
+      "is_new": false,
+      "discount": 0,
+      "created_at": "2025-04-08T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 99,
+    "fields": {
+      "category": 7,
+      "name": "Солнцезащитный крем с тоном",
+      "description": "Тонирующий крем с защитой SPF 30.",
+      "price": "1150.00",
+      "image": "products/tinted-sunscreen.jpg",
+      "is_bestseller": false,
+      "is_new": true,
+      "discount": 15,
+      "created_at": "2025-04-09T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 100,
+    "fields": {
+      "category": 7,
+      "name": "Солнцезащитный крем для чувствительной кожи",
+      "description": "Гипоаллергенный крем SPF 50 для чувствительной кожи.",
+      "price": "950.00",
+      "image": "products/sensitive-sunscreen.jpg",
+      "is_bestseller": false,
+      "is_new": false,
+      "discount": 0,
+      "created_at": "2025-04-10T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 101,
+    "fields": {
+      "category": 7,
+      "name": "Солнцезащитный спрей для волос",
+      "description": "Защита волос от ультрафиолета и выгорания.",
+      "price": "680.00",
+      "image": "products/hair-sunscreen.jpg",
+      "is_bestseller": true,
+      "is_new": true,
+      "discount": 10,
+      "created_at": "2025-04-11T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 102,
+    "fields": {
+      "category": 7,
+      "name": "Солнцезащитный крем минеральный",
+      "description": "Физическая защита с оксидом цинка SPF 50.",
+      "price": "1120.00",
+      "image": "products/mineral-sunscreen.jpg",
+      "is_bestseller": false,
+      "is_new": false,
+      "discount": 0,
+      "created_at": "2025-04-12T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 103,
+    "fields": {
+      "category": 7,
+      "name": "Солнцезащитный крем для тела",
+      "description": "Экономичная упаковка для защиты всего тела SPF 30.",
+      "price": "1250.00",
+      "image": "products/body-sunscreen.jpg",
+      "is_bestseller": false,
+      "is_new": true,
+      "discount": 0,
+      "created_at": "2025-04-13T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 104,
+    "fields": {
+      "category": 7,
+      "name": "Солнцезащитный крем с антиоксидантами",
+      "description": "Защита SPF 50 с витаминами C и E.",
+      "price": "1350.00",
+      "image": "products/antioxidant-sunscreen.jpg",
+      "is_bestseller": true,
+      "is_new": false,
+      "discount": 18,
+      "created_at": "2025-04-14T10:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 105,
+    "fields": {
+      "category": 7,
+      "name": "Солнцезащитный крем для губ",
+      "description": "Бальзам для губ с защитой SPF 30.",
+      "price": "420.00",
+      "image": "products/lip-sunscreen.jpg",
+      "is_bestseller": false,
+      "is_new": false,
+      "discount": 0,
+      "created_at": "2025-04-15T10:00:00Z"
+    }
+  }
+]

@@ -11,6 +11,8 @@ import CatalogPage from './pages/CatalogPage';
 import CertificatesPage from './pages/CertificatesPage';
 import UnderConstructionPage from './pages/UnderConstructionPage';
 import ProductPage from './pages/ProductPage';
+import CartPage from './pages/CartPage';
+import FavoritesPage from './pages/FavoritesPage';
 
 function App() {
   return (
@@ -27,8 +29,8 @@ function App() {
           {/* 2. Потом страницы "В разработке" */}
           <Route path="/about" element={<UnderConstructionPage />} />
           <Route path="/delivery" element={<UnderConstructionPage />} />
-          <Route path="/favorites" element={<UnderConstructionPage />} />
-          <Route path="/cart" element={<UnderConstructionPage />} />
+          <Route path="/favorites" element={<FavoritesPage />} />
+          <Route path="/cart" element={<CartPage />} />
           <Route path="/profile" element={<UnderConstructionPage />} />
           <Route path="/product/:id" element={<ProductPage />} />
           

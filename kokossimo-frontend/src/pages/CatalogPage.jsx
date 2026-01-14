@@ -1,15 +1,80 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import ProductCard from '../components/product/ProductCard';
-import { products } from '../data/products'; // Пока берем те же тестовые данные
-import { Filter, ChevronDown } from 'lucide-react';
+import { getProducts, getCategories } from '../services/api';
+import { Filter } from 'lucide-react';
 import './CatalogPage.css';
 
 const CatalogPage = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [sortBy, setSortBy] = useState('popular');
-  const [isFilterOpen, setIsFilterOpen] = useState(false); // Для мобильных
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [catalogProducts, setCatalogProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [selectedCategories, setSelectedCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // В реальности здесь был бы запрос к API с параметрами фильтров
-  // const [catalogProducts, setCatalogProducts] = useState([]);
+  // Загрузка категорий
+  useEffect(() => {
+    getCategories()
+      .then(response => {
+        const data = Array.isArray(response.data) ? response.data : (response.data.results || []);
+        setCategories(data);
+      })
+      .catch(() => {
+        setCategories([]);
+      });
+  }, []);
+
+  // Загрузка товаров
+  useEffect(() => {
+    setLoading(true);
+    const params = {};
+    
+    // Фильтр по категории из URL (имеет приоритет)
+    const categoryFilter = searchParams.get('filter');
+    if (categoryFilter === 'bestsellers') {
+      params.is_bestseller = 'true';
+    } else if (categoryFilter === 'new') {
+      params.is_new = 'true';
+    } else if (categoryFilter) {
+      params.category = categoryFilter;
+    } else if (selectedCategories.length > 0) {
+      // Если нет фильтра в URL, используем выбранные категории
+      // Пока берем первую категорию (можно расширить для множественного выбора)
+      params.category = selectedCategories[0];
+    }
+
+    getProducts(params)
+      .then(response => {
+        let data = Array.isArray(response.data) ? response.data : (response.data.results || []);
+        
+        // Сортировка
+        if (sortBy === 'price_asc') {
+          data = [...data].sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
+        } else if (sortBy === 'price_desc') {
+          data = [...data].sort((a, b) => parseFloat(b.price) - parseFloat(a.price));
+        } else if (sortBy === 'new') {
+          data = [...data].filter(p => p.is_new).concat(data.filter(p => !p.is_new));
+        }
+        // 'popular' - оставляем как есть (можно добавить поле popularity в будущем)
+        
+        setCatalogProducts(data);
+        setLoading(false);
+      })
+      .catch(() => {
+        setCatalogProducts([]);
+        setLoading(false);
+      });
+  }, [searchParams, selectedCategories, sortBy]);
+
+  const handleCategoryChange = (categorySlug) => {
+    setSelectedCategories(prev => 
+      prev.includes(categorySlug) 
+        ? prev.filter(slug => slug !== categorySlug)
+        : [...prev, categorySlug]
+    );
+  };
 
   return (
     <div className="catalog-page page-animation">
@@ -29,10 +94,18 @@ const CatalogPage = () => {
             <div className="filter-group">
               <h3 className="filter-title">Категории</h3>
               <ul className="filter-list">
-                <li><label><input type="checkbox" /> Уход за лицом</label></li>
-                <li><label><input type="checkbox" /> Уход за телом</label></li>
-                <li><label><input type="checkbox" /> Защита от солнца</label></li>
-                <li><label><input type="checkbox" /> Макияж</label></li>
+                {categories.map((category) => (
+                  <li key={category.id}>
+                    <label>
+                      <input 
+                        type="checkbox" 
+                        checked={selectedCategories.includes(category.slug)}
+                        onChange={() => handleCategoryChange(category.slug)}
+                      />
+                      {category.name}
+                    </label>
+                  </li>
+                ))}
               </ul>
             </div>
 
@@ -54,7 +127,15 @@ const CatalogPage = () => {
               </ul>
             </div>
 
-            <button className="apply-filters-btn">ПРИМЕНИТЬ</button>
+            <button 
+              className="apply-filters-btn"
+              onClick={() => {
+                setSelectedCategories([]);
+                setSearchParams({});
+              }}
+            >
+              СБРОСИТЬ ФИЛЬТРЫ
+            </button>
           </aside>
 
           {/* ОСНОВНОЙ КОНТЕНТ */}
@@ -81,25 +162,38 @@ const CatalogPage = () => {
                   <option value="price_desc">Сначала дорогие</option>
                   <option value="new">Новинки</option>
                 </select>
+                {!loading && (
+                  <span style={{ marginLeft: '15px', fontSize: '14px', color: '#666' }}>
+                    Найдено товаров: {catalogProducts.length}
+                  </span>
+                )}
               </div>
             </div>
 
             {/* Сетка товаров */}
             <div className="catalog-grid">
-              {/* Дублируем товары чтобы заполнить сетку для вида */}
-              {[...products, ...products, ...products].map((product, index) => (
-                <ProductCard key={`${product.id}-${index}`} product={product} />
-              ))}
+              {loading ? (
+                <div style={{ padding: '40px', textAlign: 'center', width: '100%' }}>
+                  <p>Загрузка товаров...</p>
+                </div>
+              ) : catalogProducts.length > 0 ? (
+                catalogProducts.map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))
+              ) : (
+                <div style={{ padding: '40px', textAlign: 'center', width: '100%' }}>
+                  <p>Товары не найдены</p>
+                </div>
+              )}
             </div>
 
-            {/* Пагинация */}
-            <div className="pagination">
-              <button className="page-btn active">1</button>
-              <button className="page-btn">2</button>
-              <button className="page-btn">3</button>
-              <span className="dots">...</span>
-              <button className="page-btn">10</button>
-            </div>
+            {/* Пагинация - пока скрыта, можно добавить позже */}
+            {catalogProducts.length > 0 && (
+              <div className="pagination">
+                <button className="page-btn active">1</button>
+                {/* Пагинация будет добавлена позже при необходимости */}
+              </div>
+            )}
             
           </div>
         </div>

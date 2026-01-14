@@ -1,38 +1,86 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Minus, Plus, Heart, Share2, Star } from 'lucide-react';
-import { products } from '../data/products';
+import { getProduct, getProducts } from '../services/api';
+import { useCart } from '../context/CartContext';
+import { useFavorites } from '../context/FavoritesContext';
 import ProductSlider from '../components/product/ProductSlider';
 import './ProductPage.css';
 
 const ProductPage = () => {
   const { id } = useParams();
+  const { addToCart } = useCart();
+  const { toggleFavorite, isFavorite } = useFavorites();
   const [product, setProduct] = useState(null);
+  const [relatedProducts, setRelatedProducts] = useState([]);
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState('description');
   const [currentImage, setCurrentImage] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [added, setAdded] = useState(false);
 
-  // Имитация загрузки данных товара по ID
+  // Загрузка данных товара по ID
   useEffect(() => {
-    // В реальности здесь был бы запрос api.getProduct(id)
-    const foundProduct = products.find(p => p.id === parseInt(id));
-    
-    // Если товар не найден в списке, возьмем первый для демо
-    setProduct(foundProduct || products[0]);
-    setQuantity(1);
-    setCurrentImage(0);
-    window.scrollTo(0, 0); // Прокрутка вверх при открытии
+    setLoading(true);
+    getProduct(id)
+      .then(response => {
+        setProduct(response.data);
+        setQuantity(1);
+        setCurrentImage(0);
+        window.scrollTo(0, 0);
+        
+        // Загружаем похожие товары из той же категории
+        if (response.data.category_slug) {
+          getProducts({ category: response.data.category_slug })
+            .then(res => {
+              const data = Array.isArray(res.data) ? res.data : (res.data.results || []);
+              // Исключаем текущий товар
+              const filtered = data.filter(p => p.id !== response.data.id).slice(0, 10);
+              setRelatedProducts(filtered);
+            })
+            .catch(() => setRelatedProducts([]));
+        }
+        setLoading(false);
+      })
+      .catch(() => {
+        setProduct(null);
+        setLoading(false);
+      });
   }, [id]);
 
-  if (!product) return <div className="loading">Загрузка...</div>;
+  if (loading) return <div className="loading">Загрузка...</div>;
+  if (!product) return <div className="loading">Товар не найден</div>;
+
+  const favorite = isFavorite(product.id);
+  
+  // Обработка изображения
+  const getImageUrl = (img) => {
+    if (!img) return 'https://placehold.co/600x600/F5E6D3/8B4513?text=No+Image';
+    if (img.startsWith('http')) return img;
+    return `http://127.0.0.1:8000${img.startsWith('/') ? img : `/${img}`}`;
+  };
 
   // Моковые дополнительные фото (в реальности они приходят с бэка)
   const images = [
-    product.image,
+    getImageUrl(product.image),
     "https://placehold.co/600x600/F5E6D3/8B4513?text=Photo+2",
     "https://placehold.co/600x600/F5E6D3/8B4513?text=Photo+3",
     "https://placehold.co/600x600/F5E6D3/8B4513?text=Photo+4"
   ];
+
+  const handleAddToCart = () => {
+    addToCart(product, quantity);
+    setAdded(true);
+    setTimeout(() => setAdded(false), 2000);
+  };
+
+  const handleFavoriteClick = () => {
+    toggleFavorite(product);
+  };
+
+  const price = typeof product.price === 'string' ? parseFloat(product.price) : product.price;
+  const isNew = product.is_new || product.isNew || false;
+  const discount = product.discount || 0;
 
   return (
     <div className="product-page page-animation">
@@ -45,8 +93,8 @@ const ProductPage = () => {
           <div className="product-gallery">
             <div className="gallery-main-wrapper">
                <img src={images[currentImage]} alt={product.name} className="gallery-main-image" />
-               {product.isNew && <span className="product-badge new">New</span>}
-               {product.discount && <span className="product-badge sale">-{product.discount}%</span>}
+               {isNew && <span className="product-badge new">New</span>}
+               {discount > 0 && <span className="product-badge sale">-{discount}%</span>}
             </div>
             
             <div className="gallery-thumbs">
@@ -80,10 +128,10 @@ const ProductPage = () => {
             <p className="product-short-desc">{product.description}</p>
             
             <div className="product-price-block">
-              <span className="current-price">{product.price.toLocaleString()} ₽</span>
-              {product.discount && (
+              <span className="current-price">{price.toLocaleString('ru-RU')} ₽</span>
+              {discount > 0 && (
                  <span className="old-price">
-                   {(product.price * 1.2).toLocaleString()} ₽
+                   {Math.round(price / (1 - discount / 100)).toLocaleString('ru-RU')} ₽
                  </span>
               )}
             </div>
@@ -102,12 +150,19 @@ const ProductPage = () => {
                 </button>
               </div>
 
-              <button className="add-to-cart-btn-large">
-                ДОБАВИТЬ В КОРЗИНУ
+              <button 
+                className={`add-to-cart-btn-large ${added ? 'added' : ''}`}
+                onClick={handleAddToCart}
+              >
+                {added ? '✓ ДОБАВЛЕНО' : 'ДОБАВИТЬ В КОРЗИНУ'}
               </button>
               
-              <button className="wishlist-btn">
-                <Heart size={24} />
+              <button 
+                className={`wishlist-btn ${favorite ? 'active' : ''}`}
+                onClick={handleFavoriteClick}
+                aria-label={favorite ? 'Удалить из избранного' : 'Добавить в избранное'}
+              >
+                <Heart size={24} fill={favorite ? 'currentColor' : 'none'} />
               </button>
             </div>
             
@@ -203,9 +258,11 @@ const ProductPage = () => {
         </div>
 
         {/* Вам может понравиться */}
-        <div className="related-products">
-           <ProductSlider title="ВАМ МОЖЕТ ПОНРАВИТЬСЯ" products={products} />
-        </div>
+        {relatedProducts.length > 0 && (
+          <div className="related-products">
+            <ProductSlider title="ВАМ МОЖЕТ ПОНРАВИТЬСЯ" products={relatedProducts} />
+          </div>
+        )}
 
       </div>
     </div>

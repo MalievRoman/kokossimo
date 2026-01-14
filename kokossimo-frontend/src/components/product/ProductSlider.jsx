@@ -93,7 +93,7 @@ const ProductSlider = ({ title, products, linkText = "БОЛЬШЕ", linkTo = "/
           </button>
           
           <div className="product-slider__grid" ref={sliderRef}>
-            {products.map((product) => (
+            {products && products.length > 0 && products.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>

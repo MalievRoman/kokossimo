@@ -17,26 +17,48 @@ const HomePage = () => {
     // 1. Загрузка Бестселлеров
     getBestsellers()
       .then(response => {
-        setBestsellers(response.data);
+        // Django REST Framework может возвращать массив или объект с results
+        let data = [];
+        if (Array.isArray(response.data)) {
+          data = response.data;
+        } else if (response.data && Array.isArray(response.data.results)) {
+          data = response.data.results;
+        } else if (response.data && typeof response.data === 'object') {
+          // Если это объект, попробуем найти массив внутри
+          data = Object.values(response.data).find(val => Array.isArray(val)) || [];
+        }
+        setBestsellers(data);
       })
-      .catch(error => console.error("Ошибка загрузки бестселлеров:", error));
+      .catch(() => {
+        setBestsellers([]);
+      });
 
     // 2. Загрузка Новинок
     getNewProducts()
       .then(response => {
-        setNewProducts(response.data);
+        // Django REST Framework может возвращать массив или объект с results
+        let data = [];
+        if (Array.isArray(response.data)) {
+          data = response.data;
+        } else if (response.data && Array.isArray(response.data.results)) {
+          data = response.data.results;
+        } else if (response.data && typeof response.data === 'object') {
+          // Если это объект, попробуем найти массив внутри
+          data = Object.values(response.data).find(val => Array.isArray(val)) || [];
+        }
+        setNewProducts(data);
       })
-      .catch(error => console.error("Ошибка загрузки новинок:", error));
+      .catch(() => {
+        setNewProducts([]);
+      });
   }, []);
 
   return (
     <div className="home-page page-animation">
       <HeroBlock />
       
-      {/* CategoryList тоже нужно будет переделать, но пока оставим как есть */}
       <CategoryList />
       
-      {/* Передаем реальные данные в слайдеры */}
       {bestsellers.length > 0 && (
         <ProductSlider title="БЕСТСЕЛЛЕРЫ" products={bestsellers} linkTo="/catalog?filter=bestsellers" />
       )}

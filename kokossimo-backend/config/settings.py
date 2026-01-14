@@ -135,9 +135,20 @@ STATIC_URL = 'static/'
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
 ]
+
+# Альтернативный вариант - разрешить все локальные порты (только для разработки!)
+# CORS_ALLOW_ALL_ORIGINS = True  # Раскомментируйте, если нужно разрешить все порты
 
 # Настройки для загрузки картинок (товаров)
 import os
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# Настройки REST Framework
+REST_FRAMEWORK = {
+    'DEFAULT_PAGINATION_CLASS': None,  # Отключаем пагинацию по умолчанию
+    'PAGE_SIZE': None,
+}
