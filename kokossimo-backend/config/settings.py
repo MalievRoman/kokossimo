@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     
     # Добавляем это:
     'rest_framework',   # API
+    'rest_framework.authtoken',
     'corsheaders',      # Чтобы React мог подключаться
     'shop',             # Наше приложение
 ]

@@ -1,0 +1,55 @@
+.about-page {
+  padding: 4rem 0;
+  background-color: #fff;
+}
+
+.about-section {
+  margin-top: 2.5rem;
+}
+
+.about-lead {
+  font-size: 1.1rem;
+  color: #4b3a39;
+  margin-bottom: 1.2rem;
+}
+
+.about-list {
+  display: grid;
+  gap: 0.8rem;
+  padding-left: 1.2rem;
+  color: #6b5a58;
+  line-height: 1.6;
+}
+
+.about-mission {
+  margin-top: 3rem;
+  padding: 2rem;
+  border: 1px solid #e7dcd8;
+  border-radius: 10px;
+  background: #fcf8f7;
+}
+
+.section-title--center {
+  text-align: center;
+}
+
+.about-quote {
+  font-size: 1.1rem;
+  color: #7c2b2a;
+  line-height: 1.6;
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  .about-page {
+    padding: 2.5rem 0;
+  }
+
+  .about-mission {
+    padding: 1.5rem;
+  }
+
+  .about-quote {
+    font-size: 1rem;
+  }
+}

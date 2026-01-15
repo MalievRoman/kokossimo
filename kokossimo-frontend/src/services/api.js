@@ -13,6 +13,24 @@ const api = axios.create({
 export const getProducts = (params) => api.get('/products/', { params });
 export const getProduct = (id) => api.get(`/products/${id}/`);
 export const getCategories = () => api.get('/categories/');
+export const registerUser = (payload) => api.post('/auth/register/', payload);
+export const loginUser = (payload) => api.post('/auth/login/', payload);
+export const getCurrentUser = (token) =>
+  api.get('/auth/me/', {
+    headers: { Authorization: `Token ${token}` },
+  });
+export const logoutUser = (token) =>
+  api.post(
+    '/auth/logout/',
+    {},
+    {
+      headers: { Authorization: `Token ${token}` },
+    }
+  );
+export const updateProfile = (token, payload) =>
+  api.patch('/auth/profile/', payload, {
+    headers: { Authorization: `Token ${token}` },
+  });
 
 // Специальные фильтры
 export const getBestsellers = () => api.get('/products/', { params: { is_bestseller: 'true' } });

@@ -68,6 +68,40 @@
   color: white;
 }
 
+.certificates-info {
+  display: grid;
+  gap: 2rem;
+  margin-bottom: 4rem;
+}
+
+.certificates-info__section {
+  padding: 2rem;
+  border: 1px solid #e7dcd8;
+  border-radius: 10px;
+  background: #fcf8f7;
+}
+
+.certificates-info__section p {
+  color: #6b5a58;
+  line-height: 1.6;
+  margin-top: 0.8rem;
+}
+
+.certificates-info__section ul,
+.certificates-info__section ol {
+  margin-top: 1rem;
+  padding-left: 1.2rem;
+  color: #6b5a58;
+  line-height: 1.6;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.certificates-note {
+  color: #7c2b2a;
+  font-weight: 600;
+}
+
 /* Сетка сертификатов */
 .certificates-grid {
   display: grid;
@@ -187,5 +221,9 @@
   
   .buy-btn {
     padding: 1rem;
+  }
+
+  .certificates-info__section {
+    padding: 1.5rem;
   }
 }

@@ -140,23 +140,68 @@
 }
 
 /* Адаптив */
-@media (max-width: 768px) {
+@media (max-width: 640px) {
+  .hero {
+    padding: 2.5rem 0;
+    min-height: 360px;
+  }
+
   .hero__container {
     flex-direction: column-reverse;
     text-align: center;
+    gap: 1.5rem;
   }
 
   .hero__content {
     padding-right: 0;
-    margin-top: 2rem;
+    margin-top: 0;
+    align-items: center;
   }
 
   .hero__title {
-    font-size: 1.8rem;
+    font-size: 1.6rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .hero__btn {
+    padding: 0.85rem 2rem;
+  }
+
+  .hero__image {
+    max-height: 260px;
+  }
+
+  .hero__image-placeholder {
+    width: 240px;
+    height: 240px;
+    font-size: 1.1rem;
   }
 
   .hero__controls {
     display: none;
+  }
+
+  .hero__dots {
+    bottom: 1rem;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1199px) {
+  .hero {
+    padding: 3rem 0;
+    min-height: 420px;
+  }
+
+  .hero__title {
+    font-size: 2rem;
+  }
+
+  .hero__content {
+    max-width: 520px;
+  }
+
+  .hero__image {
+    max-height: 360px;
   }
 }
 
@@ -173,6 +218,37 @@
   color: white;
   font-weight: bold;
   font-size: 1.5rem;
+  will-change: transform, opacity;
+}
+
+.hero__image-placeholder.slide-next {
+  animation: heroSlideNext 0.6s ease;
+}
+
+.hero__image-placeholder.slide-prev {
+  animation: heroSlidePrev 0.6s ease;
+}
+
+@keyframes heroSlideNext {
+  from {
+    transform: translateX(48px);
+    opacity: 0.6;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes heroSlidePrev {
+  from {
+    transform: translateX(-48px);
+    opacity: 0.6;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 /* Добавьте/обновите эти стили в HeroBlock.css */

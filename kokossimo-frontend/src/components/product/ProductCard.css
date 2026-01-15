@@ -202,3 +202,34 @@
   cursor: not-allowed;
   color: #ccc;
 }
+
+/* Адаптив: 320-640 */
+@media (max-width: 640px) {
+  .product-card {
+    min-width: 220px;
+  }
+
+  .product-card__title {
+    font-size: 0.85rem;
+  }
+
+  .product-card__description {
+    font-size: 0.8rem;
+  }
+
+  .product-card__price {
+    font-size: 1rem;
+  }
+
+  .product-card__cart-btn {
+    padding: 0.65rem;
+    font-size: 0.8rem;
+  }
+}
+
+/* Адаптив: 640-1200 */
+@media (min-width: 641px) and (max-width: 1199px) {
+  .product-card {
+    min-width: 240px;
+  }
+}

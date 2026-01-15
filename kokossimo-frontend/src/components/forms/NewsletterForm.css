@@ -71,11 +71,19 @@
   margin: 0 auto;
 }
 
-/* Адаптив */
-@media (max-width: 768px) {
+/* Адаптив: 320-640 */
+@media (max-width: 640px) {
+  .newsletter {
+    padding: 2.5rem 0;
+  }
+
   .newsletter__content {
     padding: 2rem 1rem;
-    border: none; /* Убираем рамку на мобильных для экономии места */
+    border: none;
+  }
+
+  .newsletter__title {
+    font-size: 1rem;
   }
 
   .newsletter__form {
@@ -84,5 +92,12 @@
 
   .newsletter__btn {
     width: 100%;
+  }
+}
+
+/* Адаптив: 640-1200 */
+@media (min-width: 641px) and (max-width: 1199px) {
+  .newsletter__content {
+    padding: 2.5rem 2rem;
   }
 }

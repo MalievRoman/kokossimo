@@ -33,17 +33,11 @@ const slides = [
 const HeroBlock = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
-
-  // Автопереключение каждые 5 секунд
-  useEffect(() => {
-    const timer = setInterval(() => {
-      nextSlide();
-    }, 5000);
-    return () => clearInterval(timer);
-  }, [currentSlide]);
+  const [slideDirection, setSlideDirection] = useState('next');
 
   const nextSlide = () => {
     if (isAnimating) return;
+    setSlideDirection('next');
     setIsAnimating(true);
     setTimeout(() => setIsAnimating(false), 500);
     setCurrentSlide((prev) => (prev === slides.length - 1 ? 0 : prev + 1));
@@ -51,6 +45,7 @@ const HeroBlock = () => {
 
   const prevSlide = () => {
     if (isAnimating) return;
+    setSlideDirection('prev');
     setIsAnimating(true);
     setTimeout(() => setIsAnimating(false), 500);
     setCurrentSlide((prev) => (prev === 0 ? slides.length - 1 : prev - 1));
@@ -58,6 +53,7 @@ const HeroBlock = () => {
 
   const goToSlide = (index) => {
     if (index === currentSlide || isAnimating) return;
+    setSlideDirection(index > currentSlide ? 'next' : 'prev');
     setIsAnimating(true);
     setTimeout(() => setIsAnimating(false), 500);
     setCurrentSlide(index);
@@ -94,7 +90,9 @@ const HeroBlock = () => {
         </div>
         
         <div className="hero__image-wrapper">
-          <div className="hero__image-placeholder">
+          <div
+            className={`hero__image-placeholder ${isAnimating ? `slide-${slideDirection}` : ''}`}
+          >
              {slide.imagePlaceholder}
           </div>
         </div>

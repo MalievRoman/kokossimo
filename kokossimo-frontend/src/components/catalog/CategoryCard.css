@@ -37,3 +37,21 @@
   text-align: center;
   letter-spacing: 0.05em;
 }
+
+/* Адаптив: 320-640 */
+@media (max-width: 640px) {
+  .category-card__image-wrapper {
+    padding: 3px;
+  }
+
+  .category-card__title {
+    font-size: 0.75rem;
+  }
+}
+
+/* Адаптив: 640-1200 */
+@media (min-width: 641px) and (max-width: 1199px) {
+  .category-card__title {
+    font-size: 0.85rem;
+  }
+}

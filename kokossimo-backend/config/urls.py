@@ -3,7 +3,7 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from rest_framework.routers import DefaultRouter
-from shop.views import ProductViewSet, CategoryViewSet
+from shop.views import ProductViewSet, CategoryViewSet, register_user, login_user, logout_user, current_user, update_profile
 
 # Создаем роутер для API
 router = DefaultRouter()
@@ -13,6 +13,11 @@ router.register(r'categories', CategoryViewSet)
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include(router.urls)), # Все API будут начинаться с /api/
+    path('api/auth/register/', register_user),
+    path('api/auth/login/', login_user),
+    path('api/auth/logout/', logout_user),
+    path('api/auth/me/', current_user),
+    path('api/auth/profile/', update_profile),
 ]
 
 # Это нужно, чтобы Django раздавал картинки (media) в режиме разработки
