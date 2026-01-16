@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// Если вы работаете локально, Django обычно на порту 8000
-const API_BASE_URL = 'http://127.0.0.1:8000/api';
+// In prod use same-origin /api via nginx; for dev you can override with VITE_API_URL
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
