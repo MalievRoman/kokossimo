@@ -1,11 +1,48 @@
 .certificates-page {
   padding: 4rem 0;
-  background-color: #fff;
+  background-color: #fcf8f7;
+}
+
+.certificates-hero {
+  background: #fdecea;
+  border-radius: 16px;
+  padding: 2.2rem;
+  display: grid;
+  grid-template-columns: 400px 1fr;
+  gap: 2rem;
+  margin-bottom: 3rem;
+  max-width: 1200px;
+  height: 712px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.certificates-hero__panel {
+  background: #fff;
+  border-radius: 12px;
+  padding: 2rem;
+  position: relative;
+  overflow: hidden;
+  width: 400px;
+  min-height: 592px;
+}
+
+.certificates-hero__cards {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
 }
 
 .certificates-intro {
-  margin-bottom: 4rem;
+  margin-bottom: 0;
   position: relative;
+}
+
+.certificates-intro .page-title {
+  font-size: 1.5rem;
+  letter-spacing: 0.04em;
+  color: #4b3a39;
+  margin-bottom: 1.75rem;
 }
 
 .intro-content {
@@ -23,48 +60,45 @@
 
 .intro-text p {
   line-height: 1.6;
-  color: #333;
+  color: #4b3a39;
   margin-bottom: 2rem;
-  font-size: 1.1rem;
+  font-size: 0.95rem;
 }
 
 .intro-bg-letter {
   position: absolute;
-  top: -50px;
+  top: 260px;
   left: -20px;
-  font-size: 15rem;
+  font-size: 12.5rem;
   font-weight: bold;
-  color: #FAF0E6; /* Очень светлый бежевый */
+  color: #f8e3df;
   z-index: 1;
   user-select: none;
 }
 
 .custom-amount-wrapper {
   display: flex;
-  gap: 1rem;
-  max-width: 500px;
-}
-
-.custom-amount-input {
-  flex-grow: 1;
-  padding: 1rem;
-  border: 1px solid #4a2c2a;
-  border-radius: 4px;
-  font-size: 1rem;
+  max-width: 100%;
+  margin-top: 2rem;
 }
 
 .buy-btn {
-  padding: 0 2rem;
+  padding: 0.85rem 1.2rem;
   background-color: transparent;
-  border: 1px solid #4a2c2a;
-  color: #4a2c2a;
+  border: 1px solid #7c2b2a;
+  color: #7c2b2a;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s;
+  border-radius: 6px;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  width: 100%;
 }
 
 .buy-btn:hover {
-  background-color: #4a2c2a;
+  background-color: #7c2b2a;
   color: white;
 }
 
@@ -105,16 +139,22 @@
 /* Сетка сертификатов */
 .certificates-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 2rem;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.certificate-item {
+  display: grid;
+  gap: 0.75rem;
 }
 
 /* Карточка сертификата */
 .certificate-card {
-  background-color: #8B0000; /* Бордовый фон */
+  background-color: #7c0f0f;
   color: white;
-  aspect-ratio: 1 / 2; /* Вытянутая вертикально форма */
-  padding: 2rem;
+  height: 592px;
+  padding: 1.5rem;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -123,11 +163,12 @@
   cursor: pointer;
   transition: transform 0.3s, box-shadow 0.3s;
   border: 2px solid transparent;
+  border-radius: 16px;
 }
 
 .certificate-card:hover {
-  transform: translateY(-10px);
-  box-shadow: 0 10px 20px rgba(139, 0, 0, 0.2);
+  transform: translateY(-6px);
+  box-shadow: 0 12px 20px rgba(124, 15, 15, 0.25);
 }
 
 .certificate-card.selected {
@@ -140,8 +181,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 0.9rem;
-  letter-spacing: 1px;
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
 }
 
 .star {
@@ -153,14 +194,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0.1; /* Еле видный узор */
+  opacity: 0.12;
 }
 
 .cert-chevron {
-  width: 100px;
-  height: 100px;
-  border-right: 20px solid white;
-  border-bottom: 20px solid white;
+  width: 70px;
+  height: 70px;
+  border-right: 12px solid white;
+  border-bottom: 12px solid white;
   transform: rotate(-45deg);
 }
 
@@ -171,14 +212,14 @@
 }
 
 .cert-label {
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   opacity: 0.8;
   text-transform: uppercase;
 }
 
 .cert-price {
-  font-size: 2.5rem;
-  font-weight: bold;
+  font-size: 2rem;
+  font-weight: 600;
 }
 
 /* Звездочки по углам (псевдоэлементы) */
@@ -191,24 +232,41 @@
 }
 
 .certificate-card::before {
-  bottom: 2rem;
-  left: 2rem;
+  bottom: 1.5rem;
+  left: 1.5rem;
 }
 
 .certificate-card::after {
   top: 50%;
-  right: 1rem;
-  font-size: 1rem;
+  right: 0.9rem;
+  font-size: 0.9rem;
+}
+
+.certificate-caption {
+  font-size: 0.8rem;
+  color: #6b5a58;
 }
 
 /* Адаптив */
 @media (max-width: 900px) {
+  .certificates-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .certificates-hero__panel {
+    padding: 1.5rem;
+  }
+
   .certificates-grid {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
 @media (max-width: 600px) {
+  .certificates-hero {
+    padding: 1.5rem;
+  }
+
   .certificates-grid {
     grid-template-columns: 1fr;
     max-width: 350px;

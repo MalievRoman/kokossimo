@@ -60,13 +60,8 @@ const ProductPage = () => {
     return `http://127.0.0.1:8000${img.startsWith('/') ? img : `/${img}`}`;
   };
 
-  // Моковые дополнительные фото (в реальности они приходят с бэка)
-  const images = [
-    getImageUrl(product.image),
-    "https://placehold.co/600x600/F5E6D3/8B4513?text=Photo+2",
-    "https://placehold.co/600x600/F5E6D3/8B4513?text=Photo+3",
-    "https://placehold.co/600x600/F5E6D3/8B4513?text=Photo+4"
-  ];
+  // Пока используем только реальные изображения с бэка
+  const images = [getImageUrl(product.image)].filter(Boolean);
 
   const handleAddToCart = () => {
     addToCart(product, quantity);
@@ -97,17 +92,19 @@ const ProductPage = () => {
                {discount > 0 && <span className="product-badge sale">-{discount}%</span>}
             </div>
             
-            <div className="gallery-thumbs">
-              {images.map((img, index) => (
-                <div 
-                  key={index}
-                  className={`gallery-thumb ${currentImage === index ? 'active' : ''}`}
-                  onClick={() => setCurrentImage(index)}
-                >
-                  <img src={img} alt={`Thumb ${index}`} />
-                </div>
-              ))}
-            </div>
+            {images.length > 1 && (
+              <div className="gallery-thumbs">
+                {images.map((img, index) => (
+                  <div 
+                    key={index}
+                    className={`gallery-thumb ${currentImage === index ? 'active' : ''}`}
+                    onClick={() => setCurrentImage(index)}
+                  >
+                    <img src={img} alt={`Thumb ${index}`} />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* ИНФОРМАЦИЯ */}

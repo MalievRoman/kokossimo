@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Search, ShoppingCart, Heart, User, Menu, X, ChevronDown, LayoutGrid } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 import { useFavorites } from '../../context/FavoritesContext';
+import { getProducts } from '../../services/api';
 import './Header.css';
 
 const Header = () => {
@@ -11,12 +12,54 @@ const Header = () => {
   const [isClientMenuOpen, setIsClientMenuOpen] = useState(false);
   const [isContactsMenuOpen, setIsContactsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [allProducts, setAllProducts] = useState([]);
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
   const { getTotalItems } = useCart();
   const { getFavoritesCount } = useFavorites();
   const searchRef = useRef(null);
   const searchBtnRef = useRef(null);
   const clientMenuRef = useRef(null);
   const contactsMenuRef = useRef(null);
+  const navigate = useNavigate();
+
+  const normalizeText = (value) =>
+    value
+      .toLowerCase()
+      .replace(/ё/g, 'е')
+      .replace(/[^a-zа-я0-9\s]/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+  const levenshtein = (a, b) => {
+    if (a === b) return 0;
+    if (!a.length) return b.length;
+    if (!b.length) return a.length;
+
+    const matrix = Array.from({ length: a.length + 1 }, () => []);
+    for (let i = 0; i <= a.length; i += 1) matrix[i][0] = i;
+    for (let j = 0; j <= b.length; j += 1) matrix[0][j] = j;
+
+    for (let i = 1; i <= a.length; i += 1) {
+      for (let j = 1; j <= b.length; j += 1) {
+        const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j - 1] + cost
+        );
+      }
+    }
+    return matrix[a.length][b.length];
+  };
+
+  const getSimilarity = (query, text) => {
+    if (!query || !text) return 0;
+    if (text.includes(query)) return 1;
+    const distance = levenshtein(query, text);
+    return 1 - distance / Math.max(query.length, text.length);
+  };
 
   // Отслеживаем скролл для эффекта прозрачности/тени
   useEffect(() => {
@@ -79,6 +122,52 @@ const Header = () => {
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, [isContactsMenuOpen]);
 
+  useEffect(() => {
+    if ((!isSearchOpen && !searchQuery) || allProducts.length > 0) return;
+
+    setIsSearching(true);
+    getProducts()
+      .then((response) => {
+        const data = Array.isArray(response.data) ? response.data : (response.data.results || []);
+        setAllProducts(data);
+      })
+      .catch(() => {
+        setAllProducts([]);
+      })
+      .finally(() => {
+        setIsSearching(false);
+      });
+  }, [isSearchOpen, allProducts.length]);
+
+  useEffect(() => {
+    const query = normalizeText(searchQuery);
+    if (!query || query.length < 1) {
+      setSearchResults([]);
+      return;
+    }
+
+    const results = allProducts
+      .map((product) => {
+        const name = normalizeText(product.name || '');
+        const score = getSimilarity(query, name);
+        return { product, score };
+      })
+      .filter(({ score, product }) => score >= 0.35 || normalizeText(product.name || '').includes(query))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 6)
+      .map(({ product }) => product);
+
+    setSearchResults(results);
+  }, [searchQuery, allProducts]);
+
+  const handleSearchSubmit = (event) => {
+    event.preventDefault();
+    const query = searchQuery.trim();
+    if (!query) return;
+    navigate(`/catalog?q=${encodeURIComponent(query)}`);
+    setIsSearchOpen(false);
+  };
+
   return (
     <header className={`header ${isScrolled ? 'scrolled' : ''}`}>
       <div className="container header__container">
@@ -107,13 +196,59 @@ const Header = () => {
           </Link>
         </div>
 
-        <div
+        <form
           className={`header__search ${isSearchOpen ? 'is-open' : ''}`}
           ref={searchRef}
+          onSubmit={handleSearchSubmit}
         >
           <Search size={18} />
-          <input type="text" placeholder="" aria-label="Поиск" />
-        </div>
+          <input
+            type="text"
+            placeholder="Поиск"
+            aria-label="Поиск"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            onFocus={() => setIsSearchOpen(true)}
+          />
+          {searchQuery && (
+            <div className="header__search-results">
+              {isSearching && (
+                <div className="header__search-empty">Поиск...</div>
+              )}
+              {!isSearching && searchResults.length === 0 && (
+                <div className="header__search-empty">Ничего не найдено</div>
+              )}
+              {!isSearching && searchResults.length > 0 && (
+                <>
+                  {searchResults.map((product) => (
+                    <button
+                      type="button"
+                      key={product.id}
+                      className="header__search-item"
+                      onClick={() => {
+                        navigate(`/product/${product.id}`);
+                        setIsSearchOpen(false);
+                        setSearchQuery('');
+                      }}
+                    >
+                      {product.name}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    className="header__search-item header__search-all"
+                    onClick={() => {
+                      navigate(`/catalog?q=${encodeURIComponent(searchQuery)}`);
+                      setIsSearchOpen(false);
+                    }}
+                  >
+                    Все результаты
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </form>
 
         <div className="header__right">
           <nav className={`header__nav ${isMenuOpen ? 'active' : ''}`}>

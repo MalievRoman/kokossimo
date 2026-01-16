@@ -1,32 +1,71 @@
 .hero {
-  background-color: #dcbcb9; /* Примерный розовый цвет с макета */
-  background: linear-gradient(90deg, #dcbcb9 0%, #e8cfcd 100%);
+  background-color: #dcbcb9;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
   position: relative;
   overflow: hidden;
-  padding: 4rem 0;
-  min-height: 500px; /* Высота баннера */
+  padding: 0;
+  min-height: 662px;
   display: flex;
   align-items: center;
+  transition: background 0.5s ease;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.25);
+  z-index: 1;
+}
+
+.hero__track {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.6s ease;
+  position: relative;
+  z-index: 2;
+}
+
+.hero__slide {
+  flex: 0 0 100%;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: center;
+  min-height: 662px;
+  position: relative;
+}
+
+.hero__slide::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.25);
+  z-index: 1;
 }
 
 .hero__container {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   width: 100%;
   position: relative;
   z-index: 2;
 }
 
 .hero__content {
-  max-width: 600px;
-  padding-right: 2rem;
-  
-  /* Добавляем flex-контейнер, чтобы выстроить элементы в колонку */
+  max-width: 640px;
   display: flex;
-  flex-direction: column; 
-  align-items: flex-start; /* Прижимаем всё влево */
+  flex-direction: column;
+  align-items: flex-start;
   justify-content: center;
+  color: #fff;
+  position: relative;
+  z-index: 2;
 }
 
 .hero__title {
@@ -41,35 +80,25 @@
 
 .hero__btn {
   display: inline-block;
-  border: 1px solid #8B4513; /* Коричневая рамка */
-  color: #4a2c2a;
-  padding: 1rem 2.5rem;
+  border: 2px solid #7c2b2a;
+  color: #7c2b2a;
+  padding: 13px 17px;
   text-decoration: none;
   text-transform: uppercase;
-  font-weight: 500;
-  font-size: 0.9rem;
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 0.04em;
   transition: all 0.3s ease;
   background-color: transparent;
+  border-radius: 4px;
 }
 
 .hero__btn:hover {
-  background-color: #8B4513;
-  color: white;
+  background-color: #7c2b2a;
+  color: #fff;
 }
 
-.hero__image-wrapper {
-  flex-grow: 1;
-  display: flex;
-  justify-content: flex-end;
-}
-
-.hero__image {
-  max-width: 100%;
-  max-height: 450px;
-  object-fit: contain;
-  /* Добавим тень, чтобы отделить объект от фона */
-  filter: drop-shadow(0 10px 20px rgba(0,0,0,0.15));
-}
+/* Фон слайдов теперь на секции */
 
 /* Декоративные элементы управления слайдером */
 .hero__controls {
@@ -126,6 +155,7 @@
   transform: translateX(-50%);
   display: flex;
   gap: 0.5rem;
+  z-index: 3;
 }
 
 .dot {
@@ -143,6 +173,10 @@
 @media (max-width: 640px) {
   .hero {
     padding: 2.5rem 0;
+    min-height: 360px;
+  }
+
+  .hero__slide {
     min-height: 360px;
   }
 
@@ -165,16 +199,6 @@
 
   .hero__btn {
     padding: 0.85rem 2rem;
-  }
-
-  .hero__image {
-    max-height: 260px;
-  }
-
-  .hero__image-placeholder {
-    width: 240px;
-    height: 240px;
-    font-size: 1.1rem;
   }
 
   .hero__controls {
@@ -200,63 +224,12 @@
     max-width: 520px;
   }
 
-  .hero__image {
-    max-height: 360px;
+  .hero__content {
+    max-width: 520px;
   }
 }
 
-/* Добавить в конец файла */
-.hero__image-placeholder {
-  width: 400px;
-  height: 400px;
-  background-color: rgba(255, 255, 255, 0.3);
-  border: 2px dashed rgba(255, 255, 255, 0.5);
-  border-radius: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-weight: bold;
-  font-size: 1.5rem;
-  will-change: transform, opacity;
-}
-
-.hero__image-placeholder.slide-next {
-  animation: heroSlideNext 0.6s ease;
-}
-
-.hero__image-placeholder.slide-prev {
-  animation: heroSlidePrev 0.6s ease;
-}
-
-@keyframes heroSlideNext {
-  from {
-    transform: translateX(48px);
-    opacity: 0.6;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-@keyframes heroSlidePrev {
-  from {
-    transform: translateX(-48px);
-    opacity: 0.6;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-/* Добавьте/обновите эти стили в HeroBlock.css */
-
-.hero {
-  /* ... старые стили ... */
-  transition: background 0.5s ease; /* Плавная смена фона если нужно */
-}
+/* Удалены стили плейсхолдера и дубли */
 
 /* Анимация контейнера */
 .hero__container {

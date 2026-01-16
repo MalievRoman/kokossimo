@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Instagram, Send, Phone, Mail } from 'lucide-react';
+import { Instagram, Send, Phone, MessageCircle } from 'lucide-react';
 import './Footer.css';
 
 const Footer = () => {
@@ -11,17 +11,13 @@ const Footer = () => {
         <div className="footer__col">
           <h3 className="footer__title">КАТАЛОГ</h3>
           <ul className="footer__list">
-            <li><Link to="/catalog/face">Уход для лица</Link></li>
-            <li><Link to="/catalog/body">Уход для тела</Link></li>
-            <li><Link to="/catalog/hair">Уход за волосами</Link></li>
-            <li><Link to="/catalog/makeup">Макияж</Link></li>
-            <li><Link to="/catalog/perfume">Парфюмерия</Link></li>
-            <li><Link to="/catalog/vitamins">Витамины</Link></li>
-            <li><Link to="/catalog/brands">Бренды</Link></li>
-            <li><Link to="/catalog/sets">Наборы косметики</Link></li>
+            <li><Link to="/catalog?filter=уход-за-лицом">Уход за лицом</Link></li>
+            <li><Link to="/catalog?filter=уход-за-телом">Уход за телом</Link></li>
+            <li><Link to="/catalog?filter=уход-за-волосами">Уход за волосами</Link></li>
+            <li><Link to="/catalog?filter=макияж">Макияж</Link></li>
+            <li><Link to="/catalog?filter=парфюмерия">Парфюмерия</Link></li>
+            <li><Link to="/catalog?filter=наборы-миниатюр">Наборы миниатюр</Link></li>
             <li><Link to="/certificates">Сертификаты</Link></li>
-            <li><Link to="/new">Новинки</Link></li>
-            <li><Link to="/sale" className="sale-link">SALE %</Link></li>
           </ul>
         </div>
 
@@ -30,9 +26,9 @@ const Footer = () => {
           <h3 className="footer__title">ПОКУПАТЕЛЯМ</h3>
           <ul className="footer__list">
             <li><Link to="/delivery">Доставка и оплата</Link></li>
-            <li><Link to="/returns">Возврат</Link></li>
-            <li><Link to="/reviews">Отзывы</Link></li>
-            <li><Link to="/stores">Офлайн магазины</Link></li>
+            <li><Link to="/certificates">Подарочные сертификаты</Link></li>
+            <li><Link to="/contacts">Контакты</Link></li>
+            <li><Link to="/about">О компании</Link></li>
           </ul>
         </div>
 
@@ -40,13 +36,23 @@ const Footer = () => {
         <div className="footer__col">
           <h3 className="footer__title">КОНТАКТЫ</h3>
           <ul className="footer__list contacts-list">
-            <li>+7 (999) 123-45-67</li>
-            <li>Email: info@kokossimo.ru</li>
+            <li>
+              <a href="tel:+79375068999">+7 (937) 506-89-99</a>
+            </li>
           </ul>
           <div className="footer__socials">
-            <a href="#" className="social-icon"><Instagram size={20} /></a>
-            <a href="#" className="social-icon"><Send size={20} /></a>
-            <a href="#" className="social-icon"><Phone size={20} /></a> {/* WhatsApp иконка */}
+            <a href="https://instagram.com" className="social-icon" target="_blank" rel="noreferrer">
+              <Instagram size={20} />
+            </a>
+            <a href="https://t.me/" className="social-icon" target="_blank" rel="noreferrer">
+              <Send size={20} />
+            </a>
+            <a href="https://wa.me/79375068999" className="social-icon" target="_blank" rel="noreferrer">
+              <MessageCircle size={20} />
+            </a>
+            <a href="tel:+79375068999" className="social-icon">
+              <Phone size={20} />
+            </a>
           </div>
         </div>
 
