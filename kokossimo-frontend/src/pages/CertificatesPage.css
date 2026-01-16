@@ -12,7 +12,7 @@
   gap: 2rem;
   margin-bottom: 3rem;
   max-width: 1200px;
-  height: 712px;
+  height: auto;
   margin-left: auto;
   margin-right: auto;
 }
@@ -23,7 +23,7 @@
   padding: 2rem;
   position: relative;
   overflow: hidden;
-  width: 400px;
+  width: 100%;
   min-height: 592px;
 }
 
@@ -78,8 +78,23 @@
 
 .custom-amount-wrapper {
   display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
   max-width: 100%;
   margin-top: 2rem;
+}
+
+.custom-amount-wrapper input {
+  border: 1px solid #e7dcd8;
+  border-radius: 8px;
+  padding: 0.75rem 0.9rem;
+  font-size: 0.95rem;
+}
+
+.custom-amount-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .buy-btn {
@@ -94,12 +109,27 @@
   text-transform: uppercase;
   font-size: 0.7rem;
   letter-spacing: 0.04em;
-  width: 100%;
+  width: auto;
 }
 
 .buy-btn:hover {
   background-color: #7c2b2a;
   color: white;
+}
+
+.buy-btn--ghost {
+  border-color: #cbb9b6;
+  color: #6b5a58;
+}
+
+.buy-btn--ghost:hover {
+  background-color: #6b5a58;
+  color: #fff;
+}
+
+.custom-amount-status {
+  font-size: 0.85rem;
+  color: #7c2b2a;
 }
 
 .certificates-info {
@@ -153,7 +183,8 @@
 .certificate-card {
   background-color: #7c0f0f;
   color: white;
-  height: 592px;
+  height: 100%;
+  min-height: 520px;
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
@@ -248,23 +279,29 @@
 }
 
 /* Адаптив */
-@media (max-width: 900px) {
+@media (max-width: 640px) {
   .certificates-hero {
     grid-template-columns: 1fr;
+    border-radius: 0;
+    padding: 1.25rem;
   }
 
   .certificates-hero__panel {
     padding: 1.5rem;
+    min-height: auto;
+    border-radius: 0;
   }
 
-  .certificates-grid {
-    grid-template-columns: repeat(2, 1fr);
+  .intro-content {
+    flex-direction: column;
   }
-}
 
-@media (max-width: 600px) {
-  .certificates-hero {
-    padding: 1.5rem;
+  .intro-bg-letter {
+    position: absolute;
+    top: 180px;
+    left: auto;
+    right: 0;
+    font-size: 9rem;
   }
 
   .certificates-grid {
@@ -278,10 +315,72 @@
   }
   
   .buy-btn {
-    padding: 1rem;
+    padding: 0.95rem 1rem;
+    width: 100%;
+  }
+
+  .custom-amount-actions {
+    flex-direction: column;
   }
 
   .certificates-info__section {
     padding: 1.5rem;
+  }
+
+  .certificate-card {
+    min-height: 420px;
+  }
+
+  .cert-price {
+    font-size: 1.7rem;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1199px) {
+  .certificates-hero {
+    grid-template-columns: 1fr;
+    border-radius: 0;
+  }
+
+  .certificates-hero__panel {
+    padding: 1.75rem;
+    min-height: auto;
+    border-radius: 0;
+  }
+
+  .intro-content {
+    flex-direction: column;
+  }
+
+  .intro-bg-letter {
+    position: absolute;
+    top: 200px;
+    left: auto;
+    right: 0;
+    font-size: 10rem;
+  }
+
+  .certificates-grid {
+    grid-template-columns: repeat(2, minmax(180px, 1fr));
+  }
+
+  .certificate-card {
+    min-height: 460px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .certificates-hero {
+    grid-template-columns: 400px 1fr;
+    border-radius: 16px;
+    padding: 2.2rem;
+  }
+
+  .certificates-hero__panel {
+    border-radius: 12px;
+  }
+
+  .certificates-grid {
+    grid-template-columns: repeat(3, minmax(180px, 1fr));
   }
 }

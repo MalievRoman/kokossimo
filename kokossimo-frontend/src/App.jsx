@@ -18,6 +18,8 @@ import CartPage from './pages/CartPage';
 import FavoritesPage from './pages/FavoritesPage';
 import ProfilePage from './pages/ProfilePage';
 import AuthPage from './pages/AuthPage';
+import PaymentPage from './pages/PaymentPage';
+import CheckoutSuccessPage from './pages/CheckoutSuccessPage';
 
 function App() {
   return (
@@ -39,6 +41,8 @@ function App() {
           <Route path="/cart" element={<CartPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/auth" element={<AuthPage />} />
+          <Route path="/checkout" element={<PaymentPage />} />
+          <Route path="/checkout/success" element={<CheckoutSuccessPage />} />
           <Route path="/product/:id" element={<ProductPage />} />
           
           {/* 3. И ТОЛЬКО В САМОМ КОНЦЕ - заглушка для всего остального */}

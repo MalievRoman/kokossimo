@@ -111,14 +111,6 @@ const ProductPage = () => {
           <div className="product-info">
             <div className="product-meta">
               <span className="sku">Артикул: {product.id}00{product.id}</span>
-              <div className="rating">
-                <Star size={16} fill="#FFD700" color="#FFD700" />
-                <Star size={16} fill="#FFD700" color="#FFD700" />
-                <Star size={16} fill="#FFD700" color="#FFD700" />
-                <Star size={16} fill="#FFD700" color="#FFD700" />
-                <Star size={16} fill="#FFD700" color="#FFD700" />
-                <span className="rating-count">(12 отзывов)</span>
-              </div>
             </div>
 
             <h1 className="product-title">{product.name}</h1>
@@ -163,11 +155,6 @@ const ProductPage = () => {
               </button>
             </div>
             
-            <div className="product-extra-actions">
-               <button className="share-btn">
-                 <Share2 size={16} /> Поделиться
-               </button>
-            </div>
           </div>
         </div>
 
@@ -185,18 +172,6 @@ const ProductPage = () => {
               onClick={() => setActiveTab('specs')}
             >
               ХАРАКТЕРИСТИКИ
-            </button>
-            <button 
-              className={`tab-btn ${activeTab === 'delivery' ? 'active' : ''}`}
-              onClick={() => setActiveTab('delivery')}
-            >
-              ДОСТАВКА
-            </button>
-            <button 
-              className={`tab-btn ${activeTab === 'reviews' ? 'active' : ''}`}
-              onClick={() => setActiveTab('reviews')}
-            >
-              ОТЗЫВЫ (12)
             </button>
           </div>
 
@@ -237,20 +212,6 @@ const ProductPage = () => {
               </div>
             )}
             
-            {activeTab === 'delivery' && (
-              <div className="text-content">
-                <p>Бесплатная доставка по Москве при заказе от 5000 ₽.</p>
-                <p>Срок доставки: 1-2 дня.</p>
-                <p>Доставка по России: СДЭК, Почта России (3-7 дней).</p>
-              </div>
-            )}
-            
-            {activeTab === 'reviews' && (
-              <div className="reviews-placeholder">
-                <p>Здесь пока нет отзывов. Будьте первым!</p>
-                <button className="write-review-btn">Написать отзыв</button>
-              </div>
-            )}
           </div>
         </div>
 

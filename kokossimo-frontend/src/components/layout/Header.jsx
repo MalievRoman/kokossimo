@@ -11,6 +11,8 @@ const Header = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isClientMenuOpen, setIsClientMenuOpen] = useState(false);
   const [isContactsMenuOpen, setIsContactsMenuOpen] = useState(false);
+  const [isContactsMobileMenuOpen, setIsContactsMobileMenuOpen] = useState(false);
+  const [isClientMobileMenuOpen, setIsClientMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [allProducts, setAllProducts] = useState([]);
@@ -20,8 +22,11 @@ const Header = () => {
   const { getFavoritesCount } = useFavorites();
   const searchRef = useRef(null);
   const searchBtnRef = useRef(null);
+  const searchResultsRef = useRef(null);
   const clientMenuRef = useRef(null);
   const contactsMenuRef = useRef(null);
+  const contactsMobileMenuRef = useRef(null);
+  const clientMobileMenuRef = useRef(null);
   const navigate = useNavigate();
 
   const normalizeText = (value) =>
@@ -82,10 +87,9 @@ const Header = () => {
     if (!isSearchOpen) return;
 
     const handleOutsideClick = (event) => {
-      const searchEl = searchRef.current;
-      const buttonEl = searchBtnRef.current;
+      const resultsEl = searchResultsRef.current;
 
-      if (searchEl?.contains(event.target) || buttonEl?.contains(event.target)) {
+      if (resultsEl?.contains(event.target)) {
         return;
       }
 
@@ -121,6 +125,32 @@ const Header = () => {
     document.addEventListener('mousedown', handleOutsideClick);
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, [isContactsMenuOpen]);
+
+  useEffect(() => {
+    if (!isContactsMobileMenuOpen) return;
+
+    const handleOutsideClick = (event) => {
+      const menuEl = contactsMobileMenuRef.current;
+      if (menuEl?.contains(event.target)) return;
+      setIsContactsMobileMenuOpen(false);
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [isContactsMobileMenuOpen]);
+
+  useEffect(() => {
+    if (!isClientMobileMenuOpen) return;
+
+    const handleOutsideClick = (event) => {
+      const menuEl = clientMobileMenuRef.current;
+      if (menuEl?.contains(event.target)) return;
+      setIsClientMobileMenuOpen(false);
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [isClientMobileMenuOpen]);
 
   useEffect(() => {
     if ((!isSearchOpen && !searchQuery) || allProducts.length > 0) return;
@@ -210,8 +240,8 @@ const Header = () => {
             onChange={(event) => setSearchQuery(event.target.value)}
             onFocus={() => setIsSearchOpen(true)}
           />
-          {searchQuery && (
-            <div className="header__search-results">
+          {searchQuery && isSearchOpen && (
+            <div className="header__search-results" ref={searchResultsRef}>
               {isSearching && (
                 <div className="header__search-empty">Поиск...</div>
               )}
@@ -301,6 +331,62 @@ const Header = () => {
                   to="/certificates"
                   className="header__dropdown-item"
                   onClick={() => setIsClientMenuOpen(false)}
+                >
+                  Сертификаты
+                </Link>
+              </div>
+            </div>
+          </nav>
+          <nav className="header__nav-mobile">
+            <div className="header__dropdown" ref={contactsMobileMenuRef}>
+              <button
+                type="button"
+                className="header__link header__dropdown-toggle header__dropdown-toggle--light"
+                onClick={() => setIsContactsMobileMenuOpen((prev) => !prev)}
+                aria-expanded={isContactsMobileMenuOpen}
+                aria-haspopup="true"
+              >
+                Контакты <ChevronDown size={16} />
+              </button>
+              <div className={`header__dropdown-menu ${isContactsMobileMenuOpen ? 'is-open' : ''}`}>
+                <Link
+                  to="/about"
+                  className="header__dropdown-item"
+                  onClick={() => setIsContactsMobileMenuOpen(false)}
+                >
+                  О нас
+                </Link>
+                <Link
+                  to="/contacts"
+                  className="header__dropdown-item"
+                  onClick={() => setIsContactsMobileMenuOpen(false)}
+                >
+                  Контакты
+                </Link>
+              </div>
+            </div>
+            <div className="header__dropdown" ref={clientMobileMenuRef}>
+              <button
+                type="button"
+                className="header__link header__dropdown-toggle header__dropdown-toggle--light"
+                onClick={() => setIsClientMobileMenuOpen((prev) => !prev)}
+                aria-expanded={isClientMobileMenuOpen}
+                aria-haspopup="true"
+              >
+                Клиентам <ChevronDown size={16} />
+              </button>
+              <div className={`header__dropdown-menu ${isClientMobileMenuOpen ? 'is-open' : ''}`}>
+                <Link
+                  to="/delivery"
+                  className="header__dropdown-item"
+                  onClick={() => setIsClientMobileMenuOpen(false)}
+                >
+                  Доставка
+                </Link>
+                <Link
+                  to="/certificates"
+                  className="header__dropdown-item"
+                  onClick={() => setIsClientMobileMenuOpen(false)}
                 >
                   Сертификаты
                 </Link>

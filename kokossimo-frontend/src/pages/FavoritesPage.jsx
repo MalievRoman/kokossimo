@@ -35,7 +35,7 @@ const FavoritesPage = () => {
                 Добавить все в корзину
               </button>
               <button 
-                className="btn-link"
+                className="btn-secondary btn-secondary--outline"
                 onClick={clearFavorites}
               >
                 Очистить избранное

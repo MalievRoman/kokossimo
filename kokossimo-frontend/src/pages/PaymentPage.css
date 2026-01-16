@@ -1,0 +1,171 @@
+.payment-page {
+  padding: 2rem 0 4rem;
+  min-height: 60vh;
+}
+
+.payment-empty {
+  margin-top: 2rem;
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  text-align: center;
+  color: #555;
+}
+
+.payment-layout {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+.payment-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.payment-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+.payment-card h2 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.payment-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.payment-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  color: #555;
+  font-size: 0.9rem;
+}
+
+.payment-field input,
+.payment-field textarea {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 0.75rem 0.85rem;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.2s;
+  background: #fff;
+}
+
+.payment-field input:focus,
+.payment-field textarea:focus {
+  border-color: #8B4513;
+}
+
+.payment-field--full {
+  grid-column: 1 / -1;
+}
+
+.payment-options {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.payment-option {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.95rem;
+  color: #555;
+}
+
+.payment-option input {
+  accent-color: #8B4513;
+}
+
+.payment-agreement {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.payment-agreement input {
+  accent-color: #8B4513;
+}
+
+.payment-summary {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  height: fit-content;
+  position: sticky;
+  top: 100px;
+}
+
+.payment-summary h2 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 1.25rem;
+}
+
+.payment-summary__row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+  font-size: 0.95rem;
+  color: #555;
+}
+
+.payment-summary__total {
+  font-weight: 600;
+  font-size: 1.1rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #eee;
+  color: #333;
+}
+
+.payment-summary__note {
+  margin-top: 1.25rem;
+  font-size: 0.85rem;
+  color: #999;
+  text-align: center;
+}
+
+.payment-status {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.payment-status--error {
+  background: #fff3f3;
+  color: #b04b4b;
+  border: 1px solid #f0c7c7;
+}
+
+.payment-status--success {
+  background: #f3fbf6;
+  color: #2c6b45;
+  border: 1px solid #ccebd9;
+}
+
+@media (max-width: 1024px) {
+  .payment-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .payment-grid {
+    grid-template-columns: 1fr;
+  }
+}

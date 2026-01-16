@@ -1,20 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import ProductCard from '../components/product/ProductCard';
 import { getProducts, getCategories } from '../services/api';
-import { Filter } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import './CatalogPage.css';
 
 const CatalogPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [sortBy, setSortBy] = useState('popular');
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [openFilter, setOpenFilter] = useState(null);
   const [catalogProducts, setCatalogProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [priceFrom, setPriceFrom] = useState('');
   const [priceTo, setPriceTo] = useState('');
   const [loading, setLoading] = useState(true);
+  const categoryMenuRef = useRef(null);
+  const priceMenuRef = useRef(null);
 
   // Загрузка категорий
   useEffect(() => {
@@ -141,6 +143,17 @@ const CatalogPage = () => {
       });
   }, [searchParams, selectedCategories, sortBy]);
 
+  useEffect(() => {
+    if (!openFilter) return;
+    const handleOutsideClick = (event) => {
+      if (categoryMenuRef.current?.contains(event.target)) return;
+      if (priceMenuRef.current?.contains(event.target)) return;
+      setOpenFilter(null);
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [openFilter]);
+
   const handleCategoryChange = (categorySlug) => {
     setSelectedCategories(prev => 
       prev.includes(categorySlug) 
@@ -162,6 +175,13 @@ const CatalogPage = () => {
     setSearchParams(nextParams);
   };
 
+  const resetFilters = () => {
+    setSelectedCategories([]);
+    setPriceFrom('');
+    setPriceTo('');
+    setSearchParams(searchParams.get('q') ? { q: searchParams.get('q') } : {});
+  };
+
   return (
     <div className="catalog-page page-animation">
       <div className="container">
@@ -179,77 +199,96 @@ const CatalogPage = () => {
         )}
 
         <div className="catalog-layout">
-          
-          {/* БОКОВАЯ ПАНЕЛЬ ФИЛЬТРОВ (Sidebar) */}
-          <aside className={`catalog-sidebar ${isFilterOpen ? 'open' : ''}`}>
-            <div className="filter-group">
-              <h3 className="filter-title">Категории</h3>
-              <ul className="filter-list">
-                {categories.map((category) => (
-                  <li key={category.id}>
-                    <label>
-                      <input 
-                        type="checkbox" 
-                        checked={selectedCategories.includes(category.slug)}
-                        onChange={() => handleCategoryChange(category.slug)}
-                      />
-                      {category.name}
-                    </label>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="filter-group">
-              <h3 className="filter-title">Цена, ₽</h3>
-              <div className="price-inputs">
-                <input
-                  type="number"
-                  placeholder="от 0"
-                  value={priceFrom}
-                  onChange={(event) => setPriceFrom(event.target.value)}
-                />
-                <span className="dash">—</span>
-                <input
-                  type="number"
-                  placeholder="до 50000"
-                  value={priceTo}
-                  onChange={(event) => setPriceTo(event.target.value)}
-                />
-              </div>
-            </div>
-
-            <button
-              className="apply-filters-btn"
-              onClick={applyFilters}
-            >
-              ПРИМЕНИТЬ ФИЛЬТРЫ
-            </button>
-
-            <button 
-              className="apply-filters-btn"
-              onClick={() => {
-                setSelectedCategories([]);
-                setPriceFrom('');
-                setPriceTo('');
-                setSearchParams({});
-              }}
-            >
-              СБРОСИТЬ ФИЛЬТРЫ
-            </button>
-          </aside>
 
           {/* ОСНОВНОЙ КОНТЕНТ */}
           <div className="catalog-content">
             
             {/* Верхняя панель управления */}
             <div className="catalog-controls">
-              <button 
-                className="mobile-filter-btn" 
-                onClick={() => setIsFilterOpen(!isFilterOpen)}
-              >
-                <Filter size={18} /> Фильтры
-              </button>
+              <div className="catalog-filters">
+                <div className="catalog-filter" ref={categoryMenuRef}>
+                  <button
+                    type="button"
+                    className="catalog-filter-toggle"
+                    onClick={() =>
+                      setOpenFilter(openFilter === 'categories' ? null : 'categories')
+                    }
+                    aria-expanded={openFilter === 'categories'}
+                    aria-haspopup="true"
+                  >
+                    Категории
+                    {selectedCategories.length > 0 && (
+                      <span className="catalog-filter-count">{selectedCategories.length}</span>
+                    )}
+                    <ChevronDown size={16} />
+                  </button>
+                  <div
+                    className={`catalog-filter-menu ${openFilter === 'categories' ? 'is-open' : ''}`}
+                  >
+                    {categories.length === 0 ? (
+                      <div className="catalog-filter-empty">Категории не найдены</div>
+                    ) : (
+                      <ul className="catalog-filter-list">
+                        {categories.map((category) => (
+                          <li key={category.id}>
+                            <label>
+                              <input
+                                type="checkbox"
+                                checked={selectedCategories.includes(category.slug)}
+                                onChange={() => handleCategoryChange(category.slug)}
+                              />
+                              {category.name}
+                            </label>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+
+                <div className="catalog-filter" ref={priceMenuRef}>
+                  <button
+                    type="button"
+                    className="catalog-filter-toggle"
+                    onClick={() => setOpenFilter(openFilter === 'price' ? null : 'price')}
+                    aria-expanded={openFilter === 'price'}
+                    aria-haspopup="true"
+                  >
+                    Цена
+                    {(priceFrom || priceTo) && <span className="catalog-filter-count">1</span>}
+                    <ChevronDown size={16} />
+                  </button>
+                  <div
+                    className={`catalog-filter-menu ${openFilter === 'price' ? 'is-open' : ''}`}
+                  >
+                    <div className="catalog-filter-price">
+                      <input
+                        type="number"
+                        placeholder="от 0"
+                        value={priceFrom}
+                        onChange={(event) => setPriceFrom(event.target.value)}
+                      />
+                      <span className="dash">—</span>
+                      <input
+                        type="number"
+                        placeholder="до 50000"
+                        value={priceTo}
+                        onChange={(event) => setPriceTo(event.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <button className="catalog-filter-action" onClick={applyFilters}>
+                  Применить
+                </button>
+                <button
+                  className="catalog-filter-action catalog-filter-action--ghost"
+                  onClick={resetFilters}
+                >
+                  Сбросить
+                </button>
+              </div>
 
               <div className="sort-wrapper">
                 <span className="sort-label">Сортировка:</span>

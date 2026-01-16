@@ -1,14 +1,35 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getCurrentUser, logoutUser, updateProfile } from '../services/api';
+import { getCurrentUser, getMyOrders, logoutUser, updateProfile } from '../services/api';
 import './ProfilePage.css';
 
+const formatRuPhone = (value) => {
+  const digits = String(value || '').replace(/\D/g, '');
+  if (!digits) return '+7';
+  let normalized = digits;
+  if (normalized.startsWith('8')) {
+    normalized = `7${normalized.slice(1)}`;
+  }
+  if (!normalized.startsWith('7')) {
+    normalized = `7${normalized}`;
+  }
+  normalized = normalized.slice(0, 11);
+  const rest = normalized.slice(1);
+  let result = '+7';
+  if (rest.length > 0) result += `-${rest.slice(0, 3)}`;
+  if (rest.length > 3) result += `-${rest.slice(3, 6)}`;
+  if (rest.length > 6) result += `-${rest.slice(6, 8)}`;
+  if (rest.length > 8) result += `-${rest.slice(8, 10)}`;
+  return result;
+};
+
 const ProfilePage = () => {
+  const isAuthenticated = Boolean(localStorage.getItem('authToken'));
   const [profile, setProfile] = useState({
     first_name: '',
     last_name: '',
     email: '',
-    phone: '',
+    phone: '+7',
     city: '',
     street: '',
     house: '',
@@ -16,17 +37,37 @@ const ProfilePage = () => {
     postal_code: '',
   });
   const [status, setStatus] = useState({ type: '', message: '' });
+  const [orders, setOrders] = useState([]);
+  const [expandedOrders, setExpandedOrders] = useState({});
+  const [ordersLoading, setOrdersLoading] = useState(true);
 
   useEffect(() => {
     const token = localStorage.getItem('authToken');
-    if (!token) return;
+    if (!token) {
+      setOrdersLoading(false);
+      return;
+    }
 
     getCurrentUser(token)
       .then((response) => {
-        setProfile(response.data);
+        setProfile({
+          ...response.data,
+          phone: formatRuPhone(response.data?.phone || ''),
+        });
       })
       .catch(() => {
         setStatus({ type: 'error', message: 'Не удалось загрузить профиль.' });
+      });
+
+    getMyOrders(token)
+      .then((response) => {
+        setOrders(Array.isArray(response.data) ? response.data : []);
+      })
+      .catch(() => {
+        setOrders([]);
+      })
+      .finally(() => {
+        setOrdersLoading(false);
       });
   }, []);
 
@@ -97,6 +138,8 @@ const ProfilePage = () => {
         apartment: '',
         postal_code: '',
       });
+      setOrders([]);
+      setOrdersLoading(false);
       setStatus({ type: 'success', message: 'Вы вышли из аккаунта.' });
       setTimeout(() => setStatus({ type: '', message: '' }), 3000);
     }
@@ -120,11 +163,11 @@ const ProfilePage = () => {
                   : 'Гость'}
               </div>
               <div className="profile-meta">
-                {profile.email || profile.phone
-                  ? profile.email || profile.phone
+                {isAuthenticated
+                  ? profile.email || (profile.phone !== '+7' ? profile.phone : 'Заполните профиль')
                   : 'Войдите, чтобы сохранять заказы'}
               </div>
-              {!profile.email && !profile.phone ? (
+              {!isAuthenticated ? (
                 <Link to="/auth" className="btn-primary btn-primary--full">
                   Вход/Регистрация
                 </Link>
@@ -138,6 +181,68 @@ const ProfilePage = () => {
           </aside>
 
           <section className="profile-content">
+            <div className="profile-section">
+              <h2 className="section-title">ИСТОРИЯ ЗАКАЗОВ</h2>
+              {ordersLoading ? (
+                <p style={{ color: '#777' }}>Загрузка заказов...</p>
+              ) : orders.length === 0 ? (
+                <p style={{ color: '#777' }}>Заказов пока нет.</p>
+              ) : (
+                <div className="profile-orders">
+                  {orders.map((order) => {
+                    const isExpanded = Boolean(expandedOrders[order.id]);
+                    return (
+                      <div
+                        key={order.id}
+                        className="profile-order-card"
+                        role="button"
+                        tabIndex={0}
+                        onClick={() =>
+                          setExpandedOrders((prev) => ({
+                            ...prev,
+                            [order.id]: !prev[order.id],
+                          }))
+                        }
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            setExpandedOrders((prev) => ({
+                              ...prev,
+                              [order.id]: !prev[order.id],
+                            }));
+                          }
+                        }}
+                      >
+                      <div>
+                        <div className="profile-order-title">Заказ #{order.id}</div>
+                        <div className="profile-order-meta">
+                          {new Date(order.created_at).toLocaleDateString('ru-RU')} ·{' '}
+                          {order.items?.length || 0} товаров
+                        </div>
+                        {isExpanded && order.items?.length > 0 && (
+                          <div className="profile-order-items">
+                            {order.items.map((item) => (
+                              <div key={`${order.id}-${item.product_id || item.product_name}`} className="profile-order-item">
+                                <span className="profile-order-item-name">{item.product_name}</span>
+                                <span className="profile-order-item-qty">× {item.quantity}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <div className="profile-order-status">
+                        <span className="profile-order-status-label">{order.status}</span>
+                        <span className="profile-order-total">
+                          {Number(order.total_price).toLocaleString('ru-RU')} ₽
+                        </span>
+                      </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
             <div className="profile-section">
               <h2 className="section-title">ЛИЧНЫЕ ДАННЫЕ</h2>
               <div className="profile-grid">
@@ -170,7 +275,7 @@ const ProfilePage = () => {
                     placeholder="+7 (___) ___-__-__"
                     value={profile.phone}
                     onChange={(event) =>
-                      setProfile((prev) => ({ ...prev, phone: event.target.value }))
+                      setProfile((prev) => ({ ...prev, phone: formatRuPhone(event.target.value) }))
                     }
                   />
                 </label>

@@ -76,6 +76,8 @@ const ProductCard = ({ product }) => {
     toggleFavorite(product);
   };
 
+  const isGiftCertificate = product.is_gift_certificate;
+
   return (
     <div className="product-card">
       <div className="product-card__badges">
@@ -83,18 +85,32 @@ const ProductCard = ({ product }) => {
         {discount > 0 && <span className="badge badge--discount">– {discount}%</span>}
       </div>
       
-      <div className="product-card__image-container">
-        <Link to={`/product/${product.id}`} className="product-card__image-wrapper">
-          <img src={imageUrl} alt={product.name} className="product-card__image" />
-        </Link>
-        <button
-          className={`product-card__favorite ${favorite ? 'active' : ''}`}
-          onClick={handleFavoriteClick}
-          aria-label={favorite ? 'Удалить из избранного' : 'Добавить в избранное'}
-        >
-          <Heart size={20} fill={favorite ? 'currentColor' : 'none'} />
-        </button>
-      </div>
+      {!isGiftCertificate && (
+        <div className="product-card__image-container">
+          <Link to={`/product/${product.id}`} className="product-card__image-wrapper">
+            <img src={imageUrl} alt={product.name} className="product-card__image" />
+          </Link>
+          <button
+            className={`product-card__favorite ${favorite ? 'active' : ''}`}
+            onClick={handleFavoriteClick}
+            aria-label={favorite ? 'Удалить из избранного' : 'Добавить в избранное'}
+          >
+            <Heart size={20} fill={favorite ? 'currentColor' : 'none'} />
+          </button>
+        </div>
+      )}
+      {isGiftCertificate && (
+        <div className="product-card__image-container product-card__image-container--gift">
+          <div className="product-card__gift-label">Подарочный сертификат</div>
+          <button
+            className={`product-card__favorite ${favorite ? 'active' : ''}`}
+            onClick={handleFavoriteClick}
+            aria-label={favorite ? 'Удалить из избранного' : 'Добавить в избранное'}
+          >
+            <Heart size={20} fill={favorite ? 'currentColor' : 'none'} />
+          </button>
+        </div>
+      )}
       
       <div className="product-card__content">
         <Link to={`/product/${product.id}`} className="product-card__title">

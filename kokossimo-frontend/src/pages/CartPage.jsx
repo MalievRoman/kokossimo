@@ -22,6 +22,8 @@ const CartPage = () => {
     return `http://127.0.0.1:8000${image.startsWith('/') ? image : `/${image}`}`;
   };
 
+  const isAuthenticated = Boolean(localStorage.getItem('authToken'));
+
   return (
     <div className="cart-page page-animation">
       <div className="container">
@@ -47,10 +49,9 @@ const CartPage = () => {
             <div className="cart-items">
               <div className="cart-items__header">
                 <h2>Товары в корзине ({cartItems.length})</h2>
-                <button 
-                  className="btn-link" 
+                <button
+                  className="btn-secondary btn-secondary--outline"
                   onClick={clearCart}
-                  style={{ fontSize: '14px', color: '#999' }}
                 >
                   Очистить корзину
                 </button>
@@ -58,9 +59,15 @@ const CartPage = () => {
 
               {cartItems.map((item) => (
                 <div key={item.id} className="cart-item">
-                  <div className="cart-item__image">
-                    <img src={getImageUrl(item.image)} alt={item.name} />
-                  </div>
+                  {item.image ? (
+                    <div className="cart-item__image">
+                      <img src={getImageUrl(item.image)} alt={item.name} />
+                    </div>
+                  ) : (
+                    <div className="cart-item__image cart-item__image--gift">
+                      <span>Подарочный сертификат</span>
+                    </div>
+                  )}
                   
                   <div className="cart-item__info">
                     <h3 className="cart-item__name">{item.name}</h3>
@@ -112,9 +119,12 @@ const CartPage = () => {
                 <span>{getTotalPrice().toLocaleString('ru-RU')} ₽</span>
               </div>
               
-              <button className="btn-primary btn-primary--full">
+              <Link
+                to={isAuthenticated ? '/checkout' : '/auth'}
+                className="btn-primary btn-primary--full"
+              >
                 Оформить заказ
-              </button>
+              </Link>
               
               <Link to="/catalog" className="btn-link btn-link--center">
                 Продолжить покупки

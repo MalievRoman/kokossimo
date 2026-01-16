@@ -90,6 +90,81 @@
   gap: 1.2rem;
 }
 
+.profile-orders {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.profile-order-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid #eee;
+  border-radius: 10px;
+  background: #faf7f5;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.profile-order-card:hover {
+  border-color: #d9c6c3;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.05);
+}
+
+.profile-order-items {
+  margin-top: 0.6rem;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.profile-order-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.9rem;
+  color: #6b5a58;
+}
+
+.profile-order-item-name {
+  max-width: 320px;
+}
+
+.profile-order-item-qty {
+  white-space: nowrap;
+}
+
+.profile-order-title {
+  font-weight: 600;
+  color: #3a2f2f;
+  margin-bottom: 0.2rem;
+}
+
+.profile-order-meta {
+  font-size: 0.85rem;
+  color: #777;
+}
+
+.profile-order-status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
+}
+
+.profile-order-status-label {
+  font-size: 0.85rem;
+  color: #7c2b2a;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.profile-order-total {
+  font-weight: 600;
+  color: #2f2f2f;
+}
+
 .profile-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -166,5 +241,14 @@
 
   .profile-field--full {
     grid-column: auto;
+  }
+
+  .profile-order-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .profile-order-status {
+    align-items: flex-start;
   }
 }

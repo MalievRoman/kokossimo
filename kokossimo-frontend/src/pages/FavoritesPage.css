@@ -30,6 +30,16 @@
   transition: all 0.2s;
 }
 
+.btn-secondary--outline {
+  background: transparent;
+  color: #8B4513;
+}
+
+.btn-secondary--outline:hover {
+  background: #8B4513;
+  color: white;
+}
+
 .btn-secondary:hover {
   background: #8B4513;
   color: white;

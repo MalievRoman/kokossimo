@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 class Category(models.Model):
@@ -53,3 +54,78 @@ class Profile(models.Model):
 
     def __str__(self):
         return f"{self.user.username}"
+
+
+class Order(models.Model):
+    STATUS_CHOICES = [
+        ('new', 'Новый'),
+        ('processing', 'В обработке'),
+        ('paid', 'Оплачен'),
+        ('shipped', 'Отправлен'),
+        ('delivered', 'Доставлен'),
+        ('cancelled', 'Отменен'),
+    ]
+
+    PAYMENT_METHOD_CHOICES = [
+        ('cash_on_delivery', 'Наличными курьеру'),
+        ('cash_pickup', 'На кассе при самовывозе'),
+    ]
+
+    DELIVERY_METHOD_CHOICES = [
+        ('courier', 'Курьерская доставка'),
+        ('pickup', 'Самовывоз'),
+    ]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='orders'
+    )
+    status = models.CharField("Статус", max_length=20, choices=STATUS_CHOICES, default='new')
+    delivery_method = models.CharField("Способ доставки", max_length=20, choices=DELIVERY_METHOD_CHOICES, default='courier')
+    payment_method = models.CharField("Способ оплаты", max_length=20, choices=PAYMENT_METHOD_CHOICES, default='cash_on_delivery')
+
+    full_name = models.CharField("Имя и фамилия", max_length=200)
+    phone = models.CharField("Телефон", max_length=30)
+    email = models.EmailField("Email", blank=True)
+    city = models.CharField("Город", max_length=150)
+    street = models.CharField("Улица", max_length=200)
+    house = models.CharField("Дом", max_length=50)
+    apartment = models.CharField("Квартира", max_length=50, blank=True)
+    postal_code = models.CharField("Индекс", max_length=20, blank=True)
+    comment = models.TextField("Комментарий", blank=True)
+
+    total_price = models.DecimalField("Сумма заказа", max_digits=10, decimal_places=2, default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Заказ"
+        verbose_name_plural = "Заказы"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Заказ #{self.id}"
+
+
+class OrderItem(models.Model):
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
+    product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name='order_items', null=True, blank=True)
+    title = models.CharField("Название", max_length=200, blank=True)
+    is_gift_certificate = models.BooleanField("Подарочный сертификат", default=False)
+    quantity = models.PositiveIntegerField("Количество", default=1)
+    price = models.DecimalField("Цена на момент заказа", max_digits=10, decimal_places=2)
+
+    class Meta:
+        verbose_name = "Позиция заказа"
+        verbose_name_plural = "Позиции заказа"
+
+    def __str__(self):
+        label = self.product.name if self.product else self.title or "Позиция заказа"
+        return f"{label} x {self.quantity}"
+
+    @property
+    def line_total(self):
+        return self.price * self.quantity

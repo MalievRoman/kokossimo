@@ -41,6 +41,26 @@
   margin-bottom: 1rem;
 }
 
+.product-card__image-container--gift {
+  min-height: 200px;
+  background: #f8f1ee;
+  border: 1px dashed #d7c7c2;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 1.5rem;
+}
+
+.product-card__gift-label {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #7c2b2a;
+  font-weight: 600;
+}
+
 .product-card__image-wrapper {
   width: 100%;
   aspect-ratio: 1;

@@ -6,8 +6,17 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate, get_user_model
 from django.db.models import Q
-from .models import Product, Category, Profile
-from .serializers import ProductSerializer, CategorySerializer, RegisterSerializer, LoginSerializer, ProfileUpdateSerializer
+from .models import Product, Category, Profile, Order
+from .serializers import (
+    ProductSerializer,
+    CategorySerializer,
+    RegisterSerializer,
+    LoginSerializer,
+    ProfileUpdateSerializer,
+    OrderCreateSerializer,
+    OrderSerializer,
+    OrderListSerializer,
+)
 
 class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Category.objects.all()
@@ -194,3 +203,34 @@ def update_profile(request):
         "apartment": profile.apartment,
         "postal_code": profile.postal_code,
     })
+
+
+@api_view(['POST'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def create_order(request):
+    serializer = OrderCreateSerializer(data=request.data, context={'request': request})
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    order = serializer.save()
+    return Response(OrderSerializer(order, context={'request': request}).data, status=status.HTTP_201_CREATED)
+
+
+@api_view(['GET'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def list_orders(request):
+    orders = Order.objects.filter(user=request.user).prefetch_related('items__product').order_by('-created_at')
+    return Response(OrderSerializer(orders, many=True, context={'request': request}).data)
+
+
+@api_view(['GET'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def order_detail(request, order_id):
+    try:
+        order = Order.objects.prefetch_related('items__product').get(id=order_id, user=request.user)
+    except Order.DoesNotExist:
+        return Response({"detail": "Заказ не найден."}, status=status.HTTP_404_NOT_FOUND)
+    return Response(OrderSerializer(order, context={'request': request}).data)

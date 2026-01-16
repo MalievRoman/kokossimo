@@ -1,9 +1,14 @@
 import React, { useState } from 'react';
+import { useCart } from '../context/CartContext';
+import { useFavorites } from '../context/FavoritesContext';
 import './CertificatesPage.css';
 
 const CertificatesPage = () => {
+  const { addToCart } = useCart();
+  const { addToFavorites } = useFavorites();
   const [selectedAmount, setSelectedAmount] = useState(null);
   const [customAmount, setCustomAmount] = useState('');
+  const [status, setStatus] = useState('');
 
   const handleCustomAmountChange = (e) => {
     setCustomAmount(e.target.value);
@@ -15,14 +20,44 @@ const CertificatesPage = () => {
     setCustomAmount(''); // Сбрасываем поле своего номинала
   };
 
-  const handleBuy = () => {
-    const finalAmount = selectedAmount || customAmount;
-    if (!finalAmount) {
-      alert('Пожалуйста, выберите номинал или введите свой');
+  const getFinalAmount = () => {
+    const raw = selectedAmount || customAmount;
+    if (!raw) return null;
+    const normalized = String(raw).replace(/\s/g, '').replace(',', '.');
+    const value = Number.parseFloat(normalized);
+    if (Number.isNaN(value) || value <= 0) return null;
+    return Math.round(value);
+  };
+
+  const createCertificateProduct = (amount) => ({
+    id: `gift-${amount}`,
+    name: `Подарочный сертификат на ${amount.toLocaleString('ru-RU')} ₽`,
+    description: 'Подарочный сертификат',
+    price: amount,
+    image: null,
+    is_new: false,
+    discount: 0,
+    is_gift_certificate: true,
+  });
+
+  const handleAddToCart = () => {
+    const amount = getFinalAmount();
+    if (!amount) {
+      setStatus('Пожалуйста, выберите номинал или введите свой.');
       return;
     }
-    alert(`Сертификат на сумму ${finalAmount} ₽ добавлен в корзину!`);
-    // Здесь будет логика добавления в корзину
+    addToCart(createCertificateProduct(amount), 1);
+    setStatus(`Сертификат на сумму ${amount.toLocaleString('ru-RU')} ₽ добавлен в корзину.`);
+  };
+
+  const handleAddToFavorites = () => {
+    const amount = getFinalAmount();
+    if (!amount) {
+      setStatus('Пожалуйста, выберите номинал или введите свой.');
+      return;
+    }
+    addToFavorites(createCertificateProduct(amount));
+    setStatus(`Сертификат на сумму ${amount.toLocaleString('ru-RU')} ₽ добавлен в избранное.`);
   };
 
   return (
@@ -44,9 +79,22 @@ const CertificatesPage = () => {
                 </p>
                 
                 <div className="custom-amount-wrapper">
-                  <button className="buy-btn" onClick={handleBuy}>
-                    СЕРТИФИКАТ СО СВОИМ НОМИНАЛОМ
-                  </button>
+                  <input
+                    type="number"
+                    min="1"
+                    placeholder="Введите сумму, ₽"
+                    value={customAmount}
+                    onChange={handleCustomAmountChange}
+                  />
+                  <div className="custom-amount-actions">
+                    <button className="buy-btn" onClick={handleAddToCart}>
+                      В корзину
+                    </button>
+                    <button className="buy-btn buy-btn--ghost" onClick={handleAddToFavorites}>
+                      В избранное
+                    </button>
+                  </div>
+                  {status && <div className="custom-amount-status">{status}</div>}
                 </div>
               </div>
               

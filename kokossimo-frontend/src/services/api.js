@@ -32,6 +32,19 @@ export const updateProfile = (token, payload) =>
     headers: { Authorization: `Token ${token}` },
   });
 
+export const createOrder = (payload, token) =>
+  api.post('/orders/', payload, {
+    headers: token ? { Authorization: `Token ${token}` } : undefined,
+  });
+export const getMyOrders = (token) =>
+  api.get('/orders/list/', {
+    headers: { Authorization: `Token ${token}` },
+  });
+export const getOrderDetail = (token, orderId) =>
+  api.get(`/orders/${orderId}/`, {
+    headers: { Authorization: `Token ${token}` },
+  });
+
 // Специальные фильтры
 export const getBestsellers = () => api.get('/products/', { params: { is_bestseller: 'true' } });
 export const getNewProducts = () => api.get('/products/', { params: { is_new: 'true' } });

@@ -235,6 +235,12 @@
   color: #7c2b2a;
 }
 
+.header__nav-mobile {
+  display: none;
+  align-items: center;
+  gap: 1rem;
+}
+
 /* Когда страница прокручена */
 .header.scrolled {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
@@ -279,6 +285,15 @@
 
   .header__menu-btn {
     display: none;
+  }
+
+  .header__nav-mobile {
+    display: flex;
+  }
+
+  .header__nav-mobile .header__dropdown-menu {
+    left: 0;
+    right: auto;
   }
 
 

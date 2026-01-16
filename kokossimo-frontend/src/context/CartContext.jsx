@@ -49,7 +49,8 @@ export const CartProvider = ({ children }) => {
           name: product.name,
           price: typeof product.price === 'string' ? parseFloat(product.price) : product.price,
           image: product.image,
-          quantity: quantity
+          quantity: quantity,
+          is_gift_certificate: Boolean(product.is_gift_certificate)
         }];
       }
     });

@@ -44,7 +44,8 @@ export const FavoritesProvider = ({ children }) => {
         image: product.image,
         description: product.description,
         is_new: product.is_new || product.isNew,
-        discount: product.discount || 0
+        discount: product.discount || 0,
+        is_gift_certificate: Boolean(product.is_gift_certificate)
       }];
     });
   };
