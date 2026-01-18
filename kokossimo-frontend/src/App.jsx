@@ -1,5 +1,5 @@
-import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Routes, Route, useLocation } from 'react-router-dom';
 
 // Компоненты layout
 import Header from './components/layout/Header';
@@ -21,9 +21,20 @@ import AuthPage from './pages/AuthPage';
 import PaymentPage from './pages/PaymentPage';
 import CheckoutSuccessPage from './pages/CheckoutSuccessPage';
 
+const ScrollToTop = () => {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [pathname]);
+
+  return null;
+};
+
 function App() {
   return (
     <div className="app">
+      <ScrollToTop />
       <Header />
       
       <main>

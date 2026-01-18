@@ -62,6 +62,7 @@
   border: none;
   padding: 0;
   cursor: pointer;
+  display: none;
 }
 
 .header__nav {
