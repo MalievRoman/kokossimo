@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import './HeroBlock.css';
@@ -36,6 +36,8 @@ const slides = [
 const HeroBlock = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
+  const touchStartX = useRef(null);
+  const touchStartY = useRef(null);
 
   const nextSlide = () => {
     if (isAnimating) return;
@@ -58,8 +60,32 @@ const HeroBlock = () => {
     setCurrentSlide(index);
   };
 
+  const handleTouchStart = (event) => {
+    const touch = event.touches[0];
+    if (!touch) return;
+    touchStartX.current = touch.clientX;
+    touchStartY.current = touch.clientY;
+  };
+
+  const handleTouchEnd = (event) => {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+    const touch = event.changedTouches[0];
+    if (!touch) return;
+    const deltaX = touch.clientX - touchStartX.current;
+    const deltaY = touch.clientY - touchStartY.current;
+    touchStartX.current = null;
+    touchStartY.current = null;
+
+    if (Math.abs(deltaX) < 40 || Math.abs(deltaY) > 60) return;
+    if (deltaX > 0) {
+      prevSlide();
+    } else {
+      nextSlide();
+    }
+  };
+
   return (
-    <section className="hero">
+    <section className="hero" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
       <div className="hero__track" style={{ transform: `translateX(-${currentSlide * 100}%)` }}>
         {slides.map((slide) => (
           <div

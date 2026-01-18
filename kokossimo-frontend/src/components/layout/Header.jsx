@@ -429,15 +429,6 @@ const Header = () => {
               </Link>
             </div>
           </div>
-          <Link to="/cart" onClick={() => setIsMenuOpen(false)}>
-            Корзина
-          </Link>
-          <Link to="/favorites" onClick={() => setIsMenuOpen(false)}>
-            Избранное
-          </Link>
-          <Link to="/profile" onClick={() => setIsMenuOpen(false)}>
-            Профиль
-          </Link>
         </nav>
       </div>
     </header>
