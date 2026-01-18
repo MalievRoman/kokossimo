@@ -238,6 +238,24 @@
     font-size: 0.8rem;
   }
 
+  .product-card__controls {
+    gap: 0.5rem;
+  }
+
+  .quantity-selector {
+    border-radius: 3px;
+  }
+
+  .quantity-btn {
+    padding: 5px 7px;
+  }
+
+  .quantity {
+    padding: 5px 8px;
+    min-width: 22px;
+    text-align: center;
+  }
+
   .product-card__price {
     font-size: 1rem;
   }
