@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { Minus, Plus, Heart } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
@@ -11,26 +11,27 @@ const ProductCard = ({ product }) => {
     return null;
   }
 
-  const { addToCart } = useCart();
+  const { addToCart, updateQuantity, removeFromCart, cartItems } = useCart();
   const { toggleFavorite, isFavorite } = useFavorites();
-  const [quantity, setQuantity] = useState(1);
-  const [added, setAdded] = useState(false);
-  
   const favorite = isFavorite(product.id);
+  const cartItem = cartItems.find((item) => item.id === product.id);
+  const cartQuantity = cartItem?.quantity || 0;
 
   // Функции для изменения количества
   const handleIncrease = () => {
-    setQuantity(prev => prev + 1);
+    updateQuantity(product.id, cartQuantity + 1);
   };
 
   const handleDecrease = () => {
-    setQuantity(prev => (prev > 1 ? prev - 1 : 1)); // Не даем опуститься ниже 1
+    if (cartQuantity <= 1) {
+      removeFromCart(product.id);
+      return;
+    }
+    updateQuantity(product.id, cartQuantity - 1);
   };
 
   const handleAddToCart = () => {
-    addToCart(product, quantity);
-    setAdded(true);
-    setTimeout(() => setAdded(false), 2000); // Сбрасываем сообщение через 2 секунды
+    addToCart(product, 1);
   };
 
   // Обработка данных из API: преобразуем формат
@@ -117,41 +118,27 @@ const ProductCard = ({ product }) => {
           {product.name}
         </Link>
         <p className="product-card__description">{product.description}</p>
-        
-        <div className="product-card__controls">
-          <div className="quantity-selector">
-            {/* Кнопка МИНУС */}
-            <button 
-              className="quantity-btn" 
-              onClick={handleDecrease}
-              disabled={quantity <= 1} // Блокируем, если 1
-            >
-              <Minus size={16} />
-            </button>
-            
-            {/* Отображаем текущее число */}
-            <span className="quantity">{quantity}</span>
-            
-            {/* Кнопка ПЛЮС */}
-            <button 
-              className="quantity-btn" 
-              onClick={handleIncrease}
-            >
-              <Plus size={16} />
-            </button>
-          </div>
-          
-          <div className="product-card__price">
-            {price > 0 ? `${price.toLocaleString('ru-RU')} ₽` : 'Цена не указана'}
-          </div>
+        <div className="product-card__price">
+          {price > 0 ? `${price.toLocaleString('ru-RU')} ₽` : 'Цена не указана'}
         </div>
-        
-        <button 
-          className={`product-card__cart-btn ${added ? 'added' : ''}`} 
-          onClick={handleAddToCart}
-        >
-          {added ? '✓ ДОБАВЛЕНО' : 'В КОРЗИНУ'}
-        </button>
+
+        <div className="product-card__controls">
+          {cartQuantity > 0 ? (
+            <div className="quantity-selector">
+              <button className="quantity-btn" onClick={handleDecrease}>
+                <Minus size={16} />
+              </button>
+              <span className="quantity">{cartQuantity}</span>
+              <button className="quantity-btn" onClick={handleIncrease}>
+                <Plus size={16} />
+              </button>
+            </div>
+          ) : (
+            <button className="product-card__cart-btn" onClick={handleAddToCart}>
+              В КОРЗИНУ
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
