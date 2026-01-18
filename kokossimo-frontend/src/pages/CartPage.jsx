@@ -24,6 +24,8 @@ const CartPage = () => {
 
   const isAuthenticated = Boolean(localStorage.getItem('authToken'));
 
+  const getProductLink = (item) => (!item.is_gift_certificate ? `/product/${item.id}` : null);
+
   return (
     <div className="cart-page page-animation">
       <div className="container">
@@ -60,9 +62,15 @@ const CartPage = () => {
               {cartItems.map((item) => (
                 <div key={item.id} className="cart-item">
                   {item.image ? (
-                    <div className="cart-item__image">
-                      <img src={getImageUrl(item.image)} alt={item.name} />
-                    </div>
+                    getProductLink(item) ? (
+                      <Link to={getProductLink(item)} className="cart-item__image">
+                        <img src={getImageUrl(item.image)} alt={item.name} />
+                      </Link>
+                    ) : (
+                      <div className="cart-item__image">
+                        <img src={getImageUrl(item.image)} alt={item.name} />
+                      </div>
+                    )
                   ) : (
                     <div className="cart-item__image cart-item__image--gift">
                       <span>Подарочный сертификат</span>
@@ -70,7 +78,13 @@ const CartPage = () => {
                   )}
                   
                   <div className="cart-item__info">
-                    <h3 className="cart-item__name">{item.name}</h3>
+                    {getProductLink(item) ? (
+                      <Link to={getProductLink(item)} className="cart-item__name">
+                        {item.name}
+                      </Link>
+                    ) : (
+                      <h3 className="cart-item__name">{item.name}</h3>
+                    )}
                     <div className="cart-item__price">
                       {item.price.toLocaleString('ru-RU')} ₽ за шт.
                     </div>

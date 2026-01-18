@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Minus, Plus, Heart } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
@@ -13,16 +13,26 @@ const ProductCard = ({ product }) => {
 
   const { addToCart, updateQuantity, removeFromCart, cartItems } = useCart();
   const { toggleFavorite, isFavorite } = useFavorites();
+  const [localQuantity, setLocalQuantity] = useState(1);
+  const [added, setAdded] = useState(false);
   const favorite = isFavorite(product.id);
   const cartItem = cartItems.find((item) => item.id === product.id);
   const cartQuantity = cartItem?.quantity || 0;
 
   // Функции для изменения количества
-  const handleIncrease = () => {
+  const handleDesktopIncrease = () => {
+    setLocalQuantity((prev) => prev + 1);
+  };
+
+  const handleDesktopDecrease = () => {
+    setLocalQuantity((prev) => (prev > 1 ? prev - 1 : 1));
+  };
+
+  const handleMobileIncrease = () => {
     updateQuantity(product.id, cartQuantity + 1);
   };
 
-  const handleDecrease = () => {
+  const handleMobileDecrease = () => {
     if (cartQuantity <= 1) {
       removeFromCart(product.id);
       return;
@@ -30,7 +40,13 @@ const ProductCard = ({ product }) => {
     updateQuantity(product.id, cartQuantity - 1);
   };
 
-  const handleAddToCart = () => {
+  const handleDesktopAddToCart = () => {
+    addToCart(product, localQuantity);
+    setAdded(true);
+    setTimeout(() => setAdded(false), 2000);
+  };
+
+  const handleMobileAddToCart = () => {
     addToCart(product, 1);
   };
 
@@ -118,27 +134,49 @@ const ProductCard = ({ product }) => {
           {product.name}
         </Link>
         <p className="product-card__description">{product.description}</p>
-        <div className="product-card__price">
+        <div className="product-card__price product-card__price--mobile">
           {price > 0 ? `${price.toLocaleString('ru-RU')} ₽` : 'Цена не указана'}
         </div>
 
-        <div className="product-card__controls">
+        <div className="product-card__controls product-card__controls--mobile">
           {cartQuantity > 0 ? (
             <div className="quantity-selector">
-              <button className="quantity-btn" onClick={handleDecrease}>
+              <button className="quantity-btn" onClick={handleMobileDecrease}>
                 <Minus size={16} />
               </button>
               <span className="quantity">{cartQuantity}</span>
-              <button className="quantity-btn" onClick={handleIncrease}>
+              <button className="quantity-btn" onClick={handleMobileIncrease}>
                 <Plus size={16} />
               </button>
             </div>
           ) : (
-            <button className="product-card__cart-btn" onClick={handleAddToCart}>
+            <button className="product-card__cart-btn" onClick={handleMobileAddToCart}>
               В КОРЗИНУ
             </button>
           )}
         </div>
+
+        <div className="product-card__controls product-card__controls--desktop">
+          <div className="quantity-selector">
+            <button className="quantity-btn" onClick={handleDesktopDecrease} disabled={localQuantity <= 1}>
+              <Minus size={16} />
+            </button>
+            <span className="quantity">{localQuantity}</span>
+            <button className="quantity-btn" onClick={handleDesktopIncrease}>
+              <Plus size={16} />
+            </button>
+          </div>
+          <div className="product-card__price product-card__price--desktop">
+            {price > 0 ? `${price.toLocaleString('ru-RU')} ₽` : 'Цена не указана'}
+          </div>
+        </div>
+
+        <button
+          className={`product-card__cart-btn product-card__cart-btn--desktop ${added ? 'added' : ''}`}
+          onClick={handleDesktopAddToCart}
+        >
+          {added ? '✓ ДОБАВЛЕНО' : 'В КОРЗИНУ'}
+        </button>
       </div>
     </div>
   );
