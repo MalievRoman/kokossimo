@@ -5,7 +5,8 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  min-width: 280px; /* Для горизонтальной прокрутки */
+  min-width: 0;
+  width: 100%;
 }
 
 .product-card__badges {
@@ -226,7 +227,7 @@
 /* Адаптив: 320-640 */
 @media (max-width: 640px) {
   .product-card {
-    min-width: 220px;
+    min-width: 0;
   }
 
   .product-card__title {
