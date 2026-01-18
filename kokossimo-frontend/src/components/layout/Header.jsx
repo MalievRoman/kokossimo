@@ -27,6 +27,8 @@ const Header = () => {
   const contactsMenuRef = useRef(null);
   const contactsMobileMenuRef = useRef(null);
   const clientMobileMenuRef = useRef(null);
+  const mobileMenuRef = useRef(null);
+  const mobileMenuButtonRef = useRef(null);
   const navigate = useNavigate();
 
   const normalizeText = (value) =>
@@ -153,6 +155,19 @@ const Header = () => {
   }, [isClientMobileMenuOpen]);
 
   useEffect(() => {
+    if (!isMenuOpen) return;
+
+    const handleOutsideClick = (event) => {
+      if (mobileMenuRef.current?.contains(event.target)) return;
+      if (mobileMenuButtonRef.current?.contains(event.target)) return;
+      setIsMenuOpen(false);
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [isMenuOpen]);
+
+  useEffect(() => {
     if ((!isSearchOpen && !searchQuery) || allProducts.length > 0) return;
 
     setIsSearching(true);
@@ -205,10 +220,20 @@ const Header = () => {
           <Link to="/" className="header__logo header__logo--full">
             KOKÓССИМО!
           </Link>
-          <Link to="/catalog" className="header__catalog" onClick={() => setIsMenuOpen(false)}>
+          <Link to="/catalog" className="header__catalog header__catalog--desktop" onClick={() => setIsMenuOpen(false)}>
             <LayoutGrid size={18} />
             <span>Каталог</span>
           </Link>
+          <button
+            type="button"
+            className="header__catalog header__catalog--mobile"
+            ref={mobileMenuButtonRef}
+            onClick={() => setIsMenuOpen((prev) => !prev)}
+            aria-expanded={isMenuOpen}
+            aria-haspopup="true"
+          >
+            <LayoutGrid size={18} />
+          </button>
           <button
             type="button"
             className="header__search-btn"
@@ -337,62 +362,6 @@ const Header = () => {
               </div>
             </div>
           </nav>
-          <nav className="header__nav-mobile">
-            <div className="header__dropdown" ref={contactsMobileMenuRef}>
-              <button
-                type="button"
-                className="header__link header__dropdown-toggle header__dropdown-toggle--light"
-                onClick={() => setIsContactsMobileMenuOpen((prev) => !prev)}
-                aria-expanded={isContactsMobileMenuOpen}
-                aria-haspopup="true"
-              >
-                Контакты <ChevronDown size={16} />
-              </button>
-              <div className={`header__dropdown-menu ${isContactsMobileMenuOpen ? 'is-open' : ''}`}>
-                <Link
-                  to="/about"
-                  className="header__dropdown-item"
-                  onClick={() => setIsContactsMobileMenuOpen(false)}
-                >
-                  О нас
-                </Link>
-                <Link
-                  to="/contacts"
-                  className="header__dropdown-item"
-                  onClick={() => setIsContactsMobileMenuOpen(false)}
-                >
-                  Контакты
-                </Link>
-              </div>
-            </div>
-            <div className="header__dropdown" ref={clientMobileMenuRef}>
-              <button
-                type="button"
-                className="header__link header__dropdown-toggle header__dropdown-toggle--light"
-                onClick={() => setIsClientMobileMenuOpen((prev) => !prev)}
-                aria-expanded={isClientMobileMenuOpen}
-                aria-haspopup="true"
-              >
-                Клиентам <ChevronDown size={16} />
-              </button>
-              <div className={`header__dropdown-menu ${isClientMobileMenuOpen ? 'is-open' : ''}`}>
-                <Link
-                  to="/delivery"
-                  className="header__dropdown-item"
-                  onClick={() => setIsClientMobileMenuOpen(false)}
-                >
-                  Доставка
-                </Link>
-                <Link
-                  to="/certificates"
-                  className="header__dropdown-item"
-                  onClick={() => setIsClientMobileMenuOpen(false)}
-                >
-                  Сертификаты
-                </Link>
-              </div>
-            </div>
-          </nav>
 
           <div className="header__actions">
             <Link to="/cart" className="header__icon-btn cart-btn">
@@ -416,6 +385,60 @@ const Header = () => {
             {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
+      </div>
+      <div className={`header__mobile-menu ${isMenuOpen ? 'is-open' : ''}`} ref={mobileMenuRef}>
+        <nav className="header__mobile-menu-list">
+          <Link to="/catalog" onClick={() => setIsMenuOpen(false)}>
+            Каталог
+          </Link>
+          <div className="header__mobile-dropdown" ref={contactsMobileMenuRef}>
+            <button
+              type="button"
+              className="header__mobile-toggle"
+              onClick={() => setIsContactsMobileMenuOpen((prev) => !prev)}
+              aria-expanded={isContactsMobileMenuOpen}
+              aria-haspopup="true"
+            >
+              Контакты <ChevronDown size={16} />
+            </button>
+            <div className={`header__dropdown-menu ${isContactsMobileMenuOpen ? 'is-open' : ''}`}>
+              <Link to="/about" className="header__dropdown-item" onClick={() => setIsMenuOpen(false)}>
+                О нас
+              </Link>
+              <Link to="/contacts" className="header__dropdown-item" onClick={() => setIsMenuOpen(false)}>
+                Контакты
+              </Link>
+            </div>
+          </div>
+          <div className="header__mobile-dropdown" ref={clientMobileMenuRef}>
+            <button
+              type="button"
+              className="header__mobile-toggle"
+              onClick={() => setIsClientMobileMenuOpen((prev) => !prev)}
+              aria-expanded={isClientMobileMenuOpen}
+              aria-haspopup="true"
+            >
+              Клиентам <ChevronDown size={16} />
+            </button>
+            <div className={`header__dropdown-menu ${isClientMobileMenuOpen ? 'is-open' : ''}`}>
+              <Link to="/delivery" className="header__dropdown-item" onClick={() => setIsMenuOpen(false)}>
+                Доставка
+              </Link>
+              <Link to="/certificates" className="header__dropdown-item" onClick={() => setIsMenuOpen(false)}>
+                Сертификаты
+              </Link>
+            </div>
+          </div>
+          <Link to="/cart" onClick={() => setIsMenuOpen(false)}>
+            Корзина
+          </Link>
+          <Link to="/favorites" onClick={() => setIsMenuOpen(false)}>
+            Избранное
+          </Link>
+          <Link to="/profile" onClick={() => setIsMenuOpen(false)}>
+            Профиль
+          </Link>
+        </nav>
       </div>
     </header>
   );
