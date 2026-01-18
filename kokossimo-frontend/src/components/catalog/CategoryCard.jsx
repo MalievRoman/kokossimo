@@ -4,7 +4,7 @@ import './CategoryCard.css';
 
 const CategoryCard = ({ title, image, slug }) => {
   return (
-    <Link to={`/catalog/${slug}`} className="category-card">
+    <Link to={`/catalog?filter=${slug}`} className="category-card">
       <div className="category-card__image-wrapper">
         <img src={image} alt={title} className="category-card__image" />
       </div>
