@@ -12,7 +12,17 @@ log() {
 
 log "Pull latest code"
 cd "$APP_ROOT"
-git pull --ff-only
+if ! git pull --ff-only; then
+  if git status --porcelain | grep -q "^\?\? deploy.sh$"; then
+    log "Untracked deploy.sh detected. Replacing with repo version."
+    rm -f deploy.sh
+    git pull --ff-only
+    chmod +x deploy.sh
+    exec ./deploy.sh
+  fi
+  echo "git pull failed. Fix conflicts and rerun."
+  exit 1
+fi
 
 log "Backend update"
 cd "$BACKEND_DIR"

@@ -232,6 +232,69 @@
   }
 }
 
+@media (max-width: 640px) {
+  .catalog-page {
+    padding: 1.5rem 0 3rem;
+  }
+
+  .page-title {
+    font-size: 1.5rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .catalog-controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+
+  .catalog-filters {
+    width: 100%;
+    gap: 0.6rem;
+  }
+
+  .catalog-filter {
+    width: 100%;
+  }
+
+  .catalog-filter-toggle {
+    width: 100%;
+    justify-content: space-between;
+    padding: 0.6rem 0.75rem;
+    border: 1px solid #e3d9d6;
+    border-radius: 8px;
+    background: #fff;
+  }
+
+  .catalog-filter-menu {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .catalog-filter-price {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .catalog-filter-action {
+    width: 100%;
+  }
+
+  .sort-wrapper {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .sort-select {
+    width: 100%;
+  }
+
+  .catalog-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
 /* Анимация появления */
 @keyframes fadeIn {
   from {
