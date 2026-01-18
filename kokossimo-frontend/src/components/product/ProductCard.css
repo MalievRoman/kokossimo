@@ -212,6 +212,9 @@
   cursor: pointer;
   transition: all 0.3s ease;
   text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .product-card__cart-btn:hover {
