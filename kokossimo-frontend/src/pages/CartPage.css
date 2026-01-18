@@ -104,6 +104,7 @@
   font-weight: 600;
   color: #333;
   margin: 0;
+  text-decoration: none;
 }
 
 .cart-item__price {
