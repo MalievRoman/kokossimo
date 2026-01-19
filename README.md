@@ -1,1 +1,43 @@
-Работа над сайтом магазина косметики
+# Kokossimo
+
+Интернет‑магазин косметики с каталогом, карточками товаров, корзиной и оформлением заказов.  
+Проект состоит из фронтенда на React и бэкенда на Django REST Framework, с API для товаров, категорий, авторизации и заказов.
+
+## Возможности
+- каталог товаров с фильтрацией по категориям, новинкам и бестселлерам
+- карточка товара, избранное и корзина
+- регистрация и вход по email или телефону, профиль пользователя
+- оформление заказов, история заказов
+- поддержка подарочных сертификатов
+- загрузка данных через фикстуры и скрипты
+
+## Технологии
+- фронтенд: React, Vite, React Router, Axios
+- бэкенд: Django, Django REST Framework, SQLite (для разработки)
+- медиа: хранение изображений товаров и категорий
+
+## Структура репозитория
+- `kokossimo-frontend/` — SPA интерфейс магазина
+- `kokossimo-backend/` — API и админ‑панель Django
+- `products.txt` — исходные данные для импорта
+
+## Быстрый старт (локально)
+### Backend
+1. Перейдите в `kokossimo-backend/`.
+2. Установите зависимости: `pip install -r requirements.txt`
+3. Примените миграции: `python manage.py migrate`
+4. Загрузите данные (по желанию): `python manage.py loaddata shop/fixtures/initial_data.json`
+5. Запустите сервер: `python manage.py runserver`
+
+### Frontend
+1. Перейдите в `kokossimo-frontend/`.
+2. Установите зависимости: `npm install`
+3. Запустите dev‑сервер: `npm run dev`
+
+## API (основные эндпоинты)
+- `GET /api/products/` — товары (фильтры: `is_new`, `is_bestseller`, `category`)
+- `GET /api/categories/` — категории
+- `POST /api/auth/register/` — регистрация
+- `POST /api/auth/login/` — вход
+- `POST /api/orders/` — создание заказа
+- `GET /api/orders/list/` — список заказов пользователя
