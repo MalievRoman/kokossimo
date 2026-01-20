@@ -15,6 +15,8 @@ export const getProduct = (id) => api.get(`/products/${id}/`);
 export const getCategories = () => api.get('/categories/');
 export const registerUser = (payload) => api.post('/auth/register/', payload);
 export const loginUser = (payload) => api.post('/auth/login/', payload);
+export const sendEmailCode = (payload) => api.post('/auth/email/send/', payload);
+export const verifyEmailCode = (payload) => api.post('/auth/email/verify/', payload);
 export const getCurrentUser = (token) =>
   api.get('/auth/me/', {
     headers: { Authorization: `Token ${token}` },

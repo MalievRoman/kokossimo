@@ -56,6 +56,26 @@ class Profile(models.Model):
         return f"{self.user.username}"
 
 
+class EmailVerificationCode(models.Model):
+    PURPOSE_CHOICES = [
+        ('login', 'Login'),
+        ('register', 'Register'),
+    ]
+
+    email = models.EmailField("Email")
+    code = models.CharField("Code", max_length=6)
+    purpose = models.CharField("Purpose", max_length=20, choices=PURPOSE_CHOICES)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_used = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name = "Email verification code"
+        verbose_name_plural = "Email verification codes"
+
+    def __str__(self):
+        return f"{self.email} ({self.purpose})"
+
+
 class Order(models.Model):
     STATUS_CHOICES = [
         ('new', 'Новый'),

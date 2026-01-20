@@ -5,18 +5,38 @@ from rest_framework.response import Response
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate, get_user_model
+from django.conf import settings
+from django.core.mail import send_mail
+from django.utils import timezone
+from datetime import timedelta
+import secrets
 from django.db.models import Q
-from .models import Product, Category, Profile, Order
+from .models import Product, Category, Profile, Order, EmailVerificationCode
 from .serializers import (
     ProductSerializer,
     CategorySerializer,
     RegisterSerializer,
     LoginSerializer,
+    EmailCodeSendSerializer,
+    EmailCodeVerifySerializer,
     ProfileUpdateSerializer,
     OrderCreateSerializer,
     OrderSerializer,
     OrderListSerializer,
 )
+
+
+def _email_code_ttl():
+    return int(getattr(settings, 'EMAIL_CODE_TTL_MINUTES', 10))
+
+
+def _generate_email_code():
+    return f"{secrets.randbelow(10**6):06d}"
+
+
+def _purge_expired_codes():
+    cutoff = timezone.now() - timedelta(minutes=_email_code_ttl())
+    EmailVerificationCode.objects.filter(created_at__lt=cutoff).delete()
 
 class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Category.objects.all()
@@ -125,6 +145,104 @@ def login_user(request):
 
     token, _ = Token.objects.get_or_create(user=user)
     return Response({"token": token.key}, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def send_email_code(request):
+    serializer = EmailCodeSendSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    _purge_expired_codes()
+    email = serializer.validated_data['email'].strip().lower()
+    purpose = serializer.validated_data['purpose']
+
+    User = get_user_model()
+    user_exists = User.objects.filter(Q(username__iexact=email) | Q(email__iexact=email)).exists()
+    if purpose == 'register' and user_exists:
+        return Response({"detail": "Пользователь с таким email уже существует."}, status=status.HTTP_400_BAD_REQUEST)
+    if purpose == 'login' and not user_exists:
+        return Response({"detail": "Пользователь с таким email не найден."}, status=status.HTTP_400_BAD_REQUEST)
+
+    EmailVerificationCode.objects.filter(email__iexact=email, purpose=purpose, is_used=False).update(is_used=True)
+
+    code = _generate_email_code()
+    EmailVerificationCode.objects.create(email=email, code=code, purpose=purpose)
+
+    send_mail(
+        subject="Код подтверждения Kokossimo",
+        message=f"Ваш код подтверждения: {code}. Он действует {_email_code_ttl()} минут.",
+        from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', None),
+        recipient_list=[email],
+        fail_silently=False,
+    )
+
+    return Response({"detail": "Код отправлен на почту."}, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def verify_email_code(request):
+    serializer = EmailCodeVerifySerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    _purge_expired_codes()
+    email = serializer.validated_data['email'].strip().lower()
+    code = serializer.validated_data['code']
+    purpose = serializer.validated_data['purpose']
+
+    cutoff = timezone.now() - timedelta(minutes=_email_code_ttl())
+    record = (
+        EmailVerificationCode.objects.filter(
+            email__iexact=email,
+            purpose=purpose,
+            is_used=False,
+            created_at__gte=cutoff,
+        )
+        .order_by('-created_at')
+        .first()
+    )
+
+    if not record or record.code != code:
+        return Response({"detail": "Неверный или просроченный код."}, status=status.HTTP_400_BAD_REQUEST)
+
+    record.is_used = True
+    record.save(update_fields=['is_used'])
+
+    User = get_user_model()
+    if purpose == 'login':
+        user = User.objects.filter(Q(username__iexact=email) | Q(email__iexact=email)).first()
+        if not user:
+            return Response({"detail": "Пользователь не найден."}, status=status.HTTP_400_BAD_REQUEST)
+        token, _ = Token.objects.get_or_create(user=user)
+        return Response({"token": token.key}, status=status.HTTP_200_OK)
+
+    password = serializer.validated_data.get('password')
+    if not password:
+        return Response({"detail": "Пароль обязателен для регистрации."}, status=status.HTTP_400_BAD_REQUEST)
+
+    if User.objects.filter(Q(username__iexact=email) | Q(email__iexact=email)).exists():
+        return Response({"detail": "Пользователь с таким email уже существует."}, status=status.HTTP_400_BAD_REQUEST)
+
+    user = User.objects.create_user(username=email, email=email, password=password)
+    profile = Profile.objects.create(user=user)
+
+    first_name = serializer.validated_data.get('first_name', '').strip()
+    last_name = serializer.validated_data.get('last_name', '').strip()
+    if first_name:
+        user.first_name = first_name
+        profile.first_name = first_name
+    if last_name:
+        user.last_name = last_name
+        profile.last_name = last_name
+    if first_name or last_name:
+        user.save(update_fields=['first_name', 'last_name'])
+        profile.save(update_fields=['first_name', 'last_name'])
+
+    token, _ = Token.objects.get_or_create(user=user)
+    return Response({"token": token.key}, status=status.HTTP_201_CREATED)
 
 
 @api_view(['POST'])

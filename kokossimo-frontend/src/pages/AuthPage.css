@@ -81,6 +81,28 @@
   font-size: 0.95rem;
 }
 
+.auth-field--inline {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.btn-secondary {
+  border: 1px solid #e7dcd8;
+  background: #fff;
+  padding: 0.65rem 1rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  color: #4b3a39;
+  transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+  border-color: #7c2b2a;
+  color: #7c2b2a;
+  background: #fcf8f7;
+}
+
 .auth-note {
   font-size: 0.8rem;
   color: #8b7b78;

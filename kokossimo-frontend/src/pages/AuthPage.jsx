@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { registerUser, loginUser } from '../services/api';
+import { registerUser, loginUser, sendEmailCode, verifyEmailCode } from '../services/api';
 import { Link, useNavigate } from 'react-router-dom';
 import './AuthPage.css';
 
@@ -13,9 +13,11 @@ const AuthPage = () => {
     identifier: '',
     password: '',
     passwordRepeat: '',
+    emailCode: '',
   });
   const [status, setStatus] = useState({ type: '', message: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSendingCode, setIsSendingCode] = useState(false);
 
   const handleChange = (field) => (event) => {
     setForm((prev) => ({ ...prev, [field]: event.target.value }));
@@ -32,6 +34,24 @@ const AuthPage = () => {
 
     setIsSubmitting(true);
     try {
+      if (authMethod === 'email') {
+        const response = await verifyEmailCode({
+          email: form.identifier,
+          code: form.emailCode,
+          purpose: activeTab === 'login' ? 'login' : 'register',
+          password: activeTab === 'register' ? form.password : undefined,
+          first_name: activeTab === 'register' ? form.name : undefined,
+          last_name: activeTab === 'register' ? form.lastName : undefined,
+        });
+        localStorage.setItem('authToken', response.data.token);
+        setStatus({
+          type: 'success',
+          message: activeTab === 'login' ? 'Вы вошли в аккаунт.' : 'Аккаунт создан.',
+        });
+        navigate('/profile');
+        return;
+      }
+
       if (activeTab === 'login') {
         const response = await loginUser({
           identifier: form.identifier,
@@ -59,6 +79,29 @@ const AuthPage = () => {
       setStatus({ type: 'error', message });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleSendCode = async () => {
+    setStatus({ type: '', message: '' });
+    if (!form.identifier) {
+      setStatus({ type: 'error', message: 'Введите email для отправки кода.' });
+      return;
+    }
+    setIsSendingCode(true);
+    try {
+      const response = await sendEmailCode({
+        email: form.identifier,
+        purpose: activeTab === 'login' ? 'login' : 'register',
+      });
+      setStatus({ type: 'success', message: response.data?.detail || 'Код отправлен.' });
+    } catch (error) {
+      const message =
+        error?.response?.data?.detail ||
+        'Не удалось отправить код. Проверьте email.';
+      setStatus({ type: 'error', message });
+    } finally {
+      setIsSendingCode(false);
     }
   };
 
@@ -126,15 +169,41 @@ const AuthPage = () => {
                 </label>
               )}
 
-              <label className="auth-field">
-                <span>Пароль</span>
-                <input
-                  type="password"
-                  placeholder="Введите пароль"
-                  value={form.password}
-                  onChange={handleChange('password')}
-                />
-              </label>
+              {authMethod === 'phone' && (
+                <label className="auth-field">
+                  <span>Пароль</span>
+                  <input
+                    type="password"
+                    placeholder="Введите пароль"
+                    value={form.password}
+                    onChange={handleChange('password')}
+                  />
+                </label>
+              )}
+
+              {authMethod === 'email' && (
+                <>
+                  <div className="auth-field auth-field--inline">
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      onClick={handleSendCode}
+                      disabled={isSendingCode}
+                    >
+                      {isSendingCode ? 'ОТПРАВКА...' : 'Отправить код'}
+                    </button>
+                  </div>
+                  <label className="auth-field">
+                    <span>Код из письма</span>
+                    <input
+                      type="text"
+                      placeholder="Введите код"
+                      value={form.emailCode}
+                      onChange={handleChange('emailCode')}
+                    />
+                  </label>
+                </>
+              )}
 
               <button type="submit" className="btn-primary btn-primary--full" disabled={isSubmitting}>
                 {isSubmitting ? 'ВХОД...' : 'Войти'}
@@ -205,6 +274,30 @@ const AuthPage = () => {
                   onChange={handleChange('passwordRepeat')}
                 />
               </label>
+
+              {authMethod === 'email' && (
+                <>
+                  <div className="auth-field auth-field--inline">
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      onClick={handleSendCode}
+                      disabled={isSendingCode}
+                    >
+                      {isSendingCode ? 'ОТПРАВКА...' : 'Отправить код'}
+                    </button>
+                  </div>
+                  <label className="auth-field">
+                    <span>Код из письма</span>
+                    <input
+                      type="text"
+                      placeholder="Введите код"
+                      value={form.emailCode}
+                      onChange={handleChange('emailCode')}
+                    />
+                  </label>
+                </>
+              )}
 
               <button type="submit" className="btn-primary btn-primary--full" disabled={isSubmitting}>
                 {isSubmitting ? 'СОЗДАНИЕ...' : 'Создать аккаунт'}

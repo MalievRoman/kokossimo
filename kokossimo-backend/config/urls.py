@@ -8,6 +8,8 @@ from shop.views import (
     CategoryViewSet,
     register_user,
     login_user,
+    send_email_code,
+    verify_email_code,
     logout_user,
     current_user,
     update_profile,
@@ -26,6 +28,8 @@ urlpatterns = [
     path('api/', include(router.urls)), # Все API будут начинаться с /api/
     path('api/auth/register/', register_user),
     path('api/auth/login/', login_user),
+    path('api/auth/email/send/', send_email_code),
+    path('api/auth/email/verify/', verify_email_code),
     path('api/auth/logout/', logout_user),
     path('api/auth/me/', current_user),
     path('api/auth/profile/', update_profile),
