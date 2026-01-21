@@ -176,22 +176,6 @@ const ProductPage = () => {
                 </span>
                 <span className="rating-count">({ratingCount})</span>
               </div>
-              <div className="rating-actions">
-                {[1, 2, 3, 4, 5].map((value) => (
-                  <button
-                    key={`user-${value}`}
-                    type="button"
-                    className={value <= (userRating || 0) ? 'star-button filled' : 'star-button'}
-                    onClick={() => handleRate(value)}
-                    disabled={ratingSaving}
-                    aria-label={`Поставить ${value}`}
-                  >
-                    <Star size={18} />
-                  </button>
-                ))}
-                {userRating && <span className="user-rating">Ваша оценка: {userRating}</span>}
-              </div>
-              {ratingError && <div className="rating-error">{ratingError}</div>}
             </div>
             <p className="product-short-desc">{product.description}</p>
             
@@ -305,6 +289,21 @@ const ProductPage = () => {
                 )}
                 <div className="review-form">
                   <label htmlFor="review-comment">Ваш отзыв</label>
+                  <div className="review-rating-actions">
+                    {[1, 2, 3, 4, 5].map((value) => (
+                      <button
+                        key={`review-rate-${value}`}
+                        type="button"
+                        className={value <= (userRating || 0) ? 'star-button filled' : 'star-button'}
+                        onClick={() => setUserRating(value)}
+                        disabled={ratingSaving}
+                        aria-label={`Поставить ${value}`}
+                      >
+                        <Star size={18} />
+                      </button>
+                    ))}
+                    {userRating && <span className="user-rating">Ваша оценка: {userRating}</span>}
+                  </div>
                   <textarea
                     id="review-comment"
                     rows={4}
@@ -321,6 +320,7 @@ const ProductPage = () => {
                   >
                     {ratingSaving ? 'Сохраняем...' : 'Отправить отзыв'}
                   </button>
+                  {ratingError && <div className="rating-error">{ratingError}</div>}
                 </div>
                 {!ratingsLoading && ratingsList.length > 0 && (
                   <div className="reviews-list">
