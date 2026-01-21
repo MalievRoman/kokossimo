@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { registerUser, loginUser, sendEmailCode, verifyEmailCode } from '../services/api';
 import { Link, useNavigate } from 'react-router-dom';
+import { formatRuPhone, isPhoneInputKeyAllowed } from '../utils/phone';
 import './AuthPage.css';
 
 const AuthPage = () => {
@@ -11,7 +12,7 @@ const AuthPage = () => {
   const [form, setForm] = useState({
     name: '',
     lastName: '',
-    identifier: '',
+    identifier: '+7',
     password: '',
     passwordRepeat: '',
     emailCode: '',
@@ -21,7 +22,12 @@ const AuthPage = () => {
   const [isSendingCode, setIsSendingCode] = useState(false);
 
   const handleChange = (field) => (event) => {
-    setForm((prev) => ({ ...prev, [field]: event.target.value }));
+    const value = event.target.value;
+    if (field === 'identifier' && authMethod === 'phone') {
+      setForm((prev) => ({ ...prev, [field]: formatRuPhone(value) }));
+      return;
+    }
+    setForm((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleSubmit = async (event) => {
@@ -157,6 +163,7 @@ const AuthPage = () => {
               onClick={() => {
                 setAuthMethod('phone');
                 setResetMode(false);
+                setForm((prev) => ({ ...prev, identifier: formatRuPhone(prev.identifier) }));
               }}
             >
               По номеру телефона
@@ -166,6 +173,10 @@ const AuthPage = () => {
               onClick={() => {
                 setAuthMethod('email');
                 setResetMode(false);
+                setForm((prev) => ({
+                  ...prev,
+                  identifier: prev.identifier.startsWith('+7') ? '' : prev.identifier,
+                }));
               }}
             >
               По почте
@@ -182,6 +193,11 @@ const AuthPage = () => {
                     placeholder="+7 (___) ___-__-__"
                     value={form.identifier}
                     onChange={handleChange('identifier')}
+                    onKeyDown={(event) => {
+                      if (!isPhoneInputKeyAllowed(event)) {
+                        event.preventDefault();
+                      }
+                    }}
                   />
                 </label>
               ) : (
@@ -323,6 +339,11 @@ const AuthPage = () => {
                     placeholder="+7 (___) ___-__-__"
                     value={form.identifier}
                     onChange={handleChange('identifier')}
+                    onKeyDown={(event) => {
+                      if (!isPhoneInputKeyAllowed(event)) {
+                        event.preventDefault();
+                      }
+                    }}
                   />
                 </label>
               ) : (

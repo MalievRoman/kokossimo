@@ -1,27 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getCurrentUser, getMyOrders, logoutUser, updateProfile } from '../services/api';
+import { formatRuPhone, isPhoneInputKeyAllowed } from '../utils/phone';
 import './ProfilePage.css';
-
-const formatRuPhone = (value) => {
-  const digits = String(value || '').replace(/\D/g, '');
-  if (!digits) return '+7';
-  let normalized = digits;
-  if (normalized.startsWith('8')) {
-    normalized = `7${normalized.slice(1)}`;
-  }
-  if (!normalized.startsWith('7')) {
-    normalized = `7${normalized}`;
-  }
-  normalized = normalized.slice(0, 11);
-  const rest = normalized.slice(1);
-  let result = '+7';
-  if (rest.length > 0) result += `-${rest.slice(0, 3)}`;
-  if (rest.length > 3) result += `-${rest.slice(3, 6)}`;
-  if (rest.length > 6) result += `-${rest.slice(6, 8)}`;
-  if (rest.length > 8) result += `-${rest.slice(8, 10)}`;
-  return result;
-};
 
 const ProfilePage = () => {
   const isAuthenticated = Boolean(localStorage.getItem('authToken'));
@@ -277,6 +258,11 @@ const ProfilePage = () => {
                     onChange={(event) =>
                       setProfile((prev) => ({ ...prev, phone: formatRuPhone(event.target.value) }))
                     }
+                    onKeyDown={(event) => {
+                      if (!isPhoneInputKeyAllowed(event)) {
+                        event.preventDefault();
+                      }
+                    }}
                   />
                 </label>
                 <label className="profile-field">

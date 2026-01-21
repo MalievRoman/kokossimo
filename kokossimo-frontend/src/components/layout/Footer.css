@@ -99,6 +99,17 @@
   }
 }
 
+@media (max-width: 640px) {
+  .contacts-list {
+    text-align: center;
+  }
+
+  .contacts-list li {
+    display: flex;
+    justify-content: center;
+  }
+}
+
 @media (max-width: 500px) {
   .footer__container {
     grid-template-columns: 1fr;
