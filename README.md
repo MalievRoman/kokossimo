@@ -36,16 +36,6 @@
 2. Установите зависимости: `npm install`
 3. Запустите dev‑сервер: `npm run dev`
 
-## Переменные окружения (backend)
-Минимальный набор в `.env`:
-- `DJANGO_SECRET_KEY`
-- `DJANGO_DEBUG` (для прод: `false`)
-- `DJANGO_ALLOWED_HOSTS` (через запятую)
-- `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`
-- `EMAIL_USE_TLS` (`true/false`)
-- `DEFAULT_FROM_EMAIL`
-- `EMAIL_CODE_TTL_MINUTES`
-
 ## API (основные эндпоинты)
 - `GET /api/products/` — товары (фильтры: `is_new`, `is_bestseller`, `category`)
 - `GET /api/categories/` — категории
