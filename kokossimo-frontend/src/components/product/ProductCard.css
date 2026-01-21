@@ -147,6 +147,34 @@
   flex-grow: 1;
 }
 
+.product-card__rating {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 0.6rem;
+  color: #666;
+}
+
+.product-card__star {
+  color: #d0c4b8;
+}
+
+.product-card__star.filled {
+  color: #f1b84b;
+}
+
+.product-card__rating-value {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #333;
+  margin-left: 4px;
+}
+
+.product-card__rating-count {
+  font-size: 0.8rem;
+  color: #777;
+}
+
 .product-card__price {
   font-size: 1.1rem;
   font-weight: 700;

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Minus, Plus, Heart } from 'lucide-react';
+import { Minus, Plus, Heart, Star } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 import { useFavorites } from '../../context/FavoritesContext';
 import './ProductCard.css';
@@ -94,6 +94,9 @@ const ProductCard = ({ product }) => {
   };
 
   const isGiftCertificate = product.is_gift_certificate;
+  const ratingAvg = typeof product.rating_avg === 'number' ? product.rating_avg : 0;
+  const ratingCount = typeof product.rating_count === 'number' ? product.rating_count : 0;
+  const ratingRounded = Math.round(ratingAvg);
 
   return (
     <div className="product-card">
@@ -133,6 +136,19 @@ const ProductCard = ({ product }) => {
         <Link to={`/product/${product.id}`} className="product-card__title">
           {product.name}
         </Link>
+        <div className="product-card__rating">
+          {[1, 2, 3, 4, 5].map((value) => (
+            <Star
+              key={`card-star-${value}`}
+              size={14}
+              className={value <= ratingRounded ? 'product-card__star filled' : 'product-card__star'}
+            />
+          ))}
+          <span className="product-card__rating-value">
+            {ratingAvg ? ratingAvg.toFixed(1) : '0.0'}
+          </span>
+          <span className="product-card__rating-count">({ratingCount})</span>
+        </div>
         <p className="product-card__description">{product.description}</p>
         <div className="product-card__price product-card__price--mobile">
           {price > 0 ? `${price.toLocaleString('ru-RU')} ₽` : 'Цена не указана'}

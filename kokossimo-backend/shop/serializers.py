@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.db import transaction
-from .models import Product, Category, Profile, Order, OrderItem
+from .models import Product, Category, Profile, Order, OrderItem, ProductRating
 from django.conf import settings
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -21,6 +21,9 @@ class CategorySerializer(serializers.ModelSerializer):
 class ProductSerializer(serializers.ModelSerializer):
     category_slug = serializers.CharField(source='category.slug', read_only=True) # Чтобы фронт знал слаг категории
     image = serializers.SerializerMethodField()
+    rating_avg = serializers.FloatField(read_only=True)
+    rating_count = serializers.IntegerField(read_only=True)
+    user_rating = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
@@ -33,7 +36,10 @@ class ProductSerializer(serializers.ModelSerializer):
             'category_slug',
             'is_bestseller', 
             'is_new', 
-            'discount'
+            'discount',
+            'rating_avg',
+            'rating_count',
+            'user_rating'
         ]
     
     def get_image(self, obj):
@@ -43,6 +49,31 @@ class ProductSerializer(serializers.ModelSerializer):
                 return request.build_absolute_uri(obj.image.url)
             return f"{settings.MEDIA_URL}{obj.image}"
         return None
+
+    def get_user_rating(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return None
+        rating = obj.ratings.filter(user=request.user).first()
+        return rating.rating if rating else None
+
+
+class ProductRatingSerializer(serializers.ModelSerializer):
+    user_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ProductRating
+        fields = ['id', 'product', 'user_name', 'rating', 'comment', 'created_at']
+        read_only_fields = ['id', 'product', 'user_name', 'created_at']
+
+    def get_user_name(self, obj):
+        name = f"{obj.user.first_name} {obj.user.last_name}".strip()
+        return name or obj.user.username
+
+
+class ProductRatingCreateSerializer(serializers.Serializer):
+    rating = serializers.IntegerField(min_value=1, max_value=5)
+    comment = serializers.CharField(required=False, allow_blank=True)
 
 
 class RegisterSerializer(serializers.Serializer):

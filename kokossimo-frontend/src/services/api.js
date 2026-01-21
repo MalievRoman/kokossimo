@@ -12,6 +12,11 @@ const api = axios.create({
 
 export const getProducts = (params) => api.get('/products/', { params });
 export const getProduct = (id) => api.get(`/products/${id}/`);
+export const getProductRatings = (productId) => api.get(`/products/${productId}/ratings/`);
+export const rateProduct = (productId, payload, token) =>
+  api.post(`/products/${productId}/rate/`, payload, {
+    headers: { Authorization: `Token ${token}` },
+  });
 export const getCategories = () => api.get('/categories/');
 export const registerUser = (payload) => api.post('/auth/register/', payload);
 export const loginUser = (payload) => api.post('/auth/login/', payload);

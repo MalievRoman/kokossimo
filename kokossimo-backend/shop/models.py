@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 class Category(models.Model):
@@ -35,6 +36,29 @@ class Product(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class ProductRating(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="ratings", verbose_name="Товар")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="product_ratings", verbose_name="Пользователь")
+    rating = models.PositiveSmallIntegerField(
+        "Оценка",
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+    )
+    comment = models.TextField("Отзыв", blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Оценка товара"
+        verbose_name_plural = "Оценки товаров"
+        ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(fields=['product', 'user'], name='unique_product_user_rating')
+        ]
+
+    def __str__(self):
+        return f"{self.product.name} - {self.rating} ({self.user_id})"
 
 
 class Profile(models.Model):

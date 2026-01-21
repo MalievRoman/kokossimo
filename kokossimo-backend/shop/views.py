@@ -10,8 +10,9 @@ from django.core.mail import send_mail
 from django.utils import timezone
 from datetime import timedelta
 import secrets
-from django.db.models import Q
-from .models import Product, Category, Profile, Order, EmailVerificationCode
+from django.db.models import Q, Avg, Count
+from django.shortcuts import get_object_or_404
+from .models import Product, Category, Profile, Order, EmailVerificationCode, ProductRating
 from .serializers import (
     ProductSerializer,
     CategorySerializer,
@@ -23,6 +24,8 @@ from .serializers import (
     OrderCreateSerializer,
     OrderSerializer,
     OrderListSerializer,
+    ProductRatingSerializer,
+    ProductRatingCreateSerializer,
 )
 
 
@@ -48,13 +51,19 @@ class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
         return context
 
 class ProductViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Product.objects.all()
+    queryset = Product.objects.annotate(
+        rating_avg=Avg('ratings__rating'),
+        rating_count=Count('ratings')
+    )
     serializer_class = ProductSerializer
 
     def get_queryset(self):
         # Фильтрация товаров через параметры URL
         # Пример: /api/products/?is_new=true&category=face
-        queryset = Product.objects.all()
+        queryset = Product.objects.annotate(
+            rating_avg=Avg('ratings__rating'),
+            rating_count=Count('ratings')
+        )
         
         is_new = self.request.query_params.get('is_new', None)
         is_bestseller = self.request.query_params.get('is_bestseller', None)
@@ -75,6 +84,47 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
         context = super().get_serializer_context()
         context['request'] = self.request
         return context
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def product_ratings(request, product_id):
+    product = get_object_or_404(Product, id=product_id)
+    ratings = ProductRating.objects.filter(product=product).select_related('user')
+    return Response(ProductRatingSerializer(ratings, many=True).data, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def rate_product(request, product_id):
+    serializer = ProductRatingCreateSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    product = get_object_or_404(Product, id=product_id)
+    rating_value = serializer.validated_data['rating']
+    comment = serializer.validated_data.get('comment', '').strip()
+
+    rating_obj, created = ProductRating.objects.update_or_create(
+        product=product,
+        user=request.user,
+        defaults={'rating': rating_value, 'comment': comment},
+    )
+
+    stats = ProductRating.objects.filter(product=product).aggregate(
+        rating_avg=Avg('rating'),
+        rating_count=Count('id'),
+    )
+
+    return Response(
+        {
+            "rating": ProductRatingSerializer(rating_obj).data,
+            "rating_avg": stats['rating_avg'] or 0,
+            "rating_count": stats['rating_count'] or 0,
+        },
+        status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+    )
 
 
 @api_view(['POST'])

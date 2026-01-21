@@ -16,6 +16,8 @@ from shop.views import (
     create_order,
     list_orders,
     order_detail,
+    product_ratings,
+    rate_product,
 )
 
 # Создаем роутер для API
@@ -36,6 +38,8 @@ urlpatterns = [
     path('api/orders/', create_order),
     path('api/orders/list/', list_orders),
     path('api/orders/<int:order_id>/', order_detail),
+    path('api/products/<int:product_id>/ratings/', product_ratings),
+    path('api/products/<int:product_id>/rate/', rate_product),
 ]
 
 # Это нужно, чтобы Django раздавал картинки (media) в режиме разработки
