@@ -60,6 +60,7 @@ class EmailVerificationCode(models.Model):
     PURPOSE_CHOICES = [
         ('login', 'Login'),
         ('register', 'Register'),
+        ('reset', 'Reset'),
     ]
 
     email = models.EmailField("Email")

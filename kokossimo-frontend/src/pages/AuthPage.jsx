@@ -6,6 +6,7 @@ import './AuthPage.css';
 const AuthPage = () => {
   const [activeTab, setActiveTab] = useState('login');
   const [authMethod, setAuthMethod] = useState('phone');
+  const [resetMode, setResetMode] = useState(false);
   const navigate = useNavigate();
   const [form, setForm] = useState({
     name: '',
@@ -27,7 +28,7 @@ const AuthPage = () => {
     event.preventDefault();
     setStatus({ type: '', message: '' });
 
-    if (activeTab === 'register' && form.password !== form.passwordRepeat) {
+    if ((activeTab === 'register' || resetMode) && form.password !== form.passwordRepeat) {
       setStatus({ type: 'error', message: 'Пароли не совпадают.' });
       return;
     }
@@ -35,6 +36,20 @@ const AuthPage = () => {
     setIsSubmitting(true);
     try {
       if (authMethod === 'email') {
+        if (resetMode) {
+          const response = await verifyEmailCode({
+            email: form.identifier,
+            code: form.emailCode,
+            purpose: 'reset',
+            password: form.password,
+          });
+          localStorage.setItem('authToken', response.data.token);
+          setStatus({ type: 'success', message: response.data?.detail || 'Пароль обновлен.' });
+          setResetMode(false);
+          navigate('/profile');
+          return;
+        }
+
         const response = await verifyEmailCode({
           email: form.identifier,
           code: form.emailCode,
@@ -92,7 +107,7 @@ const AuthPage = () => {
     try {
       const response = await sendEmailCode({
         email: form.identifier,
-        purpose: activeTab === 'login' ? 'login' : 'register',
+        purpose: resetMode ? 'reset' : activeTab === 'login' ? 'login' : 'register',
       });
       setStatus({ type: 'success', message: response.data?.detail || 'Код отправлен.' });
     } catch (error) {
@@ -118,13 +133,19 @@ const AuthPage = () => {
           <div className="auth-tabs">
             <button
               className={`auth-tab ${activeTab === 'login' ? 'is-active' : ''}`}
-              onClick={() => setActiveTab('login')}
+              onClick={() => {
+                setActiveTab('login');
+                setResetMode(false);
+              }}
             >
               Вход
             </button>
             <button
               className={`auth-tab ${activeTab === 'register' ? 'is-active' : ''}`}
-              onClick={() => setActiveTab('register')}
+              onClick={() => {
+                setActiveTab('register');
+                setResetMode(false);
+              }}
             >
               Регистрация
             </button>
@@ -133,13 +154,19 @@ const AuthPage = () => {
           <div className="auth-methods">
             <button
               className={`auth-method ${authMethod === 'phone' ? 'is-active' : ''}`}
-              onClick={() => setAuthMethod('phone')}
+              onClick={() => {
+                setAuthMethod('phone');
+                setResetMode(false);
+              }}
             >
               По номеру телефона
             </button>
             <button
               className={`auth-method ${authMethod === 'email' ? 'is-active' : ''}`}
-              onClick={() => setAuthMethod('email')}
+              onClick={() => {
+                setAuthMethod('email');
+                setResetMode(false);
+              }}
             >
               По почте
             </button>
@@ -181,7 +208,7 @@ const AuthPage = () => {
                 </label>
               )}
 
-              {authMethod === 'email' && (
+              {authMethod === 'email' && !resetMode && (
                 <>
                   <div className="auth-field auth-field--inline">
                     <button
@@ -205,12 +232,67 @@ const AuthPage = () => {
                 </>
               )}
 
+              {authMethod === 'email' && resetMode && (
+                <>
+                  <label className="auth-field">
+                    <span>Новый пароль</span>
+                    <input
+                      type="password"
+                      placeholder="Придумайте пароль"
+                      value={form.password}
+                      onChange={handleChange('password')}
+                    />
+                  </label>
+
+                  <label className="auth-field">
+                    <span>Повторите пароль</span>
+                    <input
+                      type="password"
+                      placeholder="Повторите пароль"
+                      value={form.passwordRepeat}
+                      onChange={handleChange('passwordRepeat')}
+                    />
+                  </label>
+
+                  <div className="auth-field auth-field--inline">
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      onClick={handleSendCode}
+                      disabled={isSendingCode}
+                    >
+                      {isSendingCode ? 'ОТПРАВКА...' : 'Отправить код'}
+                    </button>
+                  </div>
+                  <label className="auth-field">
+                    <span>Код из письма</span>
+                    <input
+                      type="text"
+                      placeholder="Введите код"
+                      value={form.emailCode}
+                      onChange={handleChange('emailCode')}
+                    />
+                  </label>
+                </>
+              )}
+
               <button type="submit" className="btn-primary btn-primary--full" disabled={isSubmitting}>
-                {isSubmitting ? 'ВХОД...' : 'Войти'}
+                {isSubmitting ? (resetMode ? 'СБРОС...' : 'ВХОД...') : resetMode ? 'Сбросить пароль' : 'Войти'}
               </button>
-              <Link to="/" className="btn-link btn-link--center">
-                Забыли пароль?
-              </Link>
+              <button
+                type="button"
+                className="btn-link btn-link--center"
+                onClick={() => {
+                  if (authMethod !== 'email') {
+                    setStatus({ type: 'error', message: 'Восстановление доступно только по почте.' });
+                    return;
+                  }
+                  setResetMode((prev) => !prev);
+                  setStatus({ type: '', message: '' });
+                }}
+              >
+                {resetMode ? 'Вернуться ко входу' : 'Забыли пароль?'}
+              </button>
             </form>
           ) : (
             <form className="auth-form" onSubmit={handleSubmit}>

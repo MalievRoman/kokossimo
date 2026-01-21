@@ -60,13 +60,13 @@ class LoginSerializer(serializers.Serializer):
 
 class EmailCodeSendSerializer(serializers.Serializer):
     email = serializers.EmailField()
-    purpose = serializers.ChoiceField(choices=['login', 'register'])
+    purpose = serializers.ChoiceField(choices=['login', 'register', 'reset'])
 
 
 class EmailCodeVerifySerializer(serializers.Serializer):
     email = serializers.EmailField()
     code = serializers.CharField(min_length=6, max_length=6)
-    purpose = serializers.ChoiceField(choices=['login', 'register'])
+    purpose = serializers.ChoiceField(choices=['login', 'register', 'reset'])
     password = serializers.CharField(required=False, allow_blank=False, min_length=6)
     first_name = serializers.CharField(required=False, allow_blank=True)
     last_name = serializers.CharField(required=False, allow_blank=True)

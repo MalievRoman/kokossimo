@@ -162,7 +162,7 @@ def send_email_code(request):
     user_exists = User.objects.filter(Q(username__iexact=email) | Q(email__iexact=email)).exists()
     if purpose == 'register' and user_exists:
         return Response({"detail": "Пользователь с таким email уже существует."}, status=status.HTTP_400_BAD_REQUEST)
-    if purpose == 'login' and not user_exists:
+    if purpose in ('login', 'reset') and not user_exists:
         return Response({"detail": "Пользователь с таким email не найден."}, status=status.HTTP_400_BAD_REQUEST)
 
     EmailVerificationCode.objects.filter(email__iexact=email, purpose=purpose, is_used=False).update(is_used=True)
@@ -218,6 +218,18 @@ def verify_email_code(request):
             return Response({"detail": "Пользователь не найден."}, status=status.HTTP_400_BAD_REQUEST)
         token, _ = Token.objects.get_or_create(user=user)
         return Response({"token": token.key}, status=status.HTTP_200_OK)
+
+    if purpose == 'reset':
+        password = serializer.validated_data.get('password')
+        if not password:
+            return Response({"detail": "Новый пароль обязателен."}, status=status.HTTP_400_BAD_REQUEST)
+        user = User.objects.filter(Q(username__iexact=email) | Q(email__iexact=email)).first()
+        if not user:
+            return Response({"detail": "Пользователь не найден."}, status=status.HTTP_400_BAD_REQUEST)
+        user.set_password(password)
+        user.save(update_fields=['password'])
+        token, _ = Token.objects.get_or_create(user=user)
+        return Response({"token": token.key, "detail": "Пароль обновлен."}, status=status.HTTP_200_OK)
 
     password = serializer.validated_data.get('password')
     if not password:
