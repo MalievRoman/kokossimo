@@ -112,11 +112,11 @@
 }
 
 .rating-display .star {
-  color: #d0c4b8;
+  color: #e0d5cb;
 }
 
 .rating-display .star.filled {
-  color: #f1b84b;
+  color: #8B4513;
 }
 
 .rating-value {
@@ -170,12 +170,17 @@
   background: none;
   padding: 0;
   cursor: pointer;
-  color: #d0c4b8;
+  color: #e0d5cb;
   display: inline-flex;
+  transition: color 0.2s ease;
 }
 
 .star-button.filled {
-  color: #f1b84b;
+  color: #8B4513;
+}
+
+.star-button:hover {
+  color: #6d360f;
 }
 
 .star-button:disabled {

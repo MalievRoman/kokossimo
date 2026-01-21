@@ -156,11 +156,11 @@
 }
 
 .product-card__star {
-  color: #d0c4b8;
+  color: #e0d5cb;
 }
 
 .product-card__star.filled {
-  color: #f1b84b;
+  color: #8B4513;
 }
 
 .product-card__rating-value {
