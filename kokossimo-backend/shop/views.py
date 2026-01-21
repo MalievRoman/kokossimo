@@ -148,6 +148,7 @@ def login_user(request):
 
 
 @api_view(['POST'])
+@authentication_classes([])
 @permission_classes([AllowAny])
 def send_email_code(request):
     serializer = EmailCodeSendSerializer(data=request.data)
@@ -182,6 +183,7 @@ def send_email_code(request):
 
 
 @api_view(['POST'])
+@authentication_classes([])
 @permission_classes([AllowAny])
 def verify_email_code(request):
     serializer = EmailCodeVerifySerializer(data=request.data)
