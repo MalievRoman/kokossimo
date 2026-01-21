@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://kokossimo.ru/</loc>
+  </url>
+  <url>
+    <loc>https://kokossimo.ru/catalog</loc>
+  </url>
+  <url>
+    <loc>https://kokossimo.ru/certificates</loc>
+  </url>
+  <url>
+    <loc>https://kokossimo.ru/about</loc>
+  </url>
+  <url>
+    <loc>https://kokossimo.ru/contacts</loc>
+  </url>
+  <url>
+    <loc>https://kokossimo.ru/delivery</loc>
+  </url>
+  <url>
+    <loc>https://kokossimo.ru/favorites</loc>
+  </url>
+  <url>
+    <loc>https://kokossimo.ru/cart</loc>
+  </url>
+  <url>
+    <loc>https://kokossimo.ru/profile</loc>
+  </url>
+  <url>
+    <loc>https://kokossimo.ru/auth</loc>
+  </url>
+  <url>
+    <loc>https://kokossimo.ru/checkout</loc>
+  </url>
+</urlset>
