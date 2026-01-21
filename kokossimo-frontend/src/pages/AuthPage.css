@@ -103,6 +103,19 @@
   background: #fcf8f7;
 }
 
+.btn-link {
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: #7c2b2a;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.btn-link:hover {
+  text-decoration: underline;
+}
+
 .auth-note {
   font-size: 0.8rem;
   color: #8b7b78;
