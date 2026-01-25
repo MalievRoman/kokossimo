@@ -1,45 +1,62 @@
 import React, { useState } from 'react';
-import './NewsletterForm.css';
+
+// Блок подписки на рассылку под верстку из main_page.html (subscribe)
+// Визуал полностью тянется из koko-main.css по классам .subscribe*.
 
 const NewsletterForm = () => {
   const [email, setEmail] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    alert(`Спасибо за подписку! Мы отправили письмо на ${email}`);
-    setEmail('');
+    // Здесь можно будет прикрутить реальный запрос к бэкенду.
+    // Пока оставим простой alert, чтобы было понятно, что форма живая.
+    if (email.trim()) {
+      alert(`Спасибо за подписку! Мы будем присылать новости на ${email}`);
+      setEmail('');
+    }
   };
 
   return (
-    <section className="newsletter">
-      <div className="container newsletter__container">
-        <div className="newsletter__content">
-          <h2 className="newsletter__title">
-            ПОДПИШИТЕСЬ НА РАССЫЛКУ, ЧТОБЫ БЫТЬ В КУРСЕ НАШИХ НОВОСТЕЙ
-          </h2>
-          
-          <form className="newsletter__form" onSubmit={handleSubmit}>
-            <input 
-              type="email" 
-              placeholder="Email" 
-              className="newsletter__input"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
+    <section className="subscribe block" aria-label="Подписка на рассылку">
+      <div className="subscribeplaque">
+        <div className="container">
+          <div className="subscribecontent">
+            <div className="subscribeframe">
+              <div className="subscribetitle">
+                ПОДПИШИТЕСЬ НА РАССЫЛКУ, ЧТОБЫ БЫТЬ В КУРСЕ НАШИХ НОВОСТЕЙ
+              </div>
+
+              <form className="subscribeform" onSubmit={handleSubmit}>
+                <input
+                  className="subscribeinput"
+                  type="email"
+                  name="email"
+                  placeholder="Email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+                <button className="subscribebtn" type="submit">
+                  ПОДПИСАТЬСЯ
+                </button>
+              </form>
+
+              <div className="subscribenote">
+                Нажимая на кнопку “ПОДПИСАТЬСЯ”, вы даёте согласие на получение
+                рассылки рекламно‑информационных материалов
+              </div>
+            </div>
+
+            <div className="subscribepad" aria-hidden="true"></div>
+
+            <img
+              className="subscribedecor"
+              src="/assets/beauty_elements.png"
+              alt=""
+              aria-hidden="true"
             />
-            <button type="submit" className="newsletter__btn">
-              ПОДПИСАТЬСЯ
-            </button>
-          </form>
-          
-          <p className="newsletter__disclaimer">
-            Нажимая на кнопку "ПОДПИСАТЬСЯ", Вы даете согласие на получение рассылки рекламно-информационных материалов
-          </p>
+          </div>
         </div>
-        
-        {/* Декоративные картинки косметики по краям, если нужно */}
-        <div className="newsletter__decor newsletter__decor--left"></div>
-        <div className="newsletter__decor newsletter__decor--right"></div>
       </div>
     </section>
   );

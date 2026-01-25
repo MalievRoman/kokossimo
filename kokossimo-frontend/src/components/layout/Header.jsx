@@ -1,35 +1,31 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Search, ShoppingCart, Heart, User, Menu, X, ChevronDown, LayoutGrid } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { getProducts } from '../../services/api';
 import { useCart } from '../../context/CartContext';
 import { useFavorites } from '../../context/FavoritesContext';
-import { getProducts } from '../../services/api';
-import './Header.css';
 
 const Header = () => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [isClientMenuOpen, setIsClientMenuOpen] = useState(false);
-  const [isContactsMenuOpen, setIsContactsMenuOpen] = useState(false);
-  const [isContactsMobileMenuOpen, setIsContactsMobileMenuOpen] = useState(false);
-  const [isClientMobileMenuOpen, setIsClientMobileMenuOpen] = useState(false);
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [allProducts, setAllProducts] = useState([]);
-  const [searchResults, setSearchResults] = useState([]);
-  const [isSearching, setIsSearching] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState('');
+  const [mobileDropdown, setMobileDropdown] = useState(null);
+  const [suggestions, setSuggestions] = useState([]);
+  const [isSuggestionsOpen, setIsSuggestionsOpen] = useState(false);
+  const allProductsRef = useRef([]);
+  const suggestionsTimerRef = useRef(null);
+  const navigate = useNavigate();
+  const location = useLocation();
   const { getTotalItems } = useCart();
   const { getFavoritesCount } = useFavorites();
-  const searchRef = useRef(null);
-  const searchBtnRef = useRef(null);
-  const searchResultsRef = useRef(null);
-  const clientMenuRef = useRef(null);
-  const contactsMenuRef = useRef(null);
-  const contactsMobileMenuRef = useRef(null);
-  const clientMobileMenuRef = useRef(null);
-  const mobileMenuRef = useRef(null);
-  const mobileMenuButtonRef = useRef(null);
-  const navigate = useNavigate();
+  const cartCount = getTotalItems();
+  const favoritesCount = getFavoritesCount();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    setSearchValue(params.get('q') || '');
+    setSuggestions([]);
+    setIsSuggestionsOpen(false);
+  }, [location.search]);
 
   const normalizeText = (value) =>
     value
@@ -39,399 +35,396 @@ const Header = () => {
       .replace(/\s+/g, ' ')
       .trim();
 
-  const levenshtein = (a, b) => {
-    if (a === b) return 0;
-    if (!a.length) return b.length;
-    if (!b.length) return a.length;
-
-    const matrix = Array.from({ length: a.length + 1 }, () => []);
-    for (let i = 0; i <= a.length; i += 1) matrix[i][0] = i;
-    for (let j = 0; j <= b.length; j += 1) matrix[0][j] = j;
-
-    for (let i = 1; i <= a.length; i += 1) {
-      for (let j = 1; j <= b.length; j += 1) {
-        const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-        matrix[i][j] = Math.min(
-          matrix[i - 1][j] + 1,
-          matrix[i][j - 1] + 1,
-          matrix[i - 1][j - 1] + cost
-        );
-      }
-    }
-    return matrix[a.length][b.length];
+  const loadAllProducts = async () => {
+    if (allProductsRef.current.length > 0) return allProductsRef.current;
+    const response = await getProducts({ page_size: 1000 });
+    const data = Array.isArray(response.data)
+      ? response.data
+      : response.data?.results || [];
+    allProductsRef.current = data;
+    return data;
   };
 
-  const getSimilarity = (query, text) => {
-    if (!query || !text) return 0;
-    if (text.includes(query)) return 1;
-    const distance = levenshtein(query, text);
-    return 1 - distance / Math.max(query.length, text.length);
-  };
-
-  // Отслеживаем скролл для эффекта прозрачности/тени
   useEffect(() => {
-    const handleScroll = () => {
-      // Если прокрутили больше 20px, считаем что скролл начался
-      if (window.scrollY > 20) {
-        setIsScrolled(true);
-      } else {
-        setIsScrolled(false);
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    
-    // Очистка слушателя при удалении компонента
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  useEffect(() => {
-    if (!isSearchOpen) return;
-
-    const handleOutsideClick = (event) => {
-      const resultsEl = searchResultsRef.current;
-
-      if (resultsEl?.contains(event.target)) {
-        return;
-      }
-
-      setIsSearchOpen(false);
-    };
-
-    document.addEventListener('mousedown', handleOutsideClick);
-    return () => document.removeEventListener('mousedown', handleOutsideClick);
-  }, [isSearchOpen]);
-
-  useEffect(() => {
-    if (!isClientMenuOpen) return;
-
-    const handleOutsideClick = (event) => {
-      const menuEl = clientMenuRef.current;
-      if (menuEl?.contains(event.target)) return;
-      setIsClientMenuOpen(false);
-    };
-
-    document.addEventListener('mousedown', handleOutsideClick);
-    return () => document.removeEventListener('mousedown', handleOutsideClick);
-  }, [isClientMenuOpen]);
-
-  useEffect(() => {
-    if (!isContactsMenuOpen) return;
-
-    const handleOutsideClick = (event) => {
-      const menuEl = contactsMenuRef.current;
-      if (menuEl?.contains(event.target)) return;
-      setIsContactsMenuOpen(false);
-    };
-
-    document.addEventListener('mousedown', handleOutsideClick);
-    return () => document.removeEventListener('mousedown', handleOutsideClick);
-  }, [isContactsMenuOpen]);
-
-  useEffect(() => {
-    if (!isContactsMobileMenuOpen) return;
-
-    const handleOutsideClick = (event) => {
-      const menuEl = contactsMobileMenuRef.current;
-      if (menuEl?.contains(event.target)) return;
-      setIsContactsMobileMenuOpen(false);
-    };
-
-    document.addEventListener('mousedown', handleOutsideClick);
-    return () => document.removeEventListener('mousedown', handleOutsideClick);
-  }, [isContactsMobileMenuOpen]);
-
-  useEffect(() => {
-    if (!isClientMobileMenuOpen) return;
-
-    const handleOutsideClick = (event) => {
-      const menuEl = clientMobileMenuRef.current;
-      if (menuEl?.contains(event.target)) return;
-      setIsClientMobileMenuOpen(false);
-    };
-
-    document.addEventListener('mousedown', handleOutsideClick);
-    return () => document.removeEventListener('mousedown', handleOutsideClick);
-  }, [isClientMobileMenuOpen]);
-
-  useEffect(() => {
-    if (!isMenuOpen) return;
-
-    const handleOutsideClick = (event) => {
-      if (mobileMenuRef.current?.contains(event.target)) return;
-      if (mobileMenuButtonRef.current?.contains(event.target)) return;
-      setIsMenuOpen(false);
-    };
-
-    document.addEventListener('mousedown', handleOutsideClick);
-    return () => document.removeEventListener('mousedown', handleOutsideClick);
-  }, [isMenuOpen]);
-
-  useEffect(() => {
-    if ((!isSearchOpen && !searchQuery) || allProducts.length > 0) return;
-
-    setIsSearching(true);
-    getProducts()
-      .then((response) => {
-        const data = Array.isArray(response.data) ? response.data : (response.data.results || []);
-        setAllProducts(data);
-      })
-      .catch(() => {
-        setAllProducts([]);
-      })
-      .finally(() => {
-        setIsSearching(false);
-      });
-  }, [isSearchOpen, allProducts.length]);
-
-  useEffect(() => {
-    const query = normalizeText(searchQuery);
-    if (!query || query.length < 1) {
-      setSearchResults([]);
-      return;
+    if (suggestionsTimerRef.current) {
+      clearTimeout(suggestionsTimerRef.current);
     }
 
-    const results = allProducts
-      .map((product) => {
-        const name = normalizeText(product.name || '');
-        const score = getSimilarity(query, name);
-        return { product, score };
-      })
-      .filter(({ score, product }) => score >= 0.35 || normalizeText(product.name || '').includes(query))
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 6)
-      .map(({ product }) => product);
+    const rawQuery = searchValue.trim();
+    if (!rawQuery) {
+      setSuggestions([]);
+      setIsSuggestionsOpen(false);
+      return undefined;
+    }
 
-    setSearchResults(results);
-  }, [searchQuery, allProducts]);
+    suggestionsTimerRef.current = setTimeout(async () => {
+      try {
+        const query = normalizeText(rawQuery);
+        const products = await loadAllProducts();
+        const results = products
+          .filter((item) => normalizeText(item.name || '').includes(query))
+          .slice(0, 6);
+        setSuggestions(results);
+        setIsSuggestionsOpen(true);
+      } catch {
+        setSuggestions([]);
+        setIsSuggestionsOpen(false);
+      }
+    }, 200);
+
+    return () => {
+      if (suggestionsTimerRef.current) {
+        clearTimeout(suggestionsTimerRef.current);
+      }
+    };
+  }, [searchValue]);
 
   const handleSearchSubmit = (event) => {
     event.preventDefault();
-    const query = searchQuery.trim();
-    if (!query) return;
-    navigate(`/catalog?q=${encodeURIComponent(query)}`);
-    setIsSearchOpen(false);
+    const query = searchValue.trim();
+
+    if (query) {
+      navigate(`/catalog?q=${encodeURIComponent(query)}`);
+    } else {
+      navigate('/catalog');
+    }
+
+    setIsMobileSearchOpen(false);
+    setIsMobileMenuOpen(false);
+    setIsSuggestionsOpen(false);
+  };
+
+  const openMobileMenu = () => {
+    setIsMobileMenuOpen(true);
+    setIsMobileSearchOpen(false);
+  };
+
+  const closeMobileMenu = () => {
+    setIsMobileMenuOpen(false);
+    setMobileDropdown(null);
+  };
+
+  const openMobileSearch = () => {
+    setIsMobileSearchOpen(true);
+    setIsMobileMenuOpen(false);
+  };
+
+  const closeMobileSearch = () => {
+    setIsMobileSearchOpen(false);
+  };
+
+  const toggleMobileDropdown = (key) => {
+    setMobileDropdown((prev) => (prev === key ? null : key));
+  };
+
+  const handleSuggestionClick = () => {
+    setIsSuggestionsOpen(false);
+    setIsMobileSearchOpen(false);
+    setIsMobileMenuOpen(false);
   };
 
   return (
-    <header className={`header ${isScrolled ? 'scrolled' : ''}`}>
-      <div className="container header__container">
-        <div className="header__left">
-          <Link to="/" className="header__logo header__logo--full">
-            KOKÓССИМО!
-          </Link>
-          <Link to="/catalog" className="header__catalog header__catalog--desktop" onClick={() => setIsMenuOpen(false)}>
-            <LayoutGrid size={18} />
-            <span>Каталог</span>
-          </Link>
-          <button
-            type="button"
-            className="header__catalog header__catalog--mobile"
-            ref={mobileMenuButtonRef}
-            onClick={() => setIsMenuOpen((prev) => !prev)}
-            aria-expanded={isMenuOpen}
-            aria-haspopup="true"
-          >
-            <LayoutGrid size={18} />
-          </button>
-          <button
-            type="button"
-            className="header__search-btn"
-            aria-label="Поиск"
-            ref={searchBtnRef}
-            onClick={() => setIsSearchOpen((prev) => !prev)}
-          >
-            <Search size={20} />
-          </button>
-        </div>
+  <>
+    <header className="header">
+        <div className="container">
+          <div className="header__inner">
 
-        <div className="header__logo-center">
-          <Link to="/" className="header__logo header__logo--short">
-            K
-          </Link>
-        </div>
+        
+            <div className="header__desktop">
+              <Link className="header__logo" to="/" aria-label="KOKOSSIMO">
+                <img src="/assets/logo.svg" alt="KOKOSSIMO" />
+              </Link>
 
-        <form
-          className={`header__search ${isSearchOpen ? 'is-open' : ''}`}
-          ref={searchRef}
-          onSubmit={handleSearchSubmit}
-        >
-          <Search size={18} />
-          <input
-            type="text"
-            placeholder="Поиск"
-            aria-label="Поиск"
-            value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
-            onFocus={() => setIsSearchOpen(true)}
-          />
-          {searchQuery && isSearchOpen && (
-            <div className="header__search-results" ref={searchResultsRef}>
-              {isSearching && (
-                <div className="header__search-empty">Поиск...</div>
-              )}
-              {!isSearching && searchResults.length === 0 && (
-                <div className="header__search-empty">Ничего не найдено</div>
-              )}
-              {!isSearching && searchResults.length > 0 && (
-                <>
-                  {searchResults.map((product) => (
-                    <button
-                      type="button"
-                      key={product.id}
-                      className="header__search-item"
-                      onClick={() => {
-                        navigate(`/product/${product.id}`);
-                        setIsSearchOpen(false);
-                        setSearchQuery('');
-                      }}
-                    >
-                      {product.name}
-                    </button>
-                  ))}
-                  <button
-                    type="button"
-                    className="header__search-item header__search-all"
-                    onClick={() => {
-                      navigate(`/catalog?q=${encodeURIComponent(searchQuery)}`);
-                      setIsSearchOpen(false);
-                    }}
-                  >
-                    Все результаты
+              <Link className="header__catalog" to="/catalog">
+                <span className="icon icon--catalog" aria-hidden="true"></span>
+                <span className="header__catalog-text">КАТАЛОГ</span>
+              </Link>
+
+              <Link className="header__cert" to="/certificates">СЕРТИФИКАТЫ</Link>
+
+              <form className="header__search" role="search" onSubmit={handleSearchSubmit}>
+                <button className="header__search-btn" type="submit" aria-label="Поиск">
+                  <span className="header__search-icon icon icon--search" aria-hidden="true"></span>
+                </button>
+                <input
+                  className="header__search-input"
+                  type="search"
+                  name="q"
+                  placeholder=""
+                  value={searchValue}
+                  onChange={(e) => setSearchValue(e.target.value)}
+                  onFocus={() => searchValue.trim() && setIsSuggestionsOpen(true)}
+                  onBlur={() => setTimeout(() => setIsSuggestionsOpen(false), 150)}
+                />
+                {!isMobileSearchOpen && isSuggestionsOpen && suggestions.length > 0 && (
+                  <div className="header__search-suggestions" role="listbox">
+                    {suggestions.map((item) => (
+                      <Link
+                        key={item.id}
+                        to={`/product/${item.id}`}
+                        className="header__search-suggestion"
+                        onClick={handleSuggestionClick}
+                        role="option"
+                      >
+                        {item.name}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </form>
+
+              
+              <nav className="header__nav" aria-label="Навигация">
+                <div className="header__dropdown header__dropdown--customers">
+                  <button className="header__dropdown-btn" type="button">
+                    <span className="header__dropdown-text">КЛИЕНТАМ</span>
+                    <span className="header__dropdown-icon" aria-hidden="true">
+                      <svg
+                        className="header__dropdown-chevron"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 16 16"
+                        fill="none"
+                      >
+                        <path
+                          d="M4 6l4 4 4-4"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </span>
                   </button>
-                </>
-              )}
-            </div>
-          )}
-        </form>
+                  <div className="header__dropdown-menu">
+                    <Link className="header__dropdown-link" to="/delivery">
+                      Доставка и оплата
+                    </Link>
+                    <Link className="header__dropdown-link" to="/about">
+                      О компании
+                    </Link>
+                  </div>
+                </div>
 
-        <div className="header__right">
-          <nav className={`header__nav ${isMenuOpen ? 'active' : ''}`}>
-            <div className="header__dropdown" ref={contactsMenuRef}>
-              <button
-                type="button"
-                className="header__link header__dropdown-toggle header__dropdown-toggle--light"
-                onClick={() => setIsContactsMenuOpen((prev) => !prev)}
-                aria-expanded={isContactsMenuOpen}
-                aria-haspopup="true"
-              >
-                Контакты <ChevronDown size={16} />
-              </button>
-              <div className={`header__dropdown-menu ${isContactsMenuOpen ? 'is-open' : ''}`}>
-                <Link
-                  to="/about"
-                  className="header__dropdown-item"
-                  onClick={() => setIsContactsMenuOpen(false)}
-                >
-                  О нас
+                <div className="header__dropdown header__dropdown--contacts">
+                  <button className="header__dropdown-btn header__dropdown-btn--spaced" type="button">
+                    <span className="header__dropdown-text">КОНТАКТЫ</span>
+                    <span className="header__dropdown-icon" aria-hidden="true">
+                      <svg
+                        className="header__dropdown-chevron"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 16 16"
+                        fill="none"
+                      >
+                        <path
+                          d="M4 6l4 4 4-4"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </span>
+                  </button>
+                  <div className="header__dropdown-menu">
+                    <Link className="header__dropdown-link" to="/contacts">
+                      Контакты
+                    </Link>
+                  </div>
+                </div>
+              </nav>
+
+
+
+              <div className="header__actions" aria-label="Действия">
+                <Link className="header__icon-btn" to="/cart" aria-label="Корзина">
+                  <span className="icon icon--cart" aria-hidden="true"></span>
+                  {cartCount > 0 && <span className="header__icon-badge">{cartCount}</span>}
                 </Link>
-                <Link
-                  to="/contacts"
-                  className="header__dropdown-item"
-                  onClick={() => setIsContactsMenuOpen(false)}
-                >
-                  Контакты
+                <Link className="header__icon-btn" to="/favorites" aria-label="Избранное">
+                  <span className="icon icon--fav" aria-hidden="true"></span>
+                  {favoritesCount > 0 && (
+                    <span className="header__icon-badge">{favoritesCount}</span>
+                  )}
+                </Link>
+                <Link className="header__icon-btn" to="/profile" aria-label="Профиль">
+                  <span className="icon icon--profile" aria-hidden="true"></span>
                 </Link>
               </div>
             </div>
-            <div className="header__dropdown" ref={clientMenuRef}>
+
+        
+            <div className="header__mobile" aria-label="Мобильная шапка">
+              <div className="header__mobile-left">
+                <button
+                  className="header__icon-btn"
+                  type="button"
+                  aria-label="Открыть меню"
+                  aria-controls="mobile-menu"
+                  aria-expanded={isMobileMenuOpen}
+                  onClick={openMobileMenu}
+                >
+                  <span className="icon icon--catalog" aria-hidden="true"></span>
+                </button>
+
+                <button
+                  className="header__icon-btn"
+                  type="button"
+                  aria-label="Открыть поиск"
+                  aria-controls="mobile-search"
+                  aria-expanded={isMobileSearchOpen}
+                  onClick={openMobileSearch}
+                >
+                  <span className="icon icon--search" aria-hidden="true"></span>
+                </button>
+              </div>
+
+              <a className="header__logo-mobile" href="./" aria-label="KOKOSSIMO">
+                <img src="/assets/logo_shot.svg" alt="KOKOSSIMO" />
+              </a>
+
+              <div className="header__mobile-right">
+                <Link className="header__icon-btn" to="/cart" aria-label="Корзина">
+                  <span className="icon icon--cart" aria-hidden="true"></span>
+                  {cartCount > 0 && <span className="header__icon-badge">{cartCount}</span>}
+                </Link>
+                <Link className="header__icon-btn" to="/profile" aria-label="Профиль">
+                  <span className="icon icon--profile" aria-hidden="true"></span>
+                </Link>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </header>
+    <div
+      className={`mobile-search ${isMobileSearchOpen ? 'is-open' : ''}`}
+      id="mobile-search"
+      aria-hidden={isMobileSearchOpen ? 'false' : 'true'}
+    >
+        <div className="container">
+          <form className="mobile-search__form" role="search" onSubmit={handleSearchSubmit}>
+            <button className="header__search-btn" type="submit" aria-label="Поиск">
+              <span className="icon icon--search" aria-hidden="true"></span>
+            </button>
+            <input
+              className="mobile-search__input"
+              type="search"
+              name="q"
+              placeholder=""
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
+              onFocus={() => searchValue.trim() && setIsSuggestionsOpen(true)}
+              onBlur={() => setTimeout(() => setIsSuggestionsOpen(false), 150)}
+            />
+            <button
+              className="mobile-search__close"
+              type="button"
+              aria-label="Закрыть"
+              onClick={closeMobileSearch}
+            >
+              ×
+            </button>
+            {isMobileSearchOpen && isSuggestionsOpen && suggestions.length > 0 && (
+              <div className="header__search-suggestions header__search-suggestions--mobile" role="listbox">
+                {suggestions.map((item) => (
+                  <Link
+                    key={item.id}
+                    to={`/product/${item.id}`}
+                    className="header__search-suggestion"
+                    onClick={handleSuggestionClick}
+                    role="option"
+                  >
+                    {item.name}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </form>
+        </div>
+      </div>
+
+  
+  
+    <div
+      className={`mobile-menu ${isMobileMenuOpen ? 'is-open' : ''}`}
+      id="mobile-menu"
+      aria-hidden={isMobileMenuOpen ? 'false' : 'true'}
+    >
+        <button
+          className="mobile-menu__overlay"
+          type="button"
+          aria-label="Закрыть"
+          onClick={closeMobileMenu}
+        ></button>
+        <aside className="mobile-menu__panel" role="dialog" aria-modal="true" aria-label="Меню">
+          <button
+            className="mobile-menu__close"
+            type="button"
+            aria-label="Закрыть"
+            onClick={closeMobileMenu}
+          >
+            ×
+          </button>
+
+          <nav className="mobile-menu__nav">
+            <Link to="/catalog" onClick={closeMobileMenu}>КАТАЛОГ</Link>
+
+            <div className="mobile-menu__group">
               <button
+                className={`mobile-menu__toggle ${mobileDropdown === 'contacts' ? 'is-open' : ''}`}
                 type="button"
-                className="header__link header__dropdown-toggle header__dropdown-toggle--light"
-                onClick={() => setIsClientMenuOpen((prev) => !prev)}
-                aria-expanded={isClientMenuOpen}
-                aria-haspopup="true"
+                onClick={() => toggleMobileDropdown('contacts')}
+                aria-expanded={mobileDropdown === 'contacts'}
               >
-                Клиентам <ChevronDown size={16} />
+                <span>КОНТАКТЫ</span>
+                <span className="mobile-menu__chevron" aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path
+                      d="M4 6l4 4 4-4"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </span>
               </button>
-              <div className={`header__dropdown-menu ${isClientMenuOpen ? 'is-open' : ''}`}>
-                <Link
-                  to="/delivery"
-                  className="header__dropdown-item"
-                  onClick={() => setIsClientMenuOpen(false)}
-                >
-                  Доставка
-                </Link>
-                <Link
-                  to="/certificates"
-                  className="header__dropdown-item"
-                  onClick={() => setIsClientMenuOpen(false)}
-                >
-                  Сертификаты
-                </Link>
+              <div className={`mobile-menu__submenu ${mobileDropdown === 'contacts' ? 'is-open' : ''}`}>
+                <Link to="/about" onClick={closeMobileMenu}>О НАС</Link>
+                <Link to="/contacts" onClick={closeMobileMenu}>КОНТАКТЫ</Link>
+              </div>
+            </div>
+
+            <div className="mobile-menu__group">
+              <button
+                className={`mobile-menu__toggle ${mobileDropdown === 'clients' ? 'is-open' : ''}`}
+                type="button"
+                onClick={() => toggleMobileDropdown('clients')}
+                aria-expanded={mobileDropdown === 'clients'}
+              >
+                <span>КЛИЕНТАМ</span>
+                <span className="mobile-menu__chevron" aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path
+                      d="M4 6l4 4 4-4"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </span>
+              </button>
+              <div className={`mobile-menu__submenu ${mobileDropdown === 'clients' ? 'is-open' : ''}`}>
+                <Link to="/delivery" onClick={closeMobileMenu}>ДОСТАВКА</Link>
               </div>
             </div>
           </nav>
-
-          <div className="header__actions">
-            <Link to="/cart" className="header__icon-btn cart-btn">
-              <ShoppingCart size={22} />
-              {getTotalItems() > 0 && (
-                <span className="cart-badge">{getTotalItems()}</span>
-              )}
-            </Link>
-            <Link to="/favorites" className="header__icon-btn header__icon-btn--favorites cart-btn">
-              <Heart size={22} />
-              {getFavoritesCount() > 0 && (
-                <span className="cart-badge">{getFavoritesCount()}</span>
-              )}
-            </Link>
-            <Link to="/profile" className="header__icon-btn">
-              <User size={22} />
-            </Link>
-          </div>
-
-          <button className="header__menu-btn" onClick={() => setIsMenuOpen(!isMenuOpen)}>
-            {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
-        </div>
+        </aside>
       </div>
-      <div className={`header__mobile-menu ${isMenuOpen ? 'is-open' : ''}`} ref={mobileMenuRef}>
-        <nav className="header__mobile-menu-list">
-          <Link to="/catalog" onClick={() => setIsMenuOpen(false)}>
-            Каталог
-          </Link>
-          <div className="header__mobile-dropdown" ref={contactsMobileMenuRef}>
-            <button
-              type="button"
-              className="header__mobile-toggle"
-              onClick={() => setIsContactsMobileMenuOpen((prev) => !prev)}
-              aria-expanded={isContactsMobileMenuOpen}
-              aria-haspopup="true"
-            >
-              Контакты <ChevronDown size={16} />
-            </button>
-            <div className={`header__dropdown-menu ${isContactsMobileMenuOpen ? 'is-open' : ''}`}>
-              <Link to="/about" className="header__dropdown-item" onClick={() => setIsMenuOpen(false)}>
-                О нас
-              </Link>
-              <Link to="/contacts" className="header__dropdown-item" onClick={() => setIsMenuOpen(false)}>
-                Контакты
-              </Link>
-            </div>
-          </div>
-          <div className="header__mobile-dropdown" ref={clientMobileMenuRef}>
-            <button
-              type="button"
-              className="header__mobile-toggle"
-              onClick={() => setIsClientMobileMenuOpen((prev) => !prev)}
-              aria-expanded={isClientMobileMenuOpen}
-              aria-haspopup="true"
-            >
-              Клиентам <ChevronDown size={16} />
-            </button>
-            <div className={`header__dropdown-menu ${isClientMobileMenuOpen ? 'is-open' : ''}`}>
-              <Link to="/delivery" className="header__dropdown-item" onClick={() => setIsMenuOpen(false)}>
-                Доставка
-              </Link>
-              <Link to="/certificates" className="header__dropdown-item" onClick={() => setIsMenuOpen(false)}>
-                Сертификаты
-              </Link>
-            </div>
-          </div>
-        </nav>
-      </div>
-    </header>
+  </>
   );
 };
 

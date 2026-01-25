@@ -5,6 +5,7 @@ import { getProduct, getProducts, getProductRatings, rateProduct } from '../serv
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
 import ProductSlider from '../components/product/ProductSlider';
+import { resolveMediaUrl } from '../utils/media';
 import './ProductPage.css';
 
 const ProductPage = () => {
@@ -75,9 +76,7 @@ const ProductPage = () => {
   
   // Обработка изображения
   const getImageUrl = (img) => {
-    if (!img) return 'https://placehold.co/600x600/F5E6D3/8B4513?text=No+Image';
-    if (img.startsWith('http')) return img;
-    return `http://127.0.0.1:8000${img.startsWith('/') ? img : `/${img}`}`;
+    return resolveMediaUrl(img, 'https://placehold.co/600x600/F5E6D3/8B4513?text=No+Image');
   };
 
   // Пока используем только реальные изображения с бэка
