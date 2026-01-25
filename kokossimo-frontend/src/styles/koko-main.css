@@ -254,6 +254,7 @@ body {
   font: inherit;
   color: var(--accent);
   cursor: pointer;
+  text-decoration: none;
 }
 
 .header__dropdown-btn--spaced {
