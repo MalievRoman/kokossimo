@@ -206,33 +206,9 @@ const Header = () => {
                   </div>
                 </div>
 
-                <div className="header__dropdown header__dropdown--contacts">
-                  <button className="header__dropdown-btn header__dropdown-btn--spaced" type="button">
-                    <span className="header__dropdown-text">КОНТАКТЫ</span>
-                    <span className="header__dropdown-icon" aria-hidden="true">
-                      <svg
-                        className="header__dropdown-chevron"
-                        width="16"
-                        height="16"
-                        viewBox="0 0 16 16"
-                        fill="none"
-                      >
-                        <path
-                          d="M4 6l4 4 4-4"
-                          stroke="currentColor"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </span>
-                  </button>
-                  <div className="header__dropdown-menu">
-                    <Link className="header__dropdown-link" to="/contacts">
-                      Контакты
-                    </Link>
-                  </div>
-                </div>
+                <Link className="header__dropdown-btn header__dropdown-btn--spaced" to="/contacts">
+                  <span className="header__dropdown-text">КОНТАКТЫ</span>
+                </Link>
               </nav>
 
 
