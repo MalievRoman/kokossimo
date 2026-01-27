@@ -80,22 +80,22 @@
 
 .hero__btn {
   display: inline-block;
-  border: 2px solid #7c2b2a;
-  color: #7c2b2a;
+  border: none;
+  color: #fcf8f7;
   padding: 13px 17px;
   text-decoration: none;
   text-transform: uppercase;
-  font-weight: 600;
+  font-weight: 400;
   font-size: 14px;
   letter-spacing: 0.04em;
-  transition: all 0.3s ease;
-  background-color: transparent;
+  transition: background-color 0.3s ease;
+  background-color: #460200;
   border-radius: 4px;
 }
 
 .hero__btn:hover {
-  background-color: #7c2b2a;
-  color: #fff;
+  background-color: #330200;
+  color: #fcf8f7;
 }
 
 /* Фон слайдов теперь на секции */
@@ -252,16 +252,16 @@
 
 /* Убедитесь, что кнопки работают */
 .slider-btn {
-  /* ... старые стили ... */
   z-index: 20; /* Поверх контента */
-  background: rgba(255, 255, 255, 0.2); /* Полупрозрачный фон */
-  border: 1px solid white;
+  background: rgba(70, 2, 0, 0.2); /* Полупрозрачный фон */
+  border: 1px solid #460200;
+  color: #460200;
   transition: all 0.2s;
 }
 
 .slider-btn:hover {
-  background: white;
-  color: #8B4513; /* Коричневый цвет стрелки при наведении */
+  background: #460200;
+  color: #fcf8f7; /* Цвет стрелки при наведении */
 }
 
 .dot {
