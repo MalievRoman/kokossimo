@@ -550,7 +550,7 @@ body {
   padding: 12px 16px;
   border: 0;
   border-radius: 4px;
-  background: #460200;
+  background: #240100;
   color: #FCF8F7;
   font-size: 14px;
   font-weight: 400;
@@ -560,7 +560,7 @@ body {
     color 180ms ease;
 }
 .hero__btn:hover {
-  background: #330200;
+  background: #150100;
   color: #FCF8F7;
 }
 
