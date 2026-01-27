@@ -182,8 +182,10 @@
 /* Сетка товаров */
 .catalog-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr); /* 3 товара в ряд */
-  gap: 20px;
+  grid-template-columns: repeat(4, 1fr); /* 4 товара в ряд */
+  gap: 8px;
+  justify-items: center;
+  justify-content: center;
   margin-bottom: 3rem;
 }
 
@@ -222,7 +224,7 @@
 /* Адаптив */
 @media (max-width: 1024px) {
   .catalog-grid {
-    grid-template-columns: repeat(2, 1fr); /* 2 товара на планшете */
+    grid-template-columns: repeat(3, 1fr); /* 3 товара на планшете */
   }
 }
 

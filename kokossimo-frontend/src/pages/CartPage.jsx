@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Trash2, Plus, Minus, ShoppingBag } from 'lucide-react';
 import { useCart } from '../context/CartContext';
+import { resolveMediaUrl } from '../utils/media';
 import './CartPage.css';
 
 const CartPage = () => {
@@ -17,9 +18,7 @@ const CartPage = () => {
 
   // Обработка URL изображения
   const getImageUrl = (image) => {
-    if (!image) return 'https://placehold.co/150x150/F5E6D3/8B4513?text=No+Image';
-    if (image.startsWith('http')) return image;
-    return `http://127.0.0.1:8000${image.startsWith('/') ? image : `/${image}`}`;
+    return resolveMediaUrl(image, 'https://placehold.co/150x150/F5E6D3/8B4513?text=No+Image');
   };
 
   const isAuthenticated = Boolean(localStorage.getItem('authToken'));
