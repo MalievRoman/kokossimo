@@ -582,16 +582,16 @@ body {
   background-size: contain;
 }
 .hero__arrow--prev {
-  background-image: url("/assets/arrow_scroll_black-left=hover.svg");
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='45' height='45' viewBox='0 0 45 45' fill='none'><circle cx='22.5' cy='22.5' r='21.85' fill='%23460200' stroke='%23460200' stroke-width='1.3'/><path d='M24.5 16.5L18.5 22.5L24.5 28.5' stroke='%23FFEDE8' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/></svg>");
 }
 .hero__arrow--next {
-  background-image: url("/assets/arrow_scroll_black-right=hover.svg");
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='45' height='45' viewBox='0 0 45 45' fill='none'><circle cx='22.5' cy='22.5' r='21.85' fill='%23460200' stroke='%23460200' stroke-width='1.3'/><path d='M20.5 16.5L26.5 22.5L20.5 28.5' stroke='%23FFEDE8' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/></svg>");
 }
 .hero__arrow--prev:hover {
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='45' height='45' viewBox='0 0 45 45' fill='none'><circle cx='22.5' cy='22.5' r='21.85' fill='%23150100' stroke='%23150100' stroke-width='1.3'/><path d='M24.5 16.5L18.5 22.5L24.5 28.5' stroke='%23FCF8F7' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='45' height='45' viewBox='0 0 45 45' fill='none'><circle cx='22.5' cy='22.5' r='21.85' fill='%23330200' stroke='%23330200' stroke-width='1.3'/><path d='M24.5 16.5L18.5 22.5L24.5 28.5' stroke='%23FFEDE8' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/></svg>");
 }
 .hero__arrow--next:hover {
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='45' height='45' viewBox='0 0 45 45' fill='none'><circle cx='22.5' cy='22.5' r='21.85' fill='%23150100' stroke='%23150100' stroke-width='1.3'/><path d='M20.5 16.5L26.5 22.5L20.5 28.5' stroke='%23FCF8F7' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='45' height='45' viewBox='0 0 45 45' fill='none'><circle cx='22.5' cy='22.5' r='21.85' fill='%23330200' stroke='%23330200' stroke-width='1.3'/><path d='M20.5 16.5L26.5 22.5L20.5 28.5' stroke='%23FFEDE8' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/></svg>");
 }
 
 .hero__dots {
@@ -1170,21 +1170,21 @@ body {
   gap: 48px;
 }
 
-/* Bestsellers arrows: new black icons */
+/* Bestsellers arrows: hero colors */
 .bestsellers__arrow--prev {
-  background-image: url("/assets/arrow_scroll_black-left=hover.svg");
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='45' height='45' viewBox='0 0 45 45' fill='none'><circle cx='22.5' cy='22.5' r='21.85' fill='%23460200' stroke='%23460200' stroke-width='1.3'/><path d='M24.5 16.5L18.5 22.5L24.5 28.5' stroke='%23FFEDE8' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/></svg>");
 }
 
 .bestsellers__arrow--next {
-  background-image: url("/assets/arrow_scroll_black-right=hover.svg");
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='45' height='45' viewBox='0 0 45 45' fill='none'><circle cx='22.5' cy='22.5' r='21.85' fill='%23460200' stroke='%23460200' stroke-width='1.3'/><path d='M20.5 16.5L26.5 22.5L20.5 28.5' stroke='%23FFEDE8' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/></svg>");
 }
 
 .bestsellers__arrow--prev:hover {
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='45' height='45' viewBox='0 0 45 45' fill='none'><circle cx='22.5' cy='22.5' r='21.85' fill='%23150100' stroke='%23150100' stroke-width='1.3'/><path d='M24.5 16.5L18.5 22.5L24.5 28.5' stroke='%23FCF8F7' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='45' height='45' viewBox='0 0 45 45' fill='none'><circle cx='22.5' cy='22.5' r='21.85' fill='%23330200' stroke='%23330200' stroke-width='1.3'/><path d='M24.5 16.5L18.5 22.5L24.5 28.5' stroke='%23FFEDE8' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/></svg>");
 }
 
 .bestsellers__arrow--next:hover {
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='45' height='45' viewBox='0 0 45 45' fill='none'><circle cx='22.5' cy='22.5' r='21.85' fill='%23150100' stroke='%23150100' stroke-width='1.3'/><path d='M20.5 16.5L26.5 22.5L20.5 28.5' stroke='%23FCF8F7' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='45' height='45' viewBox='0 0 45 45' fill='none'><circle cx='22.5' cy='22.5' r='21.85' fill='%23330200' stroke='%23330200' stroke-width='1.3'/><path d='M20.5 16.5L26.5 22.5L20.5 28.5' stroke='%23FFEDE8' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/></svg>");
 }
 
 /* Header: always fixed */
