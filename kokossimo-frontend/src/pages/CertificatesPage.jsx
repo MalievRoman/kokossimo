@@ -151,6 +151,26 @@ const CertificatesPage = () => {
               />
             </div>
 
+            <div className="certificate-preview certificate-preview--mobile">
+              <div className="certificate-card">
+                <div className="certificate-logo">
+                  <img src="/assets/logo.svg" alt="Кокоссимо" />
+                </div>
+                <div className="certificate-middle">
+                  <div className="certificate-title">ПОДАРОЧНЫЙ СЕРТИФИКАТ</div>
+                  <div className="certificate-amount">
+                    {(finalAmount || 0).toLocaleString('ru-RU')} ₽
+                  </div>
+                </div>
+                <div className="certificate-recipient">
+                  <span className="certificate-recipient__label">ПОЛУЧАТЕЛЬ:</span>
+                  {recipientName && (
+                    <span className="certificate-recipient__name">{recipientName}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
             <button type="button" className="certificate-form__purchase" onClick={handlePurchase}>
               ПРИОБРЕСТИ
             </button>

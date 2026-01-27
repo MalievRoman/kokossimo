@@ -299,6 +299,14 @@
     padding: 2.5rem 0;
   }
 
+  .certificate-preview {
+    display: none;
+  }
+
+  .certificate-form {
+    order: 2;
+  }
+
   .certificate-form__purchase {
     width: 100%;
     text-align: center;
@@ -307,4 +315,17 @@
   .certificate-form__input {
     max-width: 100%;
   }
+
+  .certificate-preview.certificate-preview--mobile {
+    display: flex;
+    margin: 32px 0;
+  }
+
+  .certificate-form__purchase {
+    margin-top: 0;
+  }
+}
+
+.certificate-preview--mobile {
+  display: none;
 }
