@@ -41,6 +41,12 @@ fi
 npm install --no-fund --no-audit
 npm run build
 
+log "Copy frontend static to backend staticfiles (Nginx serves /static/ from here)"
+rm -rf "$BACKEND_DIR/staticfiles/js"
+cp -r dist/js "$BACKEND_DIR/staticfiles/"
+[ -f dist/favicon.png ] && cp dist/favicon.png "$BACKEND_DIR/staticfiles/"
+sudo chmod -R o+rX "$BACKEND_DIR/staticfiles"
+
 log "Publish frontend"
 sudo mkdir -p "$STATIC_DIR"
 sudo rm -rf "$STATIC_DIR"/*
