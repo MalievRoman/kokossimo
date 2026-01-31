@@ -127,7 +127,7 @@ const ProductCard = ({ product }) => {
     price > 0 ? `${Number(n).toLocaleString('ru-RU')} ₽` : 'Цена не указана';
 
 
-  const favoriteIcon = favorite ? '/assets/fav_pressed.svg' : '/assets/fav.svg';
+  const favoriteIcon = favorite ? `${import.meta.env.BASE_URL}assets/fav_pressed.svg` : `${import.meta.env.BASE_URL}assets/fav.svg`;
 
   const showQtyControls = quantity > 0;
 

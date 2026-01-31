@@ -114,7 +114,7 @@ const CategoryList = () => {
           {categories.map((category) => {
             const imageUrl = category.image
               ? resolveMediaUrl(category.image)
-              : categoryImages[category.id] || '/assets/beauty_elements.png';
+              : categoryImages[category.id] || `${import.meta.env.BASE_URL}assets/beauty_elements.png`;
 
             return (
               <Link

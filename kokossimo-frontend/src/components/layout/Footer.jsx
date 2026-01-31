@@ -36,16 +36,16 @@ const Footer = () => (
 
           <div className="footer__social">
             <a className="footer__social-btn" href="https://instagram.com" aria-label="Instagram" target="_blank" rel="noreferrer">
-              <img src="/assets/insta.svg" alt="" />
+              <img src={`${import.meta.env.BASE_URL}assets/insta.svg`} alt="" />
             </a>
             <a className="footer__social-btn" href="https://t.me/" aria-label="Telegram" target="_blank" rel="noreferrer">
-              <img src="/assets/telegram.svg" alt="" />
+              <img src={`${import.meta.env.BASE_URL}assets/telegram.svg`} alt="" />
             </a>
             <a className="footer__social-btn" href="https://wa.me/79375068999" aria-label="WhatsApp" target="_blank" rel="noreferrer">
-              <img src="/assets/whatsapp.svg" alt="" />
+              <img src={`${import.meta.env.BASE_URL}assets/whatsapp.svg`} alt="" />
             </a>
             <a className="footer__social-btn" href="https://vk.com" aria-label="VK" target="_blank" rel="noreferrer">
-              <img src="/assets/vk.svg" alt="" />
+              <img src={`${import.meta.env.BASE_URL}assets/vk.svg`} alt="" />
             </a>
           </div>
         </div>
@@ -65,7 +65,7 @@ const Footer = () => (
       </div>
 
       <div className="footer__brand">
-        <img className="footer__logo" src="/assets/logo.svg" alt="KOKOSSIMO" />
+        <img className="footer__logo" src={`${import.meta.env.BASE_URL}assets/logo.svg`} alt="KOKOSSIMO" />
         <div className="footer__year">2026</div>
       </div>
     </div>
