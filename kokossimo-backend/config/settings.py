@@ -158,6 +158,10 @@ CORS_ALLOWED_ORIGINS = [
 # Альтернативный вариант - разрешить все локальные порты (только для разработки!)
 # CORS_ALLOW_ALL_ORIGINS = True  # Раскомментируйте, если нужно разрешить все порты
 
+# За Nginx запрос к Gunicorn приходит по HTTP — Django должен считать схему из X-Forwarded-Proto,
+# чтобы build_absolute_uri() возвращал https:// для медиа-URL (иначе Mixed Content в браузере).
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 # Настройки для загрузки картинок (товаров)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
