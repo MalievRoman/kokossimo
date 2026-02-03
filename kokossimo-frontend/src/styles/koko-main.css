@@ -548,20 +548,29 @@ body {
   width: 111px;
   height: 42px;
   padding: 12px 16px;
-  border: 0;
+  border: 1px solid #460200;
   border-radius: 4px;
-  background: #240100;
+  background: #460200;
   color: #FCF8F7;
   font-size: 14px;
   font-weight: 400;
   text-decoration: none;
   transition:
     background-color 180ms ease,
+    border-color 180ms ease,
     color 180ms ease;
 }
-.hero__btn:hover {
-  background: #150100;
+.hero__btn:active {
+  background: #330200;
+  border-color: #330200;
   color: #FCF8F7;
+}
+@media (hover: hover) and (pointer: fine) {
+  .hero__btn:hover {
+    background: #330200;
+    border-color: #330200;
+    color: #FCF8F7;
+  }
 }
 
 .hero__arrows {
