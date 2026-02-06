@@ -20,6 +20,36 @@ from shop.views import (
     rate_product,
 )
 
+# Оформление админки для сотрудников магазина
+admin.site.site_header = "Kokossimo — Панель управления"
+admin.site.site_title = "Kokossimo"
+admin.site.index_title = "Управление магазином"
+
+# Порядок разделов в админке: заказы и обращения первыми
+_original_get_app_list = admin.site.get_app_list
+
+
+def _kokossimo_get_app_list(request):
+    app_list = _original_get_app_list(request)
+    for app in app_list:
+        if app["app_label"] == "shop":
+            order = [
+                "order",
+                "feedback",
+                "product",
+                "category",
+                "profile",
+                "productrating",
+            ]
+            app["models"].sort(
+                key=lambda m: order.index(m["object_name"].lower())
+                if m["object_name"].lower() in order else 99
+            )
+    return app_list
+
+
+admin.site.get_app_list = _kokossimo_get_app_list
+
 # Создаем роутер для API
 router = DefaultRouter()
 router.register(r'products', ProductViewSet)
