@@ -1,19 +1,21 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, TriangleAlert } from 'lucide-react';
+import notFoundImage from '../assets/404/404_image.png';
 import './NotFoundPage.css';
 
 const NotFoundPage = () => {
   return (
     <div className="not-found page-animation">
-      <div className="not-found__content">
-        <TriangleAlert size={72} className="not-found__icon" />
-        <h1 className="not-found__title">СТРАНИЦА НЕ НАЙДЕНА</h1>
-        <p className="not-found__text">
-          Ошибка 404. Похоже, такой страницы не существует.
+      <div className="not-found__inner">
+        <img className="not-found__image" src={notFoundImage} alt="404" />
+        <p className="not-found__message">
+          ОЙ! ЧТО-ТО ПОШЛО НЕ ТАК.
+          <br />
+          ВОЗМОЖНО СТРАНИЦА, КОТОРУЮ ВЫ ИЩИТЕ, НЕ СУЩЕСТВУЕТ, ДАВАЙТЕ
+          ВЕРНЕМСЯ ОБРАТНО.
         </p>
-        <Link to="/" className="not-found__button">
-          <ArrowLeft size={18} /> НА ГЛАВНУЮ
+        <Link to="/" className="not-found__button product-card__btn">
+          НА ГЛАВНУЮ
         </Link>
       </div>
     </div>

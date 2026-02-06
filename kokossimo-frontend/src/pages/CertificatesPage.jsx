@@ -1,32 +1,42 @@
 import React, { useState } from 'react';
 import { useCart } from '../context/CartContext';
-import { useFavorites } from '../context/FavoritesContext';
 import './CertificatesPage.css';
+
+const CERTIFICATE_AMOUNTS = [1000, 3000, 5000];
+const CUSTOM_AMOUNT_MIN = 1000;
+const CUSTOM_AMOUNT_MAX = 20000;
+const CUSTOM_AMOUNT_STEP = 500;
 
 const CertificatesPage = () => {
   const { addToCart } = useCart();
-  const { addToFavorites } = useFavorites();
-  const [selectedAmount, setSelectedAmount] = useState(null);
-  const [customAmount, setCustomAmount] = useState('');
+  const [activeAmount, setActiveAmount] = useState(CERTIFICATE_AMOUNTS[2]);
+  const [customAmount, setCustomAmount] = useState(2000);
+  const [recipientName, setRecipientName] = useState('');
   const [status, setStatus] = useState('');
 
-  const handleCustomAmountChange = (e) => {
-    setCustomAmount(e.target.value);
-    setSelectedAmount(null); // Сбрасываем выбор готового номинала
-  };
+  const isCustom = activeAmount === 'custom';
+  const finalAmount = isCustom ? customAmount : activeAmount;
+
+  const clampCustomAmount = (value) =>
+    Math.min(CUSTOM_AMOUNT_MAX, Math.max(CUSTOM_AMOUNT_MIN, value));
 
   const handleSelectAmount = (amount) => {
-    setSelectedAmount(amount);
-    setCustomAmount(''); // Сбрасываем поле своего номинала
+    setActiveAmount(amount);
+    setStatus('');
   };
 
-  const getFinalAmount = () => {
-    const raw = selectedAmount || customAmount;
-    if (!raw) return null;
-    const normalized = String(raw).replace(/\s/g, '').replace(',', '.');
-    const value = Number.parseFloat(normalized);
-    if (Number.isNaN(value) || value <= 0) return null;
-    return Math.round(value);
+  const handleSelectCustom = () => {
+    setActiveAmount('custom');
+    setStatus('');
+  };
+
+  const handleCustomAmountChange = (event) => {
+    const rawValue = Number.parseInt(event.target.value, 10);
+    if (Number.isNaN(rawValue)) {
+      setCustomAmount(CUSTOM_AMOUNT_MIN);
+      return;
+    }
+    setCustomAmount(clampCustomAmount(rawValue));
   };
 
   const createCertificateProduct = (amount) => ({
@@ -40,135 +50,131 @@ const CertificatesPage = () => {
     is_gift_certificate: true,
   });
 
-  const handleAddToCart = () => {
-    const amount = getFinalAmount();
-    if (!amount) {
-      setStatus('Пожалуйста, выберите номинал или введите свой.');
+  const handlePurchase = () => {
+    if (!finalAmount || Number.isNaN(finalAmount)) {
+      setStatus('Пожалуйста, выберите номинал.');
       return;
     }
-    addToCart(createCertificateProduct(amount), 1);
-    setStatus(`Сертификат на сумму ${amount.toLocaleString('ru-RU')} ₽ добавлен в корзину.`);
-  };
-
-  const handleAddToFavorites = () => {
-    const amount = getFinalAmount();
-    if (!amount) {
-      setStatus('Пожалуйста, выберите номинал или введите свой.');
-      return;
-    }
-    addToFavorites(createCertificateProduct(amount));
-    setStatus(`Сертификат на сумму ${amount.toLocaleString('ru-RU')} ₽ добавлен в избранное.`);
+    addToCart(createCertificateProduct(finalAmount), 1);
+    setStatus(`Сертификат на сумму ${finalAmount.toLocaleString('ru-RU')} ₽ добавлен в корзину.`);
   };
 
   return (
     <div className="certificates-page page-animation">
       <div className="container">
-        
+
         <div className="certificates-hero">
-          {/* Блок с описанием */}
-          <div className="certificates-hero__panel certificates-intro">
-            <h1 className="page-title">ПОДАРОЧНЫЙ СЕРТИФИКАТ</h1>
-            <div className="intro-content">
-              <div className="intro-text">
-                <p>
-                  Лучший подарок — это уверенность, что он понравится. Подарочный
-                  сертификат — идеальный способ подарить близким и друзьям
-                  возможность выбрать что-то особенное для себя и получить именно
-                  те эмоции, которые запомнятся надолго. Стопроцентное попадание
-                  без долгих поисков и сомнений!
-                </p>
-                
-                <div className="custom-amount-wrapper">
-                  <input
-                    type="number"
-                    min="1"
-                    placeholder="Введите сумму, ₽"
-                    value={customAmount}
-                    onChange={handleCustomAmountChange}
-                  />
-                  <div className="custom-amount-actions">
-                    <button className="buy-btn" onClick={handleAddToCart}>
-                      В корзину
-                    </button>
-                    <button className="buy-btn buy-btn--ghost" onClick={handleAddToFavorites}>
-                      В избранное
-                    </button>
-                  </div>
-                  {status && <div className="custom-amount-status">{status}</div>}
+          <div className="certificate-preview">
+            <div className="certificate-card">
+              <div className="certificate-logo">
+                <img src="/assets/logo.svg" alt="Кокоссимо" />
+              </div>
+              <div className="certificate-middle">
+                <div className="certificate-title">ПОДАРОЧНЫЙ СЕРТИФИКАТ</div>
+                <div className="certificate-amount">
+                  {(finalAmount || 0).toLocaleString('ru-RU')} ₽
                 </div>
               </div>
-              
-              {/* Декоративная буква К на фоне */}
-              <div className="intro-bg-letter">K</div>
+              <div className="certificate-recipient">
+                <span className="certificate-recipient__label">ПОЛУЧАТЕЛЬ:</span>
+                {recipientName && (
+                  <span className="certificate-recipient__name">{recipientName}</span>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Карточки сертификатов */}
-          <div className="certificates-hero__cards">
-            <div className="certificates-grid">
-              {/* 1000 ₽ */}
-              <div className="certificate-item">
-                <div 
-                  className={`certificate-card ${selectedAmount === 1000 ? 'selected' : ''}`}
-                  onClick={() => handleSelectAmount(1000)}
-                >
-                  <div className="cert-top">
-                    <span>КОКОССИМО!</span>
-                    <span className="star">✦</span>
-                  </div>
-                  <div className="cert-center">
-                    <div className="cert-chevron"></div>
-                  </div>
-                  <div className="cert-bottom">
-                    <span className="cert-label">ПОДАРОЧНЫЙ СЕРТИФИКАТ</span>
-                    <span className="cert-price">1 000 ₽</span>
-                  </div>
-                </div>
-                <p className="certificate-caption">Подарочный сертификат номиналом 1000 рублей</p>
+          <div className="certificate-form">
+            <h1 className="certificate-form__title">ПОДАРОЧНЫЙ СЕРТИФИКАТ</h1>
+            <p className="certificate-form__text">
+              Иногда самый лучший подарок — это возможность выбрать именно то,
+              что хочется. Подарочный сертификат — идеальный способ выразить
+              внимание, порадовать близкого человека и подарить ему немного
+              красоты и удовольствия.
+            </p>
+
+            <div className="certificate-form__section">
+              <h2 className="certificate-form__subtitle">ВЫБОР НОМИНАЛА</h2>
+              <div className="certificate-form__amounts">
+                {CERTIFICATE_AMOUNTS.map((amount) => (
+                  <button
+                    key={amount}
+                    type="button"
+                    className={`amount-button ${activeAmount === amount ? 'is-active' : ''}`}
+                    onClick={() => handleSelectAmount(amount)}
+                  >
+                    {amount.toLocaleString('ru-RU')} ₽
+                  </button>
+                ))}
               </div>
 
-              {/* 3000 ₽ */}
-              <div className="certificate-item">
-                <div 
-                  className={`certificate-card ${selectedAmount === 3000 ? 'selected' : ''}`}
-                  onClick={() => handleSelectAmount(3000)}
+              <div className="certificate-form__custom">
+                <button
+                  type="button"
+                  className={`amount-button ${isCustom ? 'is-active' : ''}`}
+                  onClick={handleSelectCustom}
                 >
-                  <div className="cert-top">
-                    <span>КОКОССИМО!</span>
-                    <span className="star">✦</span>
-                  </div>
-                  <div className="cert-center">
-                    <div className="cert-chevron"></div>
-                  </div>
-                  <div className="cert-bottom">
-                    <span className="cert-label">ПОДАРОЧНЫЙ СЕРТИФИКАТ</span>
-                    <span className="cert-price">3 000 ₽</span>
-                  </div>
-                </div>
-                <p className="certificate-caption">Подарочный сертификат номиналом 3000 рублей</p>
+                  СВОЯ СУММА
+                </button>
+                {isCustom && (
+                  <input
+                    type="number"
+                    min={CUSTOM_AMOUNT_MIN}
+                    max={CUSTOM_AMOUNT_MAX}
+                    step={CUSTOM_AMOUNT_STEP}
+                    value={customAmount}
+                    onChange={handleCustomAmountChange}
+                  />
+                )}
               </div>
+              {isCustom && (
+                <input
+                  type="range"
+                  className="certificate-form__slider"
+                  min={CUSTOM_AMOUNT_MIN}
+                  max={CUSTOM_AMOUNT_MAX}
+                  step={CUSTOM_AMOUNT_STEP}
+                  value={customAmount}
+                  onChange={handleCustomAmountChange}
+                />
+              )}
+            </div>
 
-              {/* 5000 ₽ */}
-              <div className="certificate-item">
-                <div 
-                  className={`certificate-card ${selectedAmount === 5000 ? 'selected' : ''}`}
-                  onClick={() => handleSelectAmount(5000)}
-                >
-                  <div className="cert-top">
-                    <span>КОКОССИМО!</span>
-                    <span className="star">✦</span>
-                  </div>
-                  <div className="cert-center">
-                    <div className="cert-chevron"></div>
-                  </div>
-                  <div className="cert-bottom">
-                    <span className="cert-label">ПОДАРОЧНЫЙ СЕРТИФИКАТ</span>
-                    <span className="cert-price">5 000 ₽</span>
+            <div className="certificate-form__section">
+              <h2 className="certificate-form__subtitle">ИМЯ ПОЛУЧАТЕЛЯ</h2>
+              <input
+                type="text"
+                className="certificate-form__input"
+                placeholder="Имя"
+                value={recipientName}
+                onChange={(event) => setRecipientName(event.target.value)}
+              />
+            </div>
+
+            <div className="certificate-preview certificate-preview--mobile">
+              <div className="certificate-card">
+                <div className="certificate-logo">
+                  <img src="/assets/logo.svg" alt="Кокоссимо" />
+                </div>
+                <div className="certificate-middle">
+                  <div className="certificate-title">ПОДАРОЧНЫЙ СЕРТИФИКАТ</div>
+                  <div className="certificate-amount">
+                    {(finalAmount || 0).toLocaleString('ru-RU')} ₽
                   </div>
                 </div>
-                <p className="certificate-caption">Подарочный сертификат номиналом 5000 рублей</p>
+                <div className="certificate-recipient">
+                  <span className="certificate-recipient__label">ПОЛУЧАТЕЛЬ:</span>
+                  {recipientName && (
+                    <span className="certificate-recipient__name">{recipientName}</span>
+                  )}
+                </div>
               </div>
             </div>
+
+            <button type="button" className="certificate-form__purchase" onClick={handlePurchase}>
+              ПРИОБРЕСТИ
+            </button>
+            {status && <div className="certificate-form__status">{status}</div>}
           </div>
         </div>
 

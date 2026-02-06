@@ -1,6 +1,7 @@
 import os
 import re
 import sys
+import unicodedata
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
@@ -13,7 +14,7 @@ import django  # noqa: E402
 django.setup()
 
 from django.utils.text import slugify  # noqa: E402
-from shop.models import Category, Product  # noqa: E402
+from shop.models import Category, Product, OrderItem  # noqa: E402
 
 
 CATEGORY_LINE = re.compile(r"^\s*\d+\.\s*(.+)$")
@@ -35,6 +36,15 @@ def parse_price(raw):
         return None
 
 
+def _normalize_label(value):
+    value = unicodedata.normalize("NFKD", value)
+    value = "".join(ch for ch in value if not unicodedata.combining(ch))
+    value = value.lower()
+    value = re.sub(r"[\s\-_]+", "", value)
+    value = re.sub(r"[^\w]", "", value, flags=re.UNICODE)
+    return value
+
+
 def find_photo_file(photo_label, media_dir):
     photo_label = photo_label.strip()
     if not photo_label:
@@ -45,10 +55,14 @@ def find_photo_file(photo_label, media_dir):
     if direct_path.exists():
         return direct_path.name
 
+    normalized_label = _normalize_label(photo_label)
+
     # Try to find by stem (case-insensitive)
     for file_path in media_dir.iterdir():
         if file_path.is_file():
             if file_path.stem.lower() == photo_label.lower():
+                return file_path.name
+            if normalized_label and _normalize_label(file_path.stem) == normalized_label:
                 return file_path.name
 
     return None
@@ -70,7 +84,9 @@ def parse_text(text):
         current_product = None
         in_description = False
 
-    for raw_line in text.splitlines():
+    lines = text.splitlines()
+    total_lines = len(lines)
+    for idx, raw_line in enumerate(lines):
         line = raw_line.strip()
         if not line:
             continue
@@ -94,7 +110,18 @@ def parse_text(text):
             }
             continue
 
-        if alt_product_match and not PRICE_LINE.match(line) and not DESC_LINE.match(line) and not PHOTO_LINE.match(line):
+        if alt_product_match and not in_description and not PRICE_LINE.match(line) and not DESC_LINE.match(line) and not PHOTO_LINE.match(line):
+            # Treat bullet as product name only if a price line follows soon.
+            has_price_soon = False
+            for j in range(idx + 1, min(idx + 6, total_lines)):
+                next_line = lines[j].strip()
+                if not next_line:
+                    continue
+                if PRICE_LINE.match(next_line):
+                    has_price_soon = True
+                break
+            if not has_price_soon:
+                continue
             flush_product()
             current_product = {
                 "name": alt_product_match.group(1).strip(),
@@ -131,7 +158,7 @@ def parse_text(text):
     return categories
 
 
-def import_products(text_path):
+def import_products(text_path, purge=False):
     media_dir = BASE_DIR / "media" / "products"
     if not media_dir.exists():
         print(f"[WARN] Фото не найдены: {media_dir}")
@@ -139,8 +166,17 @@ def import_products(text_path):
     text = Path(text_path).read_text(encoding="utf-8")
     categories = parse_text(text)
 
-    Product.objects.all().delete()
-    Category.objects.all().delete()
+    if purge:
+        # Detach order items to bypass PROTECT, but keep item titles.
+        items_with_products = OrderItem.objects.select_related("product").filter(product__isnull=False)
+        for item in items_with_products:
+            if not item.title:
+                item.title = item.product.name
+            item.product = None
+            item.save(update_fields=["title", "product"])
+
+        Product.objects.all().delete()
+        Category.objects.all().delete()
 
     created_products = 0
     for category_data in categories:
@@ -159,12 +195,18 @@ def import_products(text_path):
             if not photo_file:
                 print(f"[WARN] Фото не найдено для '{product_data['name']}': {product_data['photo']}")
 
-            product = Product(
-                category=category,
+            product, created = Product.objects.get_or_create(
                 name=product_data["name"],
-                description=product_data["description"] or "",
-                price=product_data["price"],
+                defaults={
+                    "category": category,
+                    "description": product_data["description"] or "",
+                    "price": product_data["price"],
+                },
             )
+            if not created:
+                product.category = category
+                product.description = product_data["description"] or ""
+                product.price = product_data["price"]
             if photo_file:
                 product.image.name = f"products/{photo_file}"
             product.save()
@@ -175,7 +217,7 @@ def import_products(text_path):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python scripts/import_products_from_text.py <path_to_text_file>")
+        print("Usage: python scripts/import_products_from_text.py <path_to_text_file> [--purge]")
         sys.exit(1)
 
-    import_products(sys.argv[1])
+    import_products(sys.argv[1], purge="--purge" in sys.argv[2:])

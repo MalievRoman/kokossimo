@@ -1,132 +1,169 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import './HeroBlock.css';
-import heroImage1 from '../../assets/hero/hero_background_1.png';
-import heroImage2 from '../../assets/hero/hero_background_2.png';
-import heroImage3 from '../../assets/hero/hero_background_3.png';
 
-// --- ВОТ ЗДЕСЬ НАЧИНАЕТСЯ МАССИВ СЛАЙДОВ (ШАГ 1) ---
+// Версия hero-блока под верстку из main_page.html (koko_website)
+// Фоновые слайды берём из публичных ассетов, вся разметка и классы
+// совпадают с оригинальной HTML-версией.
+
 const slides = [
-  {
-    id: 1,
-    title: "СКИДКИ ДО 30%!\nУСПЕЙТЕ КУПИТЬ ЛЮБИМЫЕ\nТОВАРЫ ПО ВЫГОДНЫМ ЦЕНАМ!",
-    buttonText: "СМОТРЕТЬ",
-    link: "/catalog", // Ведет в каталог
-    image: heroImage1,
-  },
-  {
-    id: 2,
-    title: "НОВАЯ КОЛЛЕКЦИЯ\nУХОД ЗА ЛИЦОМ\nУЖЕ В ПРОДАЖЕ!",
-    buttonText: "В КАТАЛОГ",
-    link: "/catalog", // Тоже ведет в каталог (было /catalog/face-care)
-    image: heroImage2,
-  },
-  {
-    id: 3,
-    title: "БЕСПЛАТНАЯ ДОСТАВКА\nПРИ ЗАКАЗЕ ОТ 5000 ₽\nПО ВСЕЙ РОССИИ",
-    buttonText: "ПОДРОБНЕЕ",
-    link: "/catalog", // И это тоже в каталог (было /delivery)
-    image: heroImage3,
-  }
+  { id: 0, image: '/assets/hero_background_1.png' },
+  { id: 1, image: '/assets/hero_background_2.png' },
+  { id: 2, image: '/assets/hero_background_3.png' },
 ];
 
-// --- КОНЕЦ МАССИВА СЛАЙДОВ ---
+const AUTO_PLAY_INTERVAL = 8000; // мс
 
 const HeroBlock = () => {
-  const [currentSlide, setCurrentSlide] = useState(0);
-  const [isAnimating, setIsAnimating] = useState(false);
-  const touchStartX = useRef(null);
-  const touchStartY = useRef(null);
+  const [current, setCurrent] = useState(0);
+  const trackRef = useRef(null);
+  const autoplayRef = useRef(null);
+  const isPointerDownRef = useRef(false);
 
-  const nextSlide = () => {
-    if (isAnimating) return;
-    setIsAnimating(true);
-    setTimeout(() => setIsAnimating(false), 600);
-    setCurrentSlide((prev) => (prev === slides.length - 1 ? 0 : prev + 1));
+  const scrollToSlide = (index, withBehavior = 'smooth') => {
+    const track = trackRef.current;
+    if (!track) return;
+
+    const safeIndex = ((index % slides.length) + slides.length) % slides.length;
+    const width = track.clientWidth;
+    track.scrollTo({
+      left: safeIndex * width,
+      behavior: withBehavior,
+    });
+    setCurrent(safeIndex);
   };
 
-  const prevSlide = () => {
-    if (isAnimating) return;
-    setIsAnimating(true);
-    setTimeout(() => setIsAnimating(false), 600);
-    setCurrentSlide((prev) => (prev === 0 ? slides.length - 1 : prev - 1));
-  };
+  const nextSlide = () => scrollToSlide(current + 1);
+  const prevSlide = () => scrollToSlide(current - 1);
 
-  const goToSlide = (index) => {
-    if (index === currentSlide || isAnimating) return;
-    setIsAnimating(true);
-    setTimeout(() => setIsAnimating(false), 600);
-    setCurrentSlide(index);
-  };
+  // Автопрокрутка
+  useEffect(() => {
+    const startAutoplay = () => {
+      if (autoplayRef.current) return;
+      autoplayRef.current = window.setInterval(() => {
+        if (isPointerDownRef.current) return;
+        nextSlide();
+      }, AUTO_PLAY_INTERVAL);
+    };
 
-  const handleTouchStart = (event) => {
-    const touch = event.touches[0];
-    if (!touch) return;
-    touchStartX.current = touch.clientX;
-    touchStartY.current = touch.clientY;
-  };
+    const stopAutoplay = () => {
+      if (autoplayRef.current) {
+        window.clearInterval(autoplayRef.current);
+        autoplayRef.current = null;
+      }
+    };
 
-  const handleTouchEnd = (event) => {
-    if (touchStartX.current === null || touchStartY.current === null) return;
-    const touch = event.changedTouches[0];
-    if (!touch) return;
-    const deltaX = touch.clientX - touchStartX.current;
-    const deltaY = touch.clientY - touchStartY.current;
-    touchStartX.current = null;
-    touchStartY.current = null;
+    startAutoplay();
 
-    if (Math.abs(deltaX) < 40 || Math.abs(deltaY) > 60) return;
-    if (deltaX > 0) {
-      prevSlide();
-    } else {
-      nextSlide();
-    }
+    return () => {
+      stopAutoplay();
+    };
+  }, [current]);
+
+  // Синхронизация current при ручном скролле (свайпы/колёсико)
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track) return;
+
+    let raf = 0;
+
+    const handleScroll = () => {
+      window.cancelAnimationFrame(raf);
+      raf = window.requestAnimationFrame(() => {
+        const width = track.clientWidth || 1;
+        const index = Math.round(track.scrollLeft / width);
+        const safeIndex = ((index % slides.length) + slides.length) % slides.length;
+        if (safeIndex !== current) {
+          setCurrent(safeIndex);
+        }
+      });
+    };
+
+    track.addEventListener('scroll', handleScroll, { passive: true });
+
+    return () => {
+      track.removeEventListener('scroll', handleScroll);
+      window.cancelAnimationFrame(raf);
+    };
+  }, [current]);
+
+  // Обработчики pointer для паузы автоплея на drag
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track) return;
+
+    const handleDown = () => {
+      isPointerDownRef.current = true;
+    };
+    const handleUp = () => {
+      isPointerDownRef.current = false;
+    };
+
+    track.addEventListener('pointerdown', handleDown, { passive: true });
+    track.addEventListener('pointerup', handleUp, { passive: true });
+    track.addEventListener('pointercancel', handleUp, { passive: true });
+    track.addEventListener('mouseleave', handleUp, { passive: true });
+
+    return () => {
+      track.removeEventListener('pointerdown', handleDown);
+      track.removeEventListener('pointerup', handleUp);
+      track.removeEventListener('pointercancel', handleUp);
+      track.removeEventListener('mouseleave', handleUp);
+    };
+  }, []);
+
+  const handleDotClick = (index) => {
+    scrollToSlide(index);
   };
 
   return (
-    <section className="hero" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
-      <div className="hero__track" style={{ transform: `translateX(-${currentSlide * 100}%)` }}>
+    <section className="hero" aria-label="Главный баннер">
+      <div className="hero__slides" ref={trackRef}>
         {slides.map((slide) => (
           <div
             key={slide.id}
             className="hero__slide"
-            style={{ backgroundImage: `url(${slide.image})` }}
-          >
-            <div className="container hero__container">
-              <div className="hero__content">
-                <h1 className="hero__title">
-                  {slide.title.split('\n').map((line, i) => (
-                    <React.Fragment key={i}>
-                      {line}
-                      <br />
-                    </React.Fragment>
-                  ))}
-                </h1>
-                <Link to={slide.link} className="hero__btn">
-                  {slide.buttonText}
-                </Link>
-                <div className="hero__controls">
-                  <button className="slider-btn prev" onClick={prevSlide}>
-                    <ChevronLeft size={24} />
-                  </button>
-                  <button className="slider-btn next" onClick={nextSlide}>
-                    <ChevronRight size={24} />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+            style={{ backgroundImage: `url('${slide.image}')` }}
+          />
         ))}
       </div>
-      <div className="hero__dots">
-        {slides.map((_, index) => (
-          <span 
-            key={index} 
-            className={`dot ${index === currentSlide ? 'active' : ''}`}
-            onClick={() => goToSlide(index)}
-          ></span>
-        ))}
+
+      <div className="container hero__inner">
+        <div className="hero__content">
+          <h1 className="hero__title">
+            СКИДКИ ДО 30%! УСПЕЙТЕ КУПИТЬ ЛЮБИМЫЕ<br />
+            ТОВАРЫ ПО ВЫГОДНЫМ ЦЕНАМ!
+          </h1>
+          <Link className="hero__btn" to="/catalog">
+            СМОТРЕТЬ
+          </Link>
+        </div>
+
+        <div className="hero__arrows" aria-label="Стрелки">
+          <button
+            className="hero__arrow hero__arrow--prev"
+            type="button"
+            aria-label="Предыдущий"
+            onClick={prevSlide}
+          />
+          <button
+            className="hero__arrow hero__arrow--next"
+            type="button"
+            aria-label="Следующий"
+            onClick={nextSlide}
+          />
+        </div>
+
+        <div className="hero__dots" aria-label="Точки">
+          {slides.map((slide, index) => (
+            <button
+              key={slide.id}
+              className={`hero__dot ${index === current ? 'is-active' : ''}`}
+              type="button"
+              aria-label={`Слайд ${index + 1}`}
+              onClick={() => handleDotClick(index)}
+            />
+          ))}
+        </div>
       </div>
     </section>
   );
