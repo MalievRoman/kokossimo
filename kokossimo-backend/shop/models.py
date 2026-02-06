@@ -174,3 +174,34 @@ class OrderItem(models.Model):
     @property
     def line_total(self):
         return self.price * self.quantity
+
+
+class Feedback(models.Model):
+    """Обратная связь из Telegram-бота: отзывы, предложения, просьбы о связи."""
+
+    TYPE_CHOICES = [
+        ('review', 'Отзыв'),
+        ('suggestion', 'Предложение'),
+        ('contact_request', 'Просьба о связи'),
+    ]
+
+    feedback_type = models.CharField(
+        "Тип",
+        max_length=20,
+        choices=TYPE_CHOICES,
+    )
+    text = models.TextField("Текст сообщения")
+    telegram_user_id = models.BigIntegerField("Telegram user ID", null=True, blank=True)
+    telegram_username = models.CharField("Telegram @username", max_length=100, blank=True)
+    contact_phone = models.CharField("Телефон для связи", max_length=30, blank=True)
+    contact_email = models.EmailField("Email для связи", blank=True)
+    is_processed = models.BooleanField("Обработано", default=False)
+    created_at = models.DateTimeField("Дата создания", auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Обратная связь"
+        verbose_name_plural = "Обратная связь"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.get_feedback_type_display()} — {self.created_at.strftime('%d.%m.%Y %H:%M')}"

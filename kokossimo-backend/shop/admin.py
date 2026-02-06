@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Category, Product, Profile, Order, OrderItem, ProductRating
+from .models import Category, Product, Profile, Order, OrderItem, ProductRating, Feedback
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
@@ -40,3 +40,16 @@ class ProductRatingAdmin(admin.ModelAdmin):
     list_display = ('product', 'user', 'rating', 'created_at')
     list_filter = ('rating', 'created_at')
     search_fields = ('product__name', 'user__username', 'user__email')
+
+
+@admin.register(Feedback)
+class FeedbackAdmin(admin.ModelAdmin):
+    list_display = ('id', 'feedback_type', 'text_short', 'telegram_username', 'is_processed', 'created_at')
+    list_filter = ('feedback_type', 'is_processed', 'created_at')
+    search_fields = ('text', 'telegram_username', 'contact_phone', 'contact_email')
+    readonly_fields = ('telegram_user_id', 'telegram_username', 'created_at')
+    list_editable = ('is_processed',)
+
+    def text_short(self, obj):
+        return (obj.text[:50] + '…') if len(obj.text) > 50 else obj.text
+    text_short.short_description = 'Текст'
