@@ -84,9 +84,19 @@ const Header = () => {
     const query = searchValue.trim();
 
     if (query) {
-      navigate(`/catalog?q=${encodeURIComponent(query)}`);
+      // Сохраняем текущие фильтры каталога (категории, цена), если уже на странице каталога
+      const params = new URLSearchParams(location.pathname === '/catalog' ? location.search : '');
+      params.set('q', query);
+      navigate(`/catalog?${params.toString()}`);
     } else {
-      navigate('/catalog');
+      if (location.pathname === '/catalog') {
+        const params = new URLSearchParams(location.search);
+        params.delete('q');
+        const newSearch = params.toString();
+        navigate(newSearch ? `/catalog?${newSearch}` : '/catalog');
+      } else {
+        navigate('/catalog');
+      }
     }
 
     setIsMobileSearchOpen(false);
