@@ -8,6 +8,26 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  paramsSerializer: {
+    // Кастомная сериализация для поддержки множественных значений параметров
+    // Например: { category: ['face', 'body'] } -> 'category=face&category=body'
+    serialize: (params) => {
+      const searchParams = new URLSearchParams();
+      Object.keys(params).forEach(key => {
+        const value = params[key];
+        if (value !== undefined && value !== null) {
+          if (Array.isArray(value)) {
+            value.forEach(item => {
+              searchParams.append(key, item);
+            });
+          } else {
+            searchParams.append(key, value);
+          }
+        }
+      });
+      return searchParams.toString();
+    }
+  },
 });
 
 export const getProducts = (params) => api.get('/products/', { params });
