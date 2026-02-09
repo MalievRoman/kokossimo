@@ -103,7 +103,7 @@ def parse_contact_line(contact_line: str) -> Tuple[str, str]:
 
 
 def get_main_keyboard():
-    """Клавиатура на панели внизу экрана."""
+    """Клавиатура на панели внизу экрана (reply-клавиатура)."""
     return ReplyKeyboardMarkup(
         [
             [KeyboardButton(BTN_REVIEW)],
@@ -113,6 +113,8 @@ def get_main_keyboard():
         ],
         resize_keyboard=True,
         one_time_keyboard=False,
+        is_persistent=True,
+        input_field_placeholder="Выберите действие или введите текст...",
     )
 
 
