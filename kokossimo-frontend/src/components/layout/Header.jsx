@@ -144,16 +144,27 @@ const Header = () => {
     setIsMobileMenuOpen(false);
   };
 
+  const buildCatalogParamsWithoutQuery = () => {
+    const params = new URLSearchParams(location.search);
+    params.delete('q');
+    if (catalogFilters) {
+      params.delete('category');
+      (catalogFilters.selectedCategories || []).forEach((slug) => params.append('category', slug));
+      if (catalogFilters.priceMin) params.set('price_min', catalogFilters.priceMin);
+      else params.delete('price_min');
+      if (catalogFilters.priceMax) params.set('price_max', catalogFilters.priceMax);
+      else params.delete('price_max');
+    }
+    return params;
+  };
+
   const handleSearchClear = () => {
     setSearchValue('');
-    // Если мы на странице каталога, очищаем параметр q из URL
     if (isOnCatalogPage) {
-      const params = new URLSearchParams(location.search);
-      params.delete('q');
+      const params = buildCatalogParamsWithoutQuery();
       const newSearch = params.toString();
       navigate(newSearch ? `/catalog?${newSearch}` : '/catalog');
     } else {
-      // Если мы не на странице каталога, просто очищаем поле
       navigate('/catalog');
     }
     setIsSuggestionsOpen(false);
@@ -162,11 +173,9 @@ const Header = () => {
   const handleSearchChange = (e) => {
     const newValue = e.target.value;
     setSearchValue(newValue);
-    
-    // Если поле очищено и мы на странице каталога, очищаем параметр q из URL
+
     if (!newValue.trim() && isOnCatalogPage) {
-      const params = new URLSearchParams(location.search);
-      params.delete('q');
+      const params = buildCatalogParamsWithoutQuery();
       const newSearch = params.toString();
       navigate(newSearch ? `/catalog?${newSearch}` : '/catalog', { replace: true });
     }
