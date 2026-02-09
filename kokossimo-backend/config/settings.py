@@ -70,7 +70,7 @@ ROOT_URLCONF = 'config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -142,8 +142,16 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+# Путь к собранным статическим файлам фронтенда
+FRONTEND_BUILD_DIR = os.path.join(BASE_DIR.parent, 'kokossimo-frontend', 'dist')
+
+# Добавляем статические файлы фронтенда в STATICFILES_DIRS
+STATICFILES_DIRS = [
+    FRONTEND_BUILD_DIR,
+] if os.path.exists(FRONTEND_BUILD_DIR) else []
 
 # ... конец файла ...
 
@@ -157,6 +165,10 @@ CORS_ALLOWED_ORIGINS = [
 
 # Альтернативный вариант - разрешить все локальные порты (только для разработки!)
 # CORS_ALLOW_ALL_ORIGINS = True  # Раскомментируйте, если нужно разрешить все порты
+
+# За Nginx запрос к Gunicorn приходит по HTTP — Django должен считать схему из X-Forwarded-Proto,
+# чтобы build_absolute_uri() возвращал https:// для медиа-URL (иначе Mixed Content в браузере).
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Настройки для загрузки картинок (товаров)
 MEDIA_URL = '/media/'

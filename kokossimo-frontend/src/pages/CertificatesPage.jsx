@@ -67,7 +67,7 @@ const CertificatesPage = () => {
           <div className="certificate-preview">
             <div className="certificate-card">
               <div className="certificate-logo">
-                <img src="/assets/logo.svg" alt="Кокоссимо" />
+                <img src={`${import.meta.env.BASE_URL}assets/logo.svg`} alt="Кокоссимо" />
               </div>
               <div className="certificate-middle">
                 <div className="certificate-title">ПОДАРОЧНЫЙ СЕРТИФИКАТ</div>
@@ -154,7 +154,7 @@ const CertificatesPage = () => {
             <div className="certificate-preview certificate-preview--mobile">
               <div className="certificate-card">
                 <div className="certificate-logo">
-                  <img src="/assets/logo.svg" alt="Кокоссимо" />
+                  <img src={`${import.meta.env.BASE_URL}assets/logo.svg`} alt="Кокоссимо" />
                 </div>
                 <div className="certificate-middle">
                   <div className="certificate-title">ПОДАРОЧНЫЙ СЕРТИФИКАТ</div>

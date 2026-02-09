@@ -52,24 +52,24 @@ body {
   mask-size: contain;
 }
 .icon--catalog {
-  -webkit-mask-image: url("/assets/header__catalog-icon.svg");
-  mask-image: url("/assets/header__catalog-icon.svg");
+  -webkit-mask-image: url("/static/assets/header__catalog-icon.svg");
+  mask-image: url("/static/assets/header__catalog-icon.svg");
 }
 .icon--search {
-  -webkit-mask-image: url("/assets/header__search-icon.svg");
-  mask-image: url("/assets/header__search-icon.svg");
+  -webkit-mask-image: url("/static/assets/header__search-icon.svg");
+  mask-image: url("/static/assets/header__search-icon.svg");
 }
 .icon--cart {
-  -webkit-mask-image: url("/assets/cart-icon.svg");
-  mask-image: url("/assets/cart-icon.svg");
+  -webkit-mask-image: url("/static/assets/cart-icon.svg");
+  mask-image: url("/static/assets/cart-icon.svg");
 }
 .icon--fav {
-  -webkit-mask-image: url("/assets/fav-icon.svg");
-  mask-image: url("/assets/fav-icon.svg");
+  -webkit-mask-image: url("/static/assets/fav-icon.svg");
+  mask-image: url("/static/assets/fav-icon.svg");
 }
 .icon--profile {
-  -webkit-mask-image: url("/assets/profile-icon.svg");
-  mask-image: url("/assets/profile-icon.svg");
+  -webkit-mask-image: url("/static/assets/profile-icon.svg");
+  mask-image: url("/static/assets/profile-icon.svg");
 }
 
 /* ===== HEADER ===== */
@@ -1152,20 +1152,20 @@ body {
 
 .bestsellers__arrow--prev {
   left: 0;
-  background-image: url("/assets/arrow_scroll-left.svg");
+  background-image: url("/static/assets/arrow_scroll-left.svg");
 }
 
 .bestsellers__arrow--next {
   right: 0;
-  background-image: url("/assets/arrow_scroll-right.svg");
+  background-image: url("/static/assets/arrow_scroll-right.svg");
 }
 
 .bestsellers__arrow--prev:hover {
-  background-image: url("/assets/arrow_scroll-left=hover.svg");
+  background-image: url("/static/assets/arrow_scroll-left=hover.svg");
 }
 
 .bestsellers__arrow--next:hover {
-  background-image: url("/assets/arrow_scroll-right=hover.svg");
+  background-image: url("/static/assets/arrow_scroll-right=hover.svg");
 }
 
 /* На мобилке оставляем свайп, стрелки прячем */

@@ -51,7 +51,7 @@ const NewsletterForm = () => {
 
             <img
               className="subscribedecor"
-              src="/assets/beauty_elements.png"
+              src={`${import.meta.env.BASE_URL}assets/beauty_elements.png`}
               alt=""
               aria-hidden="true"
             />

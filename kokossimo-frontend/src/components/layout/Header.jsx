@@ -132,7 +132,7 @@ const Header = () => {
         
             <div className="header__desktop">
               <Link className="header__logo" to="/" aria-label="KOKOSSIMO">
-                <img src="/assets/logo.svg" alt="KOKOSSIMO" />
+                <img src={`${import.meta.env.BASE_URL}assets/logo.svg`} alt="KOKOSSIMO" />
               </Link>
 
               <Link className="header__catalog" to="/catalog">
@@ -257,7 +257,7 @@ const Header = () => {
               </div>
 
               <a className="header__logo-mobile" href="./" aria-label="KOKOSSIMO">
-                <img src="/assets/logo_shot.svg" alt="KOKOSSIMO" />
+                <img src={`${import.meta.env.BASE_URL}assets/logo_shot.svg`} alt="KOKOSSIMO" />
               </a>
 
               <div className="header__mobile-right">

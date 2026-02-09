@@ -6,9 +6,9 @@ import { Link } from 'react-router-dom';
 // совпадают с оригинальной HTML-версией.
 
 const slides = [
-  { id: 0, image: '/assets/hero_background_1.png' },
-  { id: 1, image: '/assets/hero_background_2.png' },
-  { id: 2, image: '/assets/hero_background_3.png' },
+  { id: 0, image: `${import.meta.env.BASE_URL}assets/hero_background_1.png` },
+  { id: 1, image: `${import.meta.env.BASE_URL}assets/hero_background_2.png` },
+  { id: 2, image: `${import.meta.env.BASE_URL}assets/hero_background_3.png` },
 ];
 
 const AUTO_PLAY_INTERVAL = 8000; // мс
