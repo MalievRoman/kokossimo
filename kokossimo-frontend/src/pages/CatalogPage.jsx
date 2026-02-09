@@ -206,7 +206,8 @@ const CatalogPage = () => {
     setSelectedCategories([]);
     setPriceFrom('');
     setPriceTo('');
-    setSearchParams(searchParams.get('q') ? { q: searchParams.get('q') } : {});
+    // Очищаем все параметры, включая поисковый запрос
+    setSearchParams({});
   };
 
   return (

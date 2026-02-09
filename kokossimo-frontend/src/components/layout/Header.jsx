@@ -123,6 +123,34 @@ const Header = () => {
     setIsMobileMenuOpen(false);
   };
 
+  const handleSearchClear = () => {
+    setSearchValue('');
+    // Если мы на странице каталога, очищаем параметр q из URL
+    if (location.pathname === '/catalog') {
+      const params = new URLSearchParams(location.search);
+      params.delete('q');
+      const newSearch = params.toString();
+      navigate(newSearch ? `/catalog?${newSearch}` : '/catalog');
+    } else {
+      // Если мы не на странице каталога, просто очищаем поле
+      navigate('/catalog');
+    }
+    setIsSuggestionsOpen(false);
+  };
+
+  const handleSearchChange = (e) => {
+    const newValue = e.target.value;
+    setSearchValue(newValue);
+    
+    // Если поле очищено и мы на странице каталога, очищаем параметр q из URL
+    if (!newValue.trim() && location.pathname === '/catalog') {
+      const params = new URLSearchParams(location.search);
+      params.delete('q');
+      const newSearch = params.toString();
+      navigate(newSearch ? `/catalog?${newSearch}` : '/catalog', { replace: true });
+    }
+  };
+
   return (
   <>
     <header className="header">
@@ -152,7 +180,8 @@ const Header = () => {
                   name="q"
                   placeholder=""
                   value={searchValue}
-                  onChange={(e) => setSearchValue(e.target.value)}
+                  onChange={handleSearchChange}
+                  onReset={handleSearchClear}
                   onFocus={() => searchValue.trim() && setIsSuggestionsOpen(true)}
                   onBlur={() => setTimeout(() => setIsSuggestionsOpen(false), 150)}
                 />
@@ -290,7 +319,8 @@ const Header = () => {
               name="q"
               placeholder=""
               value={searchValue}
-              onChange={(e) => setSearchValue(e.target.value)}
+              onChange={handleSearchChange}
+              onReset={handleSearchClear}
               onFocus={() => searchValue.trim() && setIsSuggestionsOpen(true)}
               onBlur={() => setTimeout(() => setIsSuggestionsOpen(false), 150)}
             />
