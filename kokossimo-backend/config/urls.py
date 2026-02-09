@@ -1,7 +1,11 @@
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include, re_path
 from django.conf import settings
 from django.conf.urls.static import static
+from django.views.generic import TemplateView
+from django.http import HttpResponse
+from django.template.loader import render_to_string
+import os
 from rest_framework.routers import DefaultRouter
 from shop.views import (
     ProductViewSet,
@@ -50,6 +54,20 @@ def _kokossimo_get_app_list(request):
 
 admin.site.get_app_list = _kokossimo_get_app_list
 
+# View для отдачи React приложения
+def react_app_view(request):
+    """Отдает index.html из собранного фронтенда"""
+    frontend_dist = os.path.join(settings.BASE_DIR.parent, 'kokossimo-frontend', 'dist', 'index.html')
+    
+    # Если есть собранный index.html из фронтенда, используем его
+    if os.path.exists(frontend_dist):
+        with open(frontend_dist, 'r', encoding='utf-8') as f:
+            content = f.read()
+        return HttpResponse(content, content_type='text/html')
+    
+    # Иначе используем шаблон Django
+    return TemplateView.as_view(template_name='index.html')(request)
+
 # Создаем роутер для API
 router = DefaultRouter()
 router.register(r'products', ProductViewSet)
@@ -72,6 +90,13 @@ urlpatterns = [
     path('api/products/<int:product_id>/rate/', rate_product),
 ]
 
+# Отдача React приложения для всех остальных маршрутов (SPA)
+# Это должно быть в конце, чтобы не перехватывать API маршруты
+urlpatterns += [
+    re_path(r'^(?!api|admin|static|media).*', react_app_view),
+]
+
 # Это нужно, чтобы Django раздавал картинки (media) в режиме разработки
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
