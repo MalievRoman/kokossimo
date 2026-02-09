@@ -102,19 +102,31 @@ def parse_contact_line(contact_line: str) -> Tuple[str, str]:
     return (phone, email)
 
 
-def get_main_keyboard():
-    """Клавиатура на панели внизу экрана (reply-клавиатура)."""
+def get_welcome_keyboard():
+    """Клавиатура приветствия - только выбор действий, без кнопки отмены."""
     return ReplyKeyboardMarkup(
         [
             [KeyboardButton(BTN_REVIEW)],
             [KeyboardButton(BTN_SUGGESTION)],
             [KeyboardButton(BTN_CONTACT)],
+        ],
+        resize_keyboard=True,
+        one_time_keyboard=False,
+        is_persistent=True,
+        input_field_placeholder="Выберите действие...",
+    )
+
+
+def get_action_keyboard():
+    """Клавиатура после выбора действия - только кнопка отмены."""
+    return ReplyKeyboardMarkup(
+        [
             [KeyboardButton(BTN_CANCEL)],
         ],
         resize_keyboard=True,
         one_time_keyboard=False,
         is_persistent=True,
-        input_field_placeholder="Выберите действие или введите текст...",
+        input_field_placeholder="Введите текст или нажмите отмена...",
     )
 
 
@@ -127,27 +139,19 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         "• поделиться предложением\n"
         "• попросить связаться с вами\n\n"
         "Выберите действие кнопкой ниже — это займёт пару минут.",
-        reply_markup=get_main_keyboard(),
+        reply_markup=get_welcome_keyboard(),
     )
     return CHOOSE_TYPE
 
 
 async def button_choose_type(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Пользователь нажал кнопку на панели (отзыв / предложение / просьба о связи / отмена)."""
+    """Пользователь нажал кнопку на панели (отзыв / предложение / просьба о связи)."""
     text = (update.message.text or "").strip()
-
-    if text == BTN_CANCEL:
-        context.user_data.clear()
-        await update.message.reply_text(
-            "↩️ Ничего страшного! Выберите действие, когда будет удобно:",
-            reply_markup=get_main_keyboard(),
-        )
-        return CHOOSE_TYPE
 
     if text not in BUTTON_TO_TYPE:
         await update.message.reply_text(
             "Выберите, пожалуйста, одно из действий кнопкой ниже 👇",
-            reply_markup=get_main_keyboard(),
+            reply_markup=get_welcome_keyboard(),
         )
         return CHOOSE_TYPE
 
@@ -163,7 +167,7 @@ async def button_choose_type(update: Update, context: ContextTypes.DEFAULT_TYPE)
     await update.message.reply_text(
         f"Отлично, вы выбрали {label}.\n\n"
         "Напишите ваше сообщение — мы обязательно прочитаем:",
-        reply_markup=get_main_keyboard(),
+        reply_markup=get_action_keyboard(),
     )
     return ENTER_TEXT
 
@@ -176,28 +180,14 @@ async def receive_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         context.user_data.clear()
         await update.message.reply_text(
             "↩️ Отменили. Выберите действие кнопкой ниже, когда будете готовы:",
-            reply_markup=get_main_keyboard(),
+            reply_markup=get_welcome_keyboard(),
         )
         return CHOOSE_TYPE
-
-    if text in BUTTON_TO_TYPE:
-        context.user_data["feedback_type"] = BUTTON_TO_TYPE[text]
-        type_labels = {
-            TYPE_REVIEW: "✍️ отзыв",
-            TYPE_SUGGESTION: "💡 предложение",
-            TYPE_CONTACT: "📞 просьбу о связи",
-        }
-        label = type_labels[context.user_data["feedback_type"]]
-        await update.message.reply_text(
-            f"Хорошо, теперь {label}.\n\nНапишите ваше сообщение:",
-            reply_markup=get_main_keyboard(),
-        )
-        return ENTER_TEXT
 
     if not text:
         await update.message.reply_text(
             "Напишите, пожалуйста, текст сообщения — пустое мы не отправим 😊",
-            reply_markup=get_main_keyboard(),
+            reply_markup=get_action_keyboard(),
         )
         return ENTER_TEXT
 
@@ -209,7 +199,7 @@ async def receive_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
             "📱 Осталось оставить контакт для связи.\n\n"
             "Напишите телефон и/или email одним сообщением.\n"
             "Например: +7 999 123-45-67 или example@mail.ru",
-            reply_markup=get_main_keyboard(),
+            reply_markup=get_action_keyboard(),
         )
         return ENTER_CONTACT
 
@@ -224,23 +214,9 @@ async def receive_contact(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         context.user_data.clear()
         await update.message.reply_text(
             "↩️ Отменили. Выберите действие кнопкой ниже:",
-            reply_markup=get_main_keyboard(),
+            reply_markup=get_welcome_keyboard(),
         )
         return CHOOSE_TYPE
-
-    if text in BUTTON_TO_TYPE:
-        context.user_data["feedback_type"] = BUTTON_TO_TYPE[text]
-        type_labels = {
-            TYPE_REVIEW: "✍️ отзыв",
-            TYPE_SUGGESTION: "💡 предложение",
-            TYPE_CONTACT: "📞 просьбу о связи",
-        }
-        label = type_labels[context.user_data["feedback_type"]]
-        await update.message.reply_text(
-            f"Хорошо, теперь {label}.\n\nНапишите ваше сообщение:",
-            reply_markup=get_main_keyboard(),
-        )
-        return ENTER_TEXT
 
     contact_line = text
     phone, email = parse_contact_line(contact_line)
@@ -249,7 +225,7 @@ async def receive_contact(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await update.message.reply_text(
             "📱 Напишите телефон и/или email одним сообщением.\n"
             "Например: +7 999 123-45-67 или example@mail.ru",
-            reply_markup=get_main_keyboard(),
+            reply_markup=get_action_keyboard(),
         )
         return ENTER_CONTACT
 
@@ -262,7 +238,7 @@ async def receive_contact(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     if errors:
         await update.message.reply_text(
             "Не получилось распознать контакт:\n\n" + "\n".join(errors) + "\n\nПопробуйте ещё раз 👇",
-            reply_markup=get_main_keyboard(),
+            reply_markup=get_action_keyboard(),
         )
         return ENTER_CONTACT
 
@@ -312,7 +288,7 @@ async def save_feedback_and_finish(update: Update, context: ContextTypes.DEFAULT
         logger.exception("Ошибка при сохранении обратной связи в БД: %s", e)
         await update.message.reply_text(
             "😔 Что-то пошло не так — сообщение не сохранилось. Попробуйте позже или напишите нам другим способом.",
-            reply_markup=get_main_keyboard(),
+            reply_markup=get_welcome_keyboard(),
         )
         context.user_data.clear()
         return CHOOSE_TYPE
@@ -320,7 +296,7 @@ async def save_feedback_and_finish(update: Update, context: ContextTypes.DEFAULT
     await update.message.reply_text(
         "✅ Готово! Спасибо, что нашли время — мы обязательно ознакомимся с вашим сообщением.\n\n"
         "Можете отправить ещё одно обращение или выбрать другое действие:",
-        reply_markup=get_main_keyboard(),
+        reply_markup=get_welcome_keyboard(),
     )
     context.user_data.clear()
     return CHOOSE_TYPE
@@ -331,7 +307,7 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data.clear()
     await update.message.reply_text(
         "↩️ Отменили. Выберите действие кнопкой ниже:",
-        reply_markup=get_main_keyboard(),
+        reply_markup=get_welcome_keyboard(),
     )
     return CHOOSE_TYPE
 
