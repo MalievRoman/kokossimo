@@ -59,7 +59,8 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         # Фильтрация товаров через параметры URL
-        # Пример: /api/products/?is_new=true&category=face
+        # Пример: /api/products/?is_new=true&category=face&category=body
+        # Поддерживает множественный выбор категорий
         queryset = Product.objects.annotate(
             rating_avg=Avg('ratings__rating'),
             rating_count=Count('ratings')
@@ -67,7 +68,8 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
         
         is_new = self.request.query_params.get('is_new', None)
         is_bestseller = self.request.query_params.get('is_bestseller', None)
-        category_slug = self.request.query_params.get('category', None)
+        # Получаем все значения параметра category (может быть несколько)
+        category_slugs = self.request.query_params.getlist('category')
 
         if is_new == 'true':
             queryset = queryset.filter(is_new=True)
@@ -75,8 +77,9 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
         if is_bestseller == 'true':
             queryset = queryset.filter(is_bestseller=True)
 
-        if category_slug:
-            queryset = queryset.filter(category__slug=category_slug)
+        if category_slugs:
+            # Фильтруем по всем выбранным категориям (OR логика)
+            queryset = queryset.filter(category__slug__in=category_slugs)
 
         return queryset
     

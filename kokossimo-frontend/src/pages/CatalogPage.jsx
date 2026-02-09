@@ -30,6 +30,25 @@ const CatalogPage = () => {
       });
   }, []);
 
+  // Синхронизация выбранных категорий с URL при загрузке страницы
+  useEffect(() => {
+    const categoryFiltersFromUrl = searchParams.getAll('category');
+    const categoryFilter = searchParams.get('filter');
+    
+    // Если есть категории в URL, используем их
+    if (categoryFiltersFromUrl.length > 0) {
+      setSelectedCategories(categoryFiltersFromUrl);
+    } 
+    // Поддержка старого формата с параметром filter (для обратной совместимости)
+    else if (categoryFilter && categoryFilter !== 'bestsellers' && categoryFilter !== 'new') {
+      setSelectedCategories([categoryFilter]);
+    }
+    // Если нет категорий в URL, очищаем выбранные категории
+    else if (!categoryFilter) {
+      setSelectedCategories([]);
+    }
+  }, [searchParams]);
+
   const normalizeText = (value) =>
     value
       .toLowerCase()
@@ -75,6 +94,8 @@ const CatalogPage = () => {
     
     // Фильтр по категории из URL (имеет приоритет)
     const categoryFilter = searchParams.get('filter');
+    // Получаем все категории из URL параметра category (может быть несколько)
+    const categoryFiltersFromUrl = searchParams.getAll('category');
     const minPrice = searchParams.get('price_min');
     const maxPrice = searchParams.get('price_max');
     if (searchQuery) {
@@ -84,12 +105,16 @@ const CatalogPage = () => {
       params.is_bestseller = 'true';
     } else if (categoryFilter === 'new') {
       params.is_new = 'true';
-    } else if (categoryFilter) {
-      params.category = categoryFilter;
+    } else if (categoryFiltersFromUrl.length > 0) {
+      // Используем категории из URL параметра category
+      params.category = categoryFiltersFromUrl;
+    } else if (categoryFilter && categoryFilter !== 'bestsellers' && categoryFilter !== 'new') {
+      // Поддержка старого формата с параметром filter (для обратной совместимости)
+      params.category = [categoryFilter];
     } else if (selectedCategories.length > 0) {
       // Если нет фильтра в URL, используем выбранные категории
-      // Пока берем первую категорию (можно расширить для множественного выбора)
-      params.category = selectedCategories[0];
+      // Передаем все выбранные категории
+      params.category = selectedCategories;
     }
     if (minPrice) params.price_min = minPrice;
     if (maxPrice) params.price_max = maxPrice;
@@ -164,8 +189,10 @@ const CatalogPage = () => {
 
   const applyFilters = () => {
     const nextParams = {};
+    // Сохраняем все выбранные категории в URL параметр category (можно передавать несколько раз)
     if (selectedCategories.length > 0) {
-      nextParams.filter = selectedCategories[0];
+      // Для множественных значений используем массив, React Router автоматически создаст несколько параметров
+      nextParams.category = selectedCategories;
     }
     if (priceFrom) nextParams.price_min = priceFrom;
     if (priceTo) nextParams.price_max = priceTo;
