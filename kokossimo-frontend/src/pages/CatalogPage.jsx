@@ -104,26 +104,16 @@ const CatalogPage = () => {
     const searchQuery = normalizeText(searchParams.get('q') || '');
     const params = {};
     
-    // Фильтр по категории из URL (имеет приоритет)
     const categoryFilter = searchParams.get('filter');
-    // Получаем все категории из URL параметра category (может быть несколько)
-    const categoryFiltersFromUrl = searchParams.getAll('category');
     let minPrice = searchParams.get('price_min');
     let maxPrice = searchParams.get('price_max');
     // Игнорируем отрицательные значения — не показываем "Товары не найдены" из-за некорректного ввода
     if (minPrice != null && minPrice !== '' && parseFloat(minPrice) < 0) minPrice = null;
     if (maxPrice != null && maxPrice !== '' && parseFloat(maxPrice) < 0) maxPrice = null;
     
-    // Определяем категории для фильтрации
-    let categoriesToFilter = [];
-    if (categoryFiltersFromUrl.length > 0) {
-      categoriesToFilter = categoryFiltersFromUrl;
-    } else if (categoryFilter && categoryFilter !== 'bestsellers' && categoryFilter !== 'new') {
-      // Поддержка старого формата с параметром filter (для обратной совместимости)
-      categoriesToFilter = [categoryFilter];
-    } else if (selectedCategories.length > 0) {
-      categoriesToFilter = selectedCategories;
-    }
+    // Используем только текущий выбор в UI: тогда снятие категории сразу обновляет список
+    // (URL синхронизируется при загрузке в другом эффекте и при нажатии «Применить»)
+    const categoriesToFilter = selectedCategories;
     
     if (searchQuery) {
       // При поиске также передаем фильтры категорий в API
