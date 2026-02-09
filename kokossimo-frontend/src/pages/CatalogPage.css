@@ -140,6 +140,12 @@
   font-size: 0.9rem;
 }
 
+.catalog-filter-price-error {
+  margin: 8px 0 0;
+  font-size: 0.85rem;
+  color: #b4534b;
+}
+
 .catalog-filter-action {
   padding: 8px 14px;
   background-color: #4a2c2a;
