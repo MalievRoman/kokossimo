@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import ProductCard from '../components/product/ProductCard';
 import { getProducts, getCategories } from '../services/api';
+import { useCatalogFilters } from '../context/CatalogFiltersContext';
 import { ChevronDown } from 'lucide-react';
 import './CatalogPage.css';
 
@@ -18,6 +19,16 @@ const CatalogPage = () => {
   const [loading, setLoading] = useState(true);
   const categoryMenuRef = useRef(null);
   const priceMenuRef = useRef(null);
+  const catalogFiltersContext = useCatalogFilters();
+
+  // Синхронизация выбранных фильтров в контекст (чтобы поиск в шапке их сохранял)
+  useEffect(() => {
+    if (catalogFiltersContext) {
+      catalogFiltersContext.setSelectedCategories(selectedCategories);
+      catalogFiltersContext.setPriceMin(priceFrom);
+      catalogFiltersContext.setPriceMax(priceTo);
+    }
+  }, [selectedCategories, priceFrom, priceTo, catalogFiltersContext]);
 
   // Загрузка категорий
   useEffect(() => {

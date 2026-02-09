@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { CartProvider } from './context/CartContext'
 import { FavoritesProvider } from './context/FavoritesContext'
+import { CatalogFiltersProvider } from './context/CatalogFiltersContext'
 import App from './App.jsx'
 import './index.css'
 import './styles/koko-main.css'
@@ -12,7 +13,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <BrowserRouter>
       <CartProvider>
         <FavoritesProvider>
-          <App />
+          <CatalogFiltersProvider>
+            <App />
+          </CatalogFiltersProvider>
         </FavoritesProvider>
       </CartProvider>
     </BrowserRouter>

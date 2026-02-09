@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { getProducts } from '../../services/api';
 import { useCart } from '../../context/CartContext';
 import { useFavorites } from '../../context/FavoritesContext';
+import { useCatalogFilters } from '../../context/CatalogFiltersContext';
 
 const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -17,6 +18,8 @@ const Header = () => {
   const location = useLocation();
   const { getTotalItems } = useCart();
   const { getFavoritesCount } = useFavorites();
+  const catalogFilters = useCatalogFilters();
+  const isOnCatalogPage = location.pathname === '/catalog' || location.pathname.endsWith('/catalog');
   const cartCount = getTotalItems();
   const favoritesCount = getFavoritesCount();
 
@@ -84,12 +87,20 @@ const Header = () => {
     const query = searchValue.trim();
 
     if (query) {
-      // Сохраняем текущие фильтры каталога (категории, цена), если уже на странице каталога
-      const params = new URLSearchParams(location.pathname === '/catalog' ? location.search : '');
+      const params = new URLSearchParams(isOnCatalogPage ? location.search : '');
+      // Подставляем выбранные категории и цену из контекста (даже если не нажали «Применить»)
+      if (isOnCatalogPage && catalogFilters) {
+        params.delete('category');
+        (catalogFilters.selectedCategories || []).forEach((slug) => params.append('category', slug));
+        if (catalogFilters.priceMin) params.set('price_min', catalogFilters.priceMin);
+        else params.delete('price_min');
+        if (catalogFilters.priceMax) params.set('price_max', catalogFilters.priceMax);
+        else params.delete('price_max');
+      }
       params.set('q', query);
       navigate(`/catalog?${params.toString()}`);
     } else {
-      if (location.pathname === '/catalog') {
+      if (isOnCatalogPage) {
         const params = new URLSearchParams(location.search);
         params.delete('q');
         const newSearch = params.toString();
@@ -136,7 +147,7 @@ const Header = () => {
   const handleSearchClear = () => {
     setSearchValue('');
     // Если мы на странице каталога, очищаем параметр q из URL
-    if (location.pathname === '/catalog') {
+    if (isOnCatalogPage) {
       const params = new URLSearchParams(location.search);
       params.delete('q');
       const newSearch = params.toString();
@@ -153,7 +164,7 @@ const Header = () => {
     setSearchValue(newValue);
     
     // Если поле очищено и мы на странице каталога, очищаем параметр q из URL
-    if (!newValue.trim() && location.pathname === '/catalog') {
+    if (!newValue.trim() && isOnCatalogPage) {
       const params = new URLSearchParams(location.search);
       params.delete('q');
       const newSearch = params.toString();
