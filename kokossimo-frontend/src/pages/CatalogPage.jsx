@@ -98,23 +98,31 @@ const CatalogPage = () => {
     const categoryFiltersFromUrl = searchParams.getAll('category');
     const minPrice = searchParams.get('price_min');
     const maxPrice = searchParams.get('price_max');
+    
+    // Определяем категории для фильтрации
+    let categoriesToFilter = [];
+    if (categoryFiltersFromUrl.length > 0) {
+      categoriesToFilter = categoryFiltersFromUrl;
+    } else if (categoryFilter && categoryFilter !== 'bestsellers' && categoryFilter !== 'new') {
+      // Поддержка старого формата с параметром filter (для обратной совместимости)
+      categoriesToFilter = [categoryFilter];
+    } else if (selectedCategories.length > 0) {
+      categoriesToFilter = selectedCategories;
+    }
+    
     if (searchQuery) {
-      // Поиск имеет приоритет над фильтрами категорий
+      // При поиске также передаем фильтры категорий в API
       params.page = undefined;
+      if (categoriesToFilter.length > 0) {
+        params.category = categoriesToFilter;
+      }
     } else if (categoryFilter === 'bestsellers') {
       params.is_bestseller = 'true';
     } else if (categoryFilter === 'new') {
       params.is_new = 'true';
-    } else if (categoryFiltersFromUrl.length > 0) {
+    } else if (categoriesToFilter.length > 0) {
       // Используем категории из URL параметра category
-      params.category = categoryFiltersFromUrl;
-    } else if (categoryFilter && categoryFilter !== 'bestsellers' && categoryFilter !== 'new') {
-      // Поддержка старого формата с параметром filter (для обратной совместимости)
-      params.category = [categoryFilter];
-    } else if (selectedCategories.length > 0) {
-      // Если нет фильтра в URL, используем выбранные категории
-      // Передаем все выбранные категории
-      params.category = selectedCategories;
+      params.category = categoriesToFilter;
     }
     if (minPrice) params.price_min = minPrice;
     if (maxPrice) params.price_max = maxPrice;
@@ -135,6 +143,14 @@ const CatalogPage = () => {
           data = scored
             .sort((a, b) => b.score - a.score)
             .map(({ item }) => item);
+          
+          // Применяем фильтр по категориям к результатам поиска
+          if (categoriesToFilter.length > 0) {
+            data = data.filter(item => {
+              // Проверяем, что товар принадлежит хотя бы одной из выбранных категорий
+              return item.category_slug && categoriesToFilter.includes(item.category_slug);
+            });
+          }
         }
         
         // Сортировка
