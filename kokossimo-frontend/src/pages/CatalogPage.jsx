@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import ProductCard from '../components/product/ProductCard';
 import { getProducts, getCategories } from '../services/api';
+import { useCatalogFilters } from '../context/CatalogFiltersContext';
 import { ChevronDown } from 'lucide-react';
 import './CatalogPage.css';
 
@@ -14,9 +15,20 @@ const CatalogPage = () => {
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [priceFrom, setPriceFrom] = useState('');
   const [priceTo, setPriceTo] = useState('');
+  const [priceError, setPriceError] = useState('');
   const [loading, setLoading] = useState(true);
   const categoryMenuRef = useRef(null);
   const priceMenuRef = useRef(null);
+  const catalogFiltersContext = useCatalogFilters();
+
+  // Синхронизация выбранных фильтров в контекст (чтобы поиск в шапке их сохранял)
+  useEffect(() => {
+    if (catalogFiltersContext) {
+      catalogFiltersContext.setSelectedCategories(selectedCategories);
+      catalogFiltersContext.setPriceMin(priceFrom);
+      catalogFiltersContext.setPriceMax(priceTo);
+    }
+  }, [selectedCategories, priceFrom, priceTo, catalogFiltersContext]);
 
   // Загрузка категорий
   useEffect(() => {
@@ -92,29 +104,30 @@ const CatalogPage = () => {
     const searchQuery = normalizeText(searchParams.get('q') || '');
     const params = {};
     
-    // Фильтр по категории из URL (имеет приоритет)
     const categoryFilter = searchParams.get('filter');
-    // Получаем все категории из URL параметра category (может быть несколько)
-    const categoryFiltersFromUrl = searchParams.getAll('category');
-    const minPrice = searchParams.get('price_min');
-    const maxPrice = searchParams.get('price_max');
+    let minPrice = searchParams.get('price_min');
+    let maxPrice = searchParams.get('price_max');
+    // Игнорируем отрицательные значения — не показываем "Товары не найдены" из-за некорректного ввода
+    if (minPrice != null && minPrice !== '' && parseFloat(minPrice) < 0) minPrice = null;
+    if (maxPrice != null && maxPrice !== '' && parseFloat(maxPrice) < 0) maxPrice = null;
+    
+    // Используем только текущий выбор в UI: тогда снятие категории сразу обновляет список
+    // (URL синхронизируется при загрузке в другом эффекте и при нажатии «Применить»)
+    const categoriesToFilter = selectedCategories;
+    
     if (searchQuery) {
-      // Поиск имеет приоритет над фильтрами категорий
+      // При поиске также передаем фильтры категорий в API
       params.page = undefined;
+      if (categoriesToFilter.length > 0) {
+        params.category = categoriesToFilter;
+      }
     } else if (categoryFilter === 'bestsellers') {
       params.is_bestseller = 'true';
     } else if (categoryFilter === 'new') {
       params.is_new = 'true';
-    } else if (categoryFiltersFromUrl.length > 0) {
+    } else if (categoriesToFilter.length > 0) {
       // Используем категории из URL параметра category
-      params.category = categoryFiltersFromUrl;
-    } else if (categoryFilter && categoryFilter !== 'bestsellers' && categoryFilter !== 'new') {
-      // Поддержка старого формата с параметром filter (для обратной совместимости)
-      params.category = [categoryFilter];
-    } else if (selectedCategories.length > 0) {
-      // Если нет фильтра в URL, используем выбранные категории
-      // Передаем все выбранные категории
-      params.category = selectedCategories;
+      params.category = categoriesToFilter;
     }
     if (minPrice) params.price_min = minPrice;
     if (maxPrice) params.price_max = maxPrice;
@@ -135,6 +148,14 @@ const CatalogPage = () => {
           data = scored
             .sort((a, b) => b.score - a.score)
             .map(({ item }) => item);
+          
+          // Применяем фильтр по категориям к результатам поиска
+          if (categoriesToFilter.length > 0) {
+            data = data.filter(item => {
+              // Проверяем, что товар принадлежит хотя бы одной из выбранных категорий
+              return item.category_slug && categoriesToFilter.includes(item.category_slug);
+            });
+          }
         }
         
         // Сортировка
@@ -188,14 +209,27 @@ const CatalogPage = () => {
   };
 
   const applyFilters = () => {
+    setPriceError('');
+    let fromVal = priceFrom.trim();
+    let toVal = priceTo.trim();
+    const fromNum = fromVal === '' ? null : parseFloat(fromVal);
+    const toNum = toVal === '' ? null : parseFloat(toVal);
+    if (fromNum !== null && (Number.isNaN(fromNum) || fromNum < 0)) {
+      setPriceError('Цена «от» не может быть отрицательной. Использовано значение 0.');
+      fromVal = '0';
+      setPriceFrom('0');
+    }
+    if (toNum !== null && (Number.isNaN(toNum) || toNum < 0)) {
+      setPriceError('Цена «до» не может быть отрицательной. Использовано значение 0.');
+      toVal = '0';
+      setPriceTo('0');
+    }
     const nextParams = {};
-    // Сохраняем все выбранные категории в URL параметр category (можно передавать несколько раз)
     if (selectedCategories.length > 0) {
-      // Для множественных значений используем массив, React Router автоматически создаст несколько параметров
       nextParams.category = selectedCategories;
     }
-    if (priceFrom) nextParams.price_min = priceFrom;
-    if (priceTo) nextParams.price_max = priceTo;
+    if (fromVal) nextParams.price_min = fromVal;
+    if (toVal) nextParams.price_max = toVal;
     if (searchParams.get('q')) {
       nextParams.q = searchParams.get('q');
     }
@@ -206,8 +240,36 @@ const CatalogPage = () => {
     setSelectedCategories([]);
     setPriceFrom('');
     setPriceTo('');
-    // Очищаем все параметры, включая поисковый запрос
+    setPriceError('');
     setSearchParams({});
+  };
+
+  const handlePriceFromChange = (event) => {
+    const value = event.target.value;
+    if (value === '' || value === '-') {
+      setPriceFrom(value);
+      return;
+    }
+    const num = parseFloat(value);
+    if (!Number.isNaN(num) && num < 0) {
+      setPriceFrom('0');
+      return;
+    }
+    setPriceFrom(value);
+  };
+
+  const handlePriceToChange = (event) => {
+    const value = event.target.value;
+    if (value === '' || value === '-') {
+      setPriceTo(value);
+      return;
+    }
+    const num = parseFloat(value);
+    if (!Number.isNaN(num) && num < 0) {
+      setPriceTo('0');
+      return;
+    }
+    setPriceTo(value);
   };
 
   return (
@@ -292,18 +354,25 @@ const CatalogPage = () => {
                     <div className="catalog-filter-price">
                       <input
                         type="number"
+                        min={0}
                         placeholder="от 0"
                         value={priceFrom}
-                        onChange={(event) => setPriceFrom(event.target.value)}
+                        onChange={handlePriceFromChange}
                       />
                       <span className="dash">—</span>
                       <input
                         type="number"
+                        min={0}
                         placeholder="до 50000"
                         value={priceTo}
-                        onChange={(event) => setPriceTo(event.target.value)}
+                        onChange={handlePriceToChange}
                       />
                     </div>
+                    {priceError && (
+                      <p className="catalog-filter-price-error" role="alert">
+                        {priceError}
+                      </p>
+                    )}
                   </div>
                 </div>
 

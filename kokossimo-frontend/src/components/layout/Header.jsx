@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { getProducts } from '../../services/api';
 import { useCart } from '../../context/CartContext';
 import { useFavorites } from '../../context/FavoritesContext';
+import { useCatalogFilters } from '../../context/CatalogFiltersContext';
 
 const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -17,6 +18,8 @@ const Header = () => {
   const location = useLocation();
   const { getTotalItems } = useCart();
   const { getFavoritesCount } = useFavorites();
+  const catalogFilters = useCatalogFilters();
+  const isOnCatalogPage = location.pathname === '/catalog' || location.pathname.endsWith('/catalog');
   const cartCount = getTotalItems();
   const favoritesCount = getFavoritesCount();
 
@@ -84,9 +87,27 @@ const Header = () => {
     const query = searchValue.trim();
 
     if (query) {
-      navigate(`/catalog?q=${encodeURIComponent(query)}`);
+      const params = new URLSearchParams(isOnCatalogPage ? location.search : '');
+      // Подставляем выбранные категории и цену из контекста (даже если не нажали «Применить»)
+      if (isOnCatalogPage && catalogFilters) {
+        params.delete('category');
+        (catalogFilters.selectedCategories || []).forEach((slug) => params.append('category', slug));
+        if (catalogFilters.priceMin) params.set('price_min', catalogFilters.priceMin);
+        else params.delete('price_min');
+        if (catalogFilters.priceMax) params.set('price_max', catalogFilters.priceMax);
+        else params.delete('price_max');
+      }
+      params.set('q', query);
+      navigate(`/catalog?${params.toString()}`);
     } else {
-      navigate('/catalog');
+      if (isOnCatalogPage) {
+        const params = new URLSearchParams(location.search);
+        params.delete('q');
+        const newSearch = params.toString();
+        navigate(newSearch ? `/catalog?${newSearch}` : '/catalog');
+      } else {
+        navigate('/catalog');
+      }
     }
 
     setIsMobileSearchOpen(false);
@@ -123,16 +144,27 @@ const Header = () => {
     setIsMobileMenuOpen(false);
   };
 
+  const buildCatalogParamsWithoutQuery = () => {
+    const params = new URLSearchParams(location.search);
+    params.delete('q');
+    if (catalogFilters) {
+      params.delete('category');
+      (catalogFilters.selectedCategories || []).forEach((slug) => params.append('category', slug));
+      if (catalogFilters.priceMin) params.set('price_min', catalogFilters.priceMin);
+      else params.delete('price_min');
+      if (catalogFilters.priceMax) params.set('price_max', catalogFilters.priceMax);
+      else params.delete('price_max');
+    }
+    return params;
+  };
+
   const handleSearchClear = () => {
     setSearchValue('');
-    // Если мы на странице каталога, очищаем параметр q из URL
-    if (location.pathname === '/catalog') {
-      const params = new URLSearchParams(location.search);
-      params.delete('q');
+    if (isOnCatalogPage) {
+      const params = buildCatalogParamsWithoutQuery();
       const newSearch = params.toString();
       navigate(newSearch ? `/catalog?${newSearch}` : '/catalog');
     } else {
-      // Если мы не на странице каталога, просто очищаем поле
       navigate('/catalog');
     }
     setIsSuggestionsOpen(false);
@@ -141,11 +173,9 @@ const Header = () => {
   const handleSearchChange = (e) => {
     const newValue = e.target.value;
     setSearchValue(newValue);
-    
-    // Если поле очищено и мы на странице каталога, очищаем параметр q из URL
-    if (!newValue.trim() && location.pathname === '/catalog') {
-      const params = new URLSearchParams(location.search);
-      params.delete('q');
+
+    if (!newValue.trim() && isOnCatalogPage) {
+      const params = buildCatalogParamsWithoutQuery();
       const newSearch = params.toString();
       navigate(newSearch ? `/catalog?${newSearch}` : '/catalog', { replace: true });
     }
