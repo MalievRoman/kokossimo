@@ -7,6 +7,11 @@
   --blur-bg: rgba(252, 248, 247, 0.75);
   --radius: 8px;
   --header-h: 72px;
+  --icon-catalog: url("/static/assets/header__catalog-icon.svg");
+  --icon-search: url("/static/assets/header__search-icon.svg");
+  --icon-cart: url("/static/assets/cart-icon.svg");
+  --icon-fav: url("/static/assets/fav-icon.svg");
+  --icon-profile: url("/static/assets/profile-icon.svg");
 }
 
 * {
@@ -52,24 +57,24 @@ body {
   mask-size: contain;
 }
 .icon--catalog {
-  -webkit-mask-image: url("/static/assets/header__catalog-icon.svg");
-  mask-image: url("/static/assets/header__catalog-icon.svg");
+  -webkit-mask-image: var(--icon-catalog);
+  mask-image: var(--icon-catalog);
 }
 .icon--search {
-  -webkit-mask-image: url("/static/assets/header__search-icon.svg");
-  mask-image: url("/static/assets/header__search-icon.svg");
+  -webkit-mask-image: var(--icon-search);
+  mask-image: var(--icon-search);
 }
 .icon--cart {
-  -webkit-mask-image: url("/static/assets/cart-icon.svg");
-  mask-image: url("/static/assets/cart-icon.svg");
+  -webkit-mask-image: var(--icon-cart);
+  mask-image: var(--icon-cart);
 }
 .icon--fav {
-  -webkit-mask-image: url("/static/assets/fav-icon.svg");
-  mask-image: url("/static/assets/fav-icon.svg");
+  -webkit-mask-image: var(--icon-fav);
+  mask-image: var(--icon-fav);
 }
 .icon--profile {
-  -webkit-mask-image: url("/static/assets/profile-icon.svg");
-  mask-image: url("/static/assets/profile-icon.svg");
+  -webkit-mask-image: var(--icon-profile);
+  mask-image: var(--icon-profile);
 }
 
 /* ===== HEADER ===== */
@@ -545,9 +550,9 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 111px;
+  width: auto;
   height: 42px;
-  padding: 12px 16px;
+  padding: 12px 20px;
   border: 1px solid #460200;
   border-radius: 4px;
   background: #460200;
@@ -626,7 +631,7 @@ body {
 
 @media (max-width: 960px) {
   :root {
-    --hero-dots-top: 120px;
+    --hero-dots-top: 74px;
   }
 
   .hero {
@@ -649,6 +654,7 @@ body {
 
   .hero__content {
     position: static;
+    margin-top: calc(var(--hero-dots-top) - 72px);
     max-width: 520px;
   }
   .hero__title {
@@ -659,7 +665,7 @@ body {
   .hero__btn {
     position: absolute;
     left: 0;
-    bottom: 104px;
+    bottom: 24px;
     margin-top: 0;
   }
 }
