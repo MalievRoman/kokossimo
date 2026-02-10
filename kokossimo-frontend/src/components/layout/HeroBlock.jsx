@@ -5,19 +5,51 @@ import { Link } from 'react-router-dom';
 // Фоновые слайды берём из публичных ассетов, вся разметка и классы
 // совпадают с оригинальной HTML-версией.
 
+const heroCatalogDesktop = new URL('../../assets/hero/hero_catalog_desktop.jpg', import.meta.url).href;
+const heroCatalogMobile = new URL('../../assets/hero/hero_catalog_mobile.jpg', import.meta.url).href;
+const heroCertificateDesktop = new URL(
+  '../../assets/hero/hero_certificate_desktop.jpg',
+  import.meta.url
+).href;
+const heroCertificateMobile = new URL(
+  '../../assets/hero/hero_certificate_mobile.jpg',
+  import.meta.url
+).href;
+
 const slides = [
-  { id: 0, image: `${import.meta.env.BASE_URL}assets/hero_background_1.png` },
-  { id: 1, image: `${import.meta.env.BASE_URL}assets/hero_background_2.png` },
-  { id: 2, image: `${import.meta.env.BASE_URL}assets/hero_background_3.png` },
+  {
+    id: 0,
+    desktop: heroCatalogDesktop,
+    mobile: heroCatalogMobile,
+    title: (
+      <>
+        ИССЛЕДУЙ МИР КРАСОТЫ
+        <br />
+        С НАМИ
+      </>
+    ),
+    buttonText: 'ПЕРЕЙТИ К ТОВАРАМ',
+    buttonLink: '/catalog',
+  },
+  {
+    id: 1,
+    desktop: heroCertificateDesktop,
+    mobile: heroCertificateMobile,
+    title: 'ТВОЙ ИДЕАЛЬНЫЙ ПОДАРОК ЗДЕСЬ',
+    buttonText: 'КУПИТЬ СЕРТИФИКАТ',
+    buttonLink: '/certificates',
+  },
 ];
 
 const AUTO_PLAY_INTERVAL = 8000; // мс
 
 const HeroBlock = () => {
   const [current, setCurrent] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
   const trackRef = useRef(null);
   const autoplayRef = useRef(null);
   const isPointerDownRef = useRef(false);
+  const currentSlide = slides[current];
 
   const scrollToSlide = (index, withBehavior = 'smooth') => {
     const track = trackRef.current;
@@ -115,6 +147,15 @@ const HeroBlock = () => {
     scrollToSlide(index);
   };
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mediaQuery = window.matchMedia('(max-width: 640px)');
+    const handleChange = (event) => setIsMobile(event.matches);
+    handleChange(mediaQuery);
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []);
+
   return (
     <section className="hero" aria-label="Главный баннер">
       <div className="hero__slides" ref={trackRef}>
@@ -122,19 +163,16 @@ const HeroBlock = () => {
           <div
             key={slide.id}
             className="hero__slide"
-            style={{ backgroundImage: `url('${slide.image}')` }}
+            style={{ backgroundImage: `url('${isMobile ? slide.mobile : slide.desktop}')` }}
           />
         ))}
       </div>
 
       <div className="container hero__inner">
         <div className="hero__content">
-          <h1 className="hero__title">
-            СКИДКИ ДО 30%! УСПЕЙТЕ КУПИТЬ ЛЮБИМЫЕ<br />
-            ТОВАРЫ ПО ВЫГОДНЫМ ЦЕНАМ!
-          </h1>
-          <Link className="hero__btn" to="/catalog">
-            СМОТРЕТЬ
+          <h1 className="hero__title">{currentSlide.title}</h1>
+          <Link className="hero__btn" to={currentSlide.buttonLink}>
+            {currentSlide.buttonText}
           </Link>
         </div>
 
