@@ -1,25 +1,25 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import ProductCard from '../components/product/ProductCard';
 import { getProducts, getCategories } from '../services/api';
 import { useCatalogFilters } from '../context/CatalogFiltersContext';
-import { ChevronDown } from 'lucide-react';
+import checkboxSelectionIcon from '../assets/icons/checkbox_selection.svg';
+import tagCloseIcon from '../assets/icons/tag_close.svg';
 import './CatalogPage.css';
 
 const CatalogPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [sortBy, setSortBy] = useState('popular');
-  const [openFilter, setOpenFilter] = useState(null);
-  const [catalogProducts, setCatalogProducts] = useState([]);
+  const [baseProducts, setBaseProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [priceFrom, setPriceFrom] = useState('');
   const [priceTo, setPriceTo] = useState('');
-  const [priceError, setPriceError] = useState('');
+  const [priceBounds, setPriceBounds] = useState({ min: null, max: null });
   const [loading, setLoading] = useState(true);
-  const categoryMenuRef = useRef(null);
-  const priceMenuRef = useRef(null);
   const catalogFiltersContext = useCatalogFilters();
+  const searchQueryParam = searchParams.get('q') || '';
+  const filterParam = searchParams.get('filter') || '';
 
   // Синхронизация выбранных фильтров в контекст (чтобы поиск в шапке их сохранял)
   useEffect(() => {
@@ -30,35 +30,56 @@ const CatalogPage = () => {
     }
   }, [selectedCategories, priceFrom, priceTo, catalogFiltersContext]);
 
-  // Загрузка категорий
+  // Загрузка категорий и ценовых границ
   useEffect(() => {
     getCategories()
-      .then(response => {
+      .then((response) => {
         const data = Array.isArray(response.data) ? response.data : (response.data.results || []);
         setCategories(data);
       })
       .catch(() => {
         setCategories([]);
       });
+
+    getProducts({})
+      .then((response) => {
+        const data = Array.isArray(response.data) ? response.data : (response.data.results || []);
+        const prices = data
+          .map((item) => parseFloat(item.price))
+          .filter((value) => Number.isFinite(value));
+
+        if (!prices.length) {
+          setPriceBounds({ min: null, max: null });
+          return;
+        }
+
+        setPriceBounds({
+          min: Math.min(...prices),
+          max: Math.max(...prices),
+        });
+      })
+      .catch(() => {
+        setPriceBounds({ min: null, max: null });
+      });
   }, []);
 
-  // Синхронизация выбранных категорий с URL при загрузке страницы
+  // Синхронизация фильтров из URL
   useEffect(() => {
     const categoryFiltersFromUrl = searchParams.getAll('category');
     const categoryFilter = searchParams.get('filter');
-    
-    // Если есть категории в URL, используем их
+
     if (categoryFiltersFromUrl.length > 0) {
       setSelectedCategories(categoryFiltersFromUrl);
-    } 
-    // Поддержка старого формата с параметром filter (для обратной совместимости)
-    else if (categoryFilter && categoryFilter !== 'bestsellers' && categoryFilter !== 'new') {
+    } else if (categoryFilter && categoryFilter !== 'bestsellers' && categoryFilter !== 'new') {
       setSelectedCategories([categoryFilter]);
-    }
-    // Если нет категорий в URL, очищаем выбранные категории
-    else if (!categoryFilter) {
+    } else {
       setSelectedCategories([]);
     }
+
+    const minPriceFromUrl = searchParams.get('price_min') || '';
+    const maxPriceFromUrl = searchParams.get('price_max') || '';
+    setPriceFrom(minPriceFromUrl);
+    setPriceTo(maxPriceFromUrl);
   }, [searchParams]);
 
   const normalizeText = (value) =>
@@ -98,42 +119,20 @@ const CatalogPage = () => {
     return 1 - distance / Math.max(query.length, text.length);
   };
 
-  // Загрузка товаров
+  // Загрузка каталога
   useEffect(() => {
     setLoading(true);
-    const searchQuery = normalizeText(searchParams.get('q') || '');
+    const searchQuery = normalizeText(searchQueryParam);
     const params = {};
-    
-    const categoryFilter = searchParams.get('filter');
-    let minPrice = searchParams.get('price_min');
-    let maxPrice = searchParams.get('price_max');
-    // Игнорируем отрицательные значения — не показываем "Товары не найдены" из-за некорректного ввода
-    if (minPrice != null && minPrice !== '' && parseFloat(minPrice) < 0) minPrice = null;
-    if (maxPrice != null && maxPrice !== '' && parseFloat(maxPrice) < 0) maxPrice = null;
-    
-    // Используем только текущий выбор в UI: тогда снятие категории сразу обновляет список
-    // (URL синхронизируется при загрузке в другом эффекте и при нажатии «Применить»)
-    const categoriesToFilter = selectedCategories;
-    
-    if (searchQuery) {
-      // При поиске также передаем фильтры категорий в API
-      params.page = undefined;
-      if (categoriesToFilter.length > 0) {
-        params.category = categoriesToFilter;
-      }
-    } else if (categoryFilter === 'bestsellers') {
+
+    if (filterParam === 'bestsellers') {
       params.is_bestseller = 'true';
-    } else if (categoryFilter === 'new') {
+    } else if (filterParam === 'new') {
       params.is_new = 'true';
-    } else if (categoriesToFilter.length > 0) {
-      // Используем категории из URL параметра category
-      params.category = categoriesToFilter;
     }
-    if (minPrice) params.price_min = minPrice;
-    if (maxPrice) params.price_max = maxPrice;
 
     getProducts(params)
-      .then(response => {
+      .then((response) => {
         let data = Array.isArray(response.data) ? response.data : (response.data.results || []);
 
         if (searchQuery) {
@@ -148,269 +147,212 @@ const CatalogPage = () => {
           data = scored
             .sort((a, b) => b.score - a.score)
             .map(({ item }) => item);
-          
-          // Применяем фильтр по категориям к результатам поиска
-          if (categoriesToFilter.length > 0) {
-            data = data.filter(item => {
-              // Проверяем, что товар принадлежит хотя бы одной из выбранных категорий
-              return item.category_slug && categoriesToFilter.includes(item.category_slug);
-            });
-          }
-        }
-        
-        // Сортировка
-        if (sortBy === 'price_asc') {
-          data = [...data].sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
-        } else if (sortBy === 'price_desc') {
-          data = [...data].sort((a, b) => parseFloat(b.price) - parseFloat(a.price));
-        } else if (sortBy === 'new') {
-          data = [...data].filter(p => p.is_new).concat(data.filter(p => !p.is_new));
-        }
-        // 'popular' - оставляем как есть (можно добавить поле popularity в будущем)
-        
-        if (minPrice || maxPrice) {
-          const minVal = minPrice ? parseFloat(minPrice) : null;
-          const maxVal = maxPrice ? parseFloat(maxPrice) : null;
-          data = data.filter((item) => {
-            const value = parseFloat(item.price);
-            if (Number.isNaN(value)) return false;
-            if (minVal !== null && value < minVal) return false;
-            if (maxVal !== null && value > maxVal) return false;
-            return true;
-          });
         }
 
-        setCatalogProducts(data);
+        setBaseProducts(data);
         setLoading(false);
       })
       .catch(() => {
-        setCatalogProducts([]);
+        setBaseProducts([]);
         setLoading(false);
       });
-  }, [searchParams, selectedCategories, sortBy]);
+  }, [searchQueryParam, filterParam]);
 
-  useEffect(() => {
-    if (!openFilter) return;
-    const handleOutsideClick = (event) => {
-      if (categoryMenuRef.current?.contains(event.target)) return;
-      if (priceMenuRef.current?.contains(event.target)) return;
-      setOpenFilter(null);
-    };
-    document.addEventListener('mousedown', handleOutsideClick);
-    return () => document.removeEventListener('mousedown', handleOutsideClick);
-  }, [openFilter]);
+  const catalogProducts = useMemo(() => {
+    let data = [...baseProducts];
+
+    if (selectedCategories.length > 0) {
+      data = data.filter(
+        (item) => item.category_slug && selectedCategories.includes(item.category_slug)
+      );
+    }
+
+    const minVal = priceFrom.trim() ? parseFloat(priceFrom) : null;
+    const maxVal = priceTo.trim() ? parseFloat(priceTo) : null;
+
+    if (Number.isFinite(minVal) || Number.isFinite(maxVal)) {
+      data = data.filter((item) => {
+        const value = parseFloat(item.price);
+        if (!Number.isFinite(value)) return false;
+        if (Number.isFinite(minVal) && value < minVal) return false;
+        if (Number.isFinite(maxVal) && value > maxVal) return false;
+        return true;
+      });
+    }
+
+    if (sortBy === 'price_asc') {
+      data.sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
+    } else if (sortBy === 'price_desc') {
+      data.sort((a, b) => parseFloat(b.price) - parseFloat(a.price));
+    } else if (sortBy === 'new') {
+      data = [...data].filter((p) => p.is_new).concat(data.filter((p) => !p.is_new));
+    }
+
+    return data;
+  }, [baseProducts, selectedCategories, priceFrom, priceTo, sortBy]);
+
+  const buildNextSearchParams = (nextCategories, nextPriceFrom, nextPriceTo) => {
+    const next = new URLSearchParams();
+
+    const q = searchParams.get('q');
+    const filter = searchParams.get('filter');
+    if (q) next.set('q', q);
+    if (filter) next.set('filter', filter);
+
+    nextCategories.forEach((slug) => next.append('category', slug));
+    if (nextPriceFrom) next.set('price_min', nextPriceFrom);
+    if (nextPriceTo) next.set('price_max', nextPriceTo);
+
+    return next;
+  };
 
   const handleCategoryChange = (categorySlug) => {
-    setSelectedCategories(prev => 
-      prev.includes(categorySlug) 
-        ? prev.filter(slug => slug !== categorySlug)
-        : [...prev, categorySlug]
-    );
+    const nextCategories = selectedCategories.includes(categorySlug)
+      ? selectedCategories.filter((slug) => slug !== categorySlug)
+      : [...selectedCategories, categorySlug];
+
+    setSelectedCategories(nextCategories);
+    setSearchParams(buildNextSearchParams(nextCategories, priceFrom, priceTo), { replace: true });
   };
 
-  const applyFilters = () => {
-    setPriceError('');
-    let fromVal = priceFrom.trim();
-    let toVal = priceTo.trim();
-    const fromNum = fromVal === '' ? null : parseFloat(fromVal);
-    const toNum = toVal === '' ? null : parseFloat(toVal);
-    if (fromNum !== null && (Number.isNaN(fromNum) || fromNum < 0)) {
-      setPriceError('Цена «от» не может быть отрицательной. Использовано значение 0.');
-      fromVal = '0';
-      setPriceFrom('0');
-    }
-    if (toNum !== null && (Number.isNaN(toNum) || toNum < 0)) {
-      setPriceError('Цена «до» не может быть отрицательной. Использовано значение 0.');
-      toVal = '0';
-      setPriceTo('0');
-    }
-    const nextParams = {};
-    if (selectedCategories.length > 0) {
-      nextParams.category = selectedCategories;
-    }
-    if (fromVal) nextParams.price_min = fromVal;
-    if (toVal) nextParams.price_max = toVal;
-    if (searchParams.get('q')) {
-      nextParams.q = searchParams.get('q');
-    }
-    setSearchParams(nextParams);
-  };
-
-  const resetFilters = () => {
-    setSelectedCategories([]);
-    setPriceFrom('');
-    setPriceTo('');
-    setPriceError('');
-    setSearchParams({});
+  const handleRemoveTag = (categorySlug) => {
+    const nextCategories = selectedCategories.filter((slug) => slug !== categorySlug);
+    setSelectedCategories(nextCategories);
+    setSearchParams(buildNextSearchParams(nextCategories, priceFrom, priceTo), { replace: true });
   };
 
   const handlePriceFromChange = (event) => {
     const value = event.target.value;
-    if (value === '' || value === '-') {
-      setPriceFrom(value);
-      return;
-    }
-    const num = parseFloat(value);
-    if (!Number.isNaN(num) && num < 0) {
-      setPriceFrom('0');
-      return;
-    }
+    if (!/^\d*$/.test(value)) return;
     setPriceFrom(value);
+    setSearchParams(buildNextSearchParams(selectedCategories, value, priceTo), { replace: true });
   };
 
   const handlePriceToChange = (event) => {
     const value = event.target.value;
-    if (value === '' || value === '-') {
-      setPriceTo(value);
-      return;
-    }
-    const num = parseFloat(value);
-    if (!Number.isNaN(num) && num < 0) {
-      setPriceTo('0');
-      return;
-    }
+    if (!/^\d*$/.test(value)) return;
     setPriceTo(value);
+    setSearchParams(buildNextSearchParams(selectedCategories, priceFrom, value), { replace: true });
   };
+
+  const selectedCategoryTags = selectedCategories
+    .map((slug) => categories.find((category) => category.slug === slug))
+    .filter(Boolean);
+
+  const minPlaceholder = Number.isFinite(priceBounds.min)
+    ? `от ${Math.round(priceBounds.min).toLocaleString('ru-RU')}`
+    : 'от 0';
+  const maxPlaceholder = Number.isFinite(priceBounds.max)
+    ? `до ${Math.round(priceBounds.max).toLocaleString('ru-RU')}`
+    : 'до 0';
+
+  const breadcrumbs = [
+    { key: 'home', label: 'ГЛАВНАЯ' },
+    { key: 'catalog', label: 'КАТАЛОГ' },
+  ];
 
   return (
     <div className="catalog-page page-animation">
       <div className="container">
-        
-        {/* Хлебные крошки (Breadcrumbs) */}
-        <div className="breadcrumbs">
-          <span>Главная</span> / <span>Каталог</span>
+        <nav className="catalog-breadcrumbs" aria-label="Breadcrumb">
+          {breadcrumbs.map((crumb, index) => (
+            <React.Fragment key={crumb.key}>
+              <span>{crumb.label}</span>
+              {index < breadcrumbs.length - 1 && (
+                <span className="catalog-breadcrumbs__separator" aria-hidden="true" />
+              )}
+            </React.Fragment>
+          ))}
+        </nav>
+
+        <div className="catalog-heading-row">
+          <div className="catalog-heading-main">
+            <h1 className="catalog-page-title">КАТАЛОГ ТОВАРОВ</h1>
+            {selectedCategoryTags.length > 0 && (
+              <div className="catalog-selected-tags">
+                {selectedCategoryTags.map((category) => (
+                  <button
+                    key={category.id}
+                    type="button"
+                    className="catalog-tag"
+                    onClick={() => handleRemoveTag(category.slug)}
+                    aria-label={`Убрать категорию ${category.name}`}
+                  >
+                    <span>{category.name}</span>
+                    <img src={tagCloseIcon} alt="" aria-hidden="true" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="catalog-sort">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="catalog-sort__select"
+              aria-label="Сортировка товаров"
+            >
+              <option value="popular">ПО ПОПУЛЯРНОСТИ</option>
+              <option value="price_asc">СНАЧАЛА ДЕШЕВЫЕ</option>
+              <option value="price_desc">СНАЧАЛА ДОРОГИЕ</option>
+              <option value="new">НОВИНКИ</option>
+            </select>
+          </div>
         </div>
 
-        <h1 className="page-title">КАТАЛОГ ТОВАРОВ</h1>
-        {searchParams.get('q') && (
-          <div style={{ marginTop: '0.5rem', color: '#6b5a58' }}>
-            Результаты по запросу: «{searchParams.get('q')}»
-          </div>
-        )}
-
-        <div className="catalog-layout">
-
-          {/* ОСНОВНОЙ КОНТЕНТ */}
-          <div className="catalog-content">
-            
-            {/* Верхняя панель управления */}
-            <div className="catalog-controls">
-              <div className="catalog-filters">
-                <div className="catalog-filter" ref={categoryMenuRef}>
-                  <button
-                    type="button"
-                    className="catalog-filter-toggle"
-                    onClick={() =>
-                      setOpenFilter(openFilter === 'categories' ? null : 'categories')
-                    }
-                    aria-expanded={openFilter === 'categories'}
-                    aria-haspopup="true"
-                  >
-                    Категории
-                    {selectedCategories.length > 0 && (
-                      <span className="catalog-filter-count">{selectedCategories.length}</span>
-                    )}
-                    <ChevronDown size={16} />
-                  </button>
-                  <div
-                    className={`catalog-filter-menu ${openFilter === 'categories' ? 'is-open' : ''}`}
-                  >
-                    {categories.length === 0 ? (
-                      <div className="catalog-filter-empty">Категории не найдены</div>
-                    ) : (
-                      <ul className="catalog-filter-list">
-                        {categories.map((category) => (
-                          <li key={category.id}>
-                            <label>
-                              <input
-                                type="checkbox"
-                                checked={selectedCategories.includes(category.slug)}
-                                onChange={() => handleCategoryChange(category.slug)}
-                              />
-                              {category.name}
-                            </label>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                </div>
-
-                <div className="catalog-filter" ref={priceMenuRef}>
-                  <button
-                    type="button"
-                    className="catalog-filter-toggle"
-                    onClick={() => setOpenFilter(openFilter === 'price' ? null : 'price')}
-                    aria-expanded={openFilter === 'price'}
-                    aria-haspopup="true"
-                  >
-                    Цена
-                    {(priceFrom || priceTo) && <span className="catalog-filter-count">1</span>}
-                    <ChevronDown size={16} />
-                  </button>
-                  <div
-                    className={`catalog-filter-menu ${openFilter === 'price' ? 'is-open' : ''}`}
-                  >
-                    <div className="catalog-filter-price">
+        <div className="catalog-body">
+          <aside className="catalog-sidebar">
+            <section className="catalog-filter-section">
+              <h2 className="catalog-sidebar-title">КАТЕГОРИИ</h2>
+              <ul className="catalog-category-list">
+                {categories.map((category) => (
+                  <li key={category.id}>
+                    <label className="catalog-category-option">
                       <input
-                        type="number"
-                        min={0}
-                        placeholder="от 0"
-                        value={priceFrom}
-                        onChange={handlePriceFromChange}
+                        type="checkbox"
+                        checked={selectedCategories.includes(category.slug)}
+                        onChange={() => handleCategoryChange(category.slug)}
                       />
-                      <span className="dash">—</span>
-                      <input
-                        type="number"
-                        min={0}
-                        placeholder="до 50000"
-                        value={priceTo}
-                        onChange={handlePriceToChange}
-                      />
-                    </div>
-                    {priceError && (
-                      <p className="catalog-filter-price-error" role="alert">
-                        {priceError}
-                      </p>
-                    )}
-                  </div>
-                </div>
+                      <span className="catalog-category-checkbox" aria-hidden="true">
+                        <img src={checkboxSelectionIcon} alt="" />
+                      </span>
+                      <span className="catalog-category-label">{category.name}</span>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+            </section>
 
-                <button className="catalog-filter-action" onClick={applyFilters}>
-                  Применить
-                </button>
-                <button
-                  className="catalog-filter-action catalog-filter-action--ghost"
-                  onClick={resetFilters}
-                >
-                  Сбросить
-                </button>
+            <section className="catalog-filter-section catalog-price-section">
+              <h2 className="catalog-sidebar-title">СТОИМОСТЬ</h2>
+              <div className="catalog-price-fields">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  className="catalog-price-input"
+                  placeholder={minPlaceholder}
+                  value={priceFrom}
+                  onChange={handlePriceFromChange}
+                  aria-label="Минимальная стоимость"
+                />
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  className="catalog-price-input"
+                  placeholder={maxPlaceholder}
+                  value={priceTo}
+                  onChange={handlePriceToChange}
+                  aria-label="Максимальная стоимость"
+                />
               </div>
+            </section>
+          </aside>
 
-              <div className="sort-wrapper">
-                <span className="sort-label">Сортировка:</span>
-                <select 
-                  value={sortBy} 
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="sort-select"
-                >
-                  <option value="popular">По популярности</option>
-                  <option value="price_asc">Сначала дешевые</option>
-                  <option value="price_desc">Сначала дорогие</option>
-                  <option value="new">Новинки</option>
-                </select>
-                {!loading && (
-                  <span style={{ marginLeft: '15px', fontSize: '14px', color: '#666' }}>
-                    Найдено товаров: {catalogProducts.length}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Сетка товаров */}
+          <section className="catalog-content">
             <div className="catalog-grid">
               {loading ? (
-                <div style={{ padding: '40px', textAlign: 'center', width: '100%' }}>
+                <div className="catalog-empty-state">
                   <p>Загрузка товаров...</p>
                 </div>
               ) : catalogProducts.length > 0 ? (
@@ -418,26 +360,12 @@ const CatalogPage = () => {
                   <ProductCard key={product.id} product={product} />
                 ))
               ) : (
-                <div style={{ padding: '40px', textAlign: 'center', width: '100%' }}>
+                <div className="catalog-empty-state">
                   <p>Товары не найдены</p>
-                  {searchParams.get('q') && (
-                    <p style={{ marginTop: '8px', color: '#8b7b78' }}>
-                      По запросу «{searchParams.get('q')}» ничего не найдено
-                    </p>
-                  )}
                 </div>
               )}
             </div>
-
-            {/* Пагинация - пока скрыта, можно добавить позже */}
-            {catalogProducts.length > 0 && (
-              <div className="pagination">
-                <button className="page-btn active">1</button>
-                {/* Пагинация будет добавлена позже при необходимости */}
-              </div>
-            )}
-            
-          </div>
+          </section>
         </div>
       </div>
     </div>
