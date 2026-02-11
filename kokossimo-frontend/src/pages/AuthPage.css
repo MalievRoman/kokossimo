@@ -86,7 +86,7 @@
   justify-content: flex-start;
 }
 
-.btn-secondary {
+.auth-page .btn-secondary {
   border: 1px solid #e7dcd8;
   background: #fff;
   padding: 0.65rem 1rem;
@@ -97,13 +97,13 @@
   transition: all 0.2s;
 }
 
-.btn-secondary:hover {
+.auth-page .btn-secondary:hover {
   border-color: #7c2b2a;
   color: #7c2b2a;
   background: #fcf8f7;
 }
 
-.btn-link {
+.auth-page .btn-link {
   background: transparent;
   border: none;
   padding: 0;
@@ -112,7 +112,7 @@
   cursor: pointer;
 }
 
-.btn-link:hover {
+.auth-page .btn-link:hover {
   text-decoration: underline;
 }
 

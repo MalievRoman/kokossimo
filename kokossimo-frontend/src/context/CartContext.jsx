@@ -1,6 +1,19 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const CartContext = createContext();
+
+const getInitialCart = () => {
+  try {
+    const savedCart = localStorage.getItem('cart');
+    if (!savedCart) return [];
+    const parsed = JSON.parse(savedCart);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    console.error('Ошибка загрузки корзины из localStorage:', e);
+    return [];
+  }
+};
 
 export const useCart = () => {
   const context = useContext(CartContext);
@@ -11,65 +24,50 @@ export const useCart = () => {
 };
 
 export const CartProvider = ({ children }) => {
-  const [cartItems, setCartItems] = useState([]);
+  const [cartItems, setCartItems] = useState(getInitialCart);
 
-  // Загружаем корзину из localStorage при монтировании
-  useEffect(() => {
-    const savedCart = localStorage.getItem('cart');
-    if (savedCart) {
-      try {
-        setCartItems(JSON.parse(savedCart));
-      } catch (e) {
-        console.error('Ошибка загрузки корзины из localStorage:', e);
-      }
-    }
-  }, []);
-
-  // Сохраняем корзину в localStorage при изменении
   useEffect(() => {
     localStorage.setItem('cart', JSON.stringify(cartItems));
   }, [cartItems]);
 
-  // Добавить товар в корзину
   const addToCart = (product, quantity = 1) => {
-    setCartItems(prevItems => {
-      const existingItem = prevItems.find(item => item.id === product.id);
-      
+    setCartItems((prevItems) => {
+      const existingItem = prevItems.find((item) => item.id === product.id);
+
       if (existingItem) {
-        // Если товар уже есть, увеличиваем количество
-        return prevItems.map(item =>
+        return prevItems.map((item) =>
           item.id === product.id
             ? { ...item, quantity: item.quantity + quantity }
             : item
         );
-      } else {
-        // Если товара нет, добавляем новый
-        return [...prevItems, {
+      }
+
+      return [
+        ...prevItems,
+        {
           id: product.id,
           name: product.name,
           price: typeof product.price === 'string' ? parseFloat(product.price) : product.price,
           image: product.image,
-          quantity: quantity,
-          is_gift_certificate: Boolean(product.is_gift_certificate)
-        }];
-      }
+          quantity,
+          is_gift_certificate: Boolean(product.is_gift_certificate),
+        },
+      ];
     });
   };
 
-  // Удалить товар из корзины
   const removeFromCart = (productId) => {
-    setCartItems(prevItems => prevItems.filter(item => item.id !== productId));
+    setCartItems((prevItems) => prevItems.filter((item) => item.id !== productId));
   };
 
-  // Изменить количество товара
   const updateQuantity = (productId, quantity) => {
     if (quantity <= 0) {
       removeFromCart(productId);
       return;
     }
-    
-    setCartItems(prevItems =>
-      prevItems.map(item =>
+
+    setCartItems((prevItems) =>
+      prevItems.map((item) =>
         item.id === productId
           ? { ...item, quantity }
           : item
@@ -77,20 +75,13 @@ export const CartProvider = ({ children }) => {
     );
   };
 
-  // Очистить корзину
   const clearCart = () => {
     setCartItems([]);
   };
 
-  // Получить общее количество товаров в корзине
-  const getTotalItems = () => {
-    return cartItems.reduce((total, item) => total + item.quantity, 0);
-  };
+  const getTotalItems = () => cartItems.reduce((total, item) => total + item.quantity, 0);
 
-  // Получить общую стоимость корзины
-  const getTotalPrice = () => {
-    return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
-  };
+  const getTotalPrice = () => cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
 
   const value = {
     cartItems,
@@ -99,7 +90,7 @@ export const CartProvider = ({ children }) => {
     updateQuantity,
     clearCart,
     getTotalItems,
-    getTotalPrice
+    getTotalPrice,
   };
 
   return (

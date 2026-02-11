@@ -22,16 +22,11 @@
 }
 
 .catalog-heading-row {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
   gap: 24px;
   margin-bottom: 40px;
 }
 
 .catalog-heading-main {
-  display: flex;
-  align-items: flex-end;
   gap: 36px;
 }
 
@@ -45,10 +40,7 @@
 }
 
 .catalog-selected-tags {
-  display: flex;
-  align-items: flex-end;
   gap: 8px;
-  flex-wrap: wrap;
 }
 
 .catalog-tag {
@@ -78,7 +70,7 @@
 
 .catalog-sort__select {
   border: 0;
-  background: transparent;
+  background-color: transparent;
   color: #240100;
   font-family: inherit;
   font-size: 24px;
@@ -98,8 +90,7 @@
 }
 
 .catalog-body {
-  display: grid;
-  grid-template-columns: 240px minmax(0, 1fr);
+  display: flex;
   gap: 40px;
   align-items: start;
 }
@@ -174,7 +165,6 @@
 
 .catalog-price-fields {
   margin-top: 20px;
-  display: flex;
   gap: 8px;
 }
 
@@ -269,7 +259,6 @@
 
 @media (max-width: 1199px) {
   .catalog-body {
-    grid-template-columns: 1fr;
     gap: 24px;
   }
 

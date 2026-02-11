@@ -7,6 +7,43 @@ import checkboxSelectionIcon from '../assets/icons/checkbox_selection.svg';
 import tagCloseIcon from '../assets/icons/tag_close.svg';
 import './CatalogPage.css';
 
+const normalizeText = (value) =>
+  value
+    .toLowerCase()
+    .replace(/ё/g, 'е')
+    .replace(/[^a-zа-я0-9\s]/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const levenshtein = (a, b) => {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+
+  const matrix = Array.from({ length: a.length + 1 }, () => []);
+  for (let i = 0; i <= a.length; i += 1) matrix[i][0] = i;
+  for (let j = 0; j <= b.length; j += 1) matrix[0][j] = j;
+
+  for (let i = 1; i <= a.length; i += 1) {
+    for (let j = 1; j <= b.length; j += 1) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      matrix[i][j] = Math.min(
+        matrix[i - 1][j] + 1,
+        matrix[i][j - 1] + 1,
+        matrix[i - 1][j - 1] + cost
+      );
+    }
+  }
+  return matrix[a.length][b.length];
+};
+
+const getSimilarity = (query, text) => {
+  if (!query || !text) return 0;
+  if (text.includes(query)) return 1;
+  const distance = levenshtein(query, text);
+  return 1 - distance / Math.max(query.length, text.length);
+};
+
 const CatalogPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [sortBy, setSortBy] = useState('popular');
@@ -67,61 +104,28 @@ const CatalogPage = () => {
   useEffect(() => {
     const categoryFiltersFromUrl = searchParams.getAll('category');
     const categoryFilter = searchParams.get('filter');
-
-    if (categoryFiltersFromUrl.length > 0) {
-      setSelectedCategories(categoryFiltersFromUrl);
-    } else if (categoryFilter && categoryFilter !== 'bestsellers' && categoryFilter !== 'new') {
-      setSelectedCategories([categoryFilter]);
-    } else {
-      setSelectedCategories([]);
-    }
-
+    const nextCategories = categoryFiltersFromUrl.length > 0
+      ? categoryFiltersFromUrl
+      : (categoryFilter && categoryFilter !== 'bestsellers' && categoryFilter !== 'new')
+        ? [categoryFilter]
+        : [];
     const minPriceFromUrl = searchParams.get('price_min') || '';
     const maxPriceFromUrl = searchParams.get('price_max') || '';
-    setPriceFrom(minPriceFromUrl);
-    setPriceTo(maxPriceFromUrl);
+
+    const syncTimer = window.setTimeout(() => {
+      setSelectedCategories(nextCategories);
+      setPriceFrom(minPriceFromUrl);
+      setPriceTo(maxPriceFromUrl);
+    }, 0);
+    return () => window.clearTimeout(syncTimer);
   }, [searchParams]);
-
-  const normalizeText = (value) =>
-    value
-      .toLowerCase()
-      .replace(/ё/g, 'е')
-      .replace(/[^a-zа-я0-9\s]/gi, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-
-  const levenshtein = (a, b) => {
-    if (a === b) return 0;
-    if (!a.length) return b.length;
-    if (!b.length) return a.length;
-
-    const matrix = Array.from({ length: a.length + 1 }, () => []);
-    for (let i = 0; i <= a.length; i += 1) matrix[i][0] = i;
-    for (let j = 0; j <= b.length; j += 1) matrix[0][j] = j;
-
-    for (let i = 1; i <= a.length; i += 1) {
-      for (let j = 1; j <= b.length; j += 1) {
-        const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-        matrix[i][j] = Math.min(
-          matrix[i - 1][j] + 1,
-          matrix[i][j - 1] + 1,
-          matrix[i - 1][j - 1] + cost
-        );
-      }
-    }
-    return matrix[a.length][b.length];
-  };
-
-  const getSimilarity = (query, text) => {
-    if (!query || !text) return 0;
-    if (text.includes(query)) return 1;
-    const distance = levenshtein(query, text);
-    return 1 - distance / Math.max(query.length, text.length);
-  };
 
   // Загрузка каталога
   useEffect(() => {
-    setLoading(true);
+    let isCancelled = false;
+    const loadingTimer = window.setTimeout(() => {
+      if (!isCancelled) setLoading(true);
+    }, 0);
     const searchQuery = normalizeText(searchQueryParam);
     const params = {};
 
@@ -133,6 +137,7 @@ const CatalogPage = () => {
 
     getProducts(params)
       .then((response) => {
+        if (isCancelled) return;
         let data = Array.isArray(response.data) ? response.data : (response.data.results || []);
 
         if (searchQuery) {
@@ -153,9 +158,14 @@ const CatalogPage = () => {
         setLoading(false);
       })
       .catch(() => {
+        if (isCancelled) return;
         setBaseProducts([]);
         setLoading(false);
       });
+    return () => {
+      isCancelled = true;
+      window.clearTimeout(loadingTimer);
+    };
   }, [searchQueryParam, filterParam]);
 
   const catalogProducts = useMemo(() => {
@@ -252,7 +262,7 @@ const CatalogPage = () => {
   ];
 
   return (
-    <div className="catalog-page page-animation">
+    <div className="catalog-page page-animation py-4 py-md-5">
       <div className="container">
         <nav className="catalog-breadcrumbs" aria-label="Breadcrumb">
           {breadcrumbs.map((crumb, index) => (
@@ -265,11 +275,11 @@ const CatalogPage = () => {
           ))}
         </nav>
 
-        <div className="catalog-heading-row">
-          <div className="catalog-heading-main">
+        <div className="catalog-heading-row d-flex flex-wrap justify-content-between align-items-end gap-3">
+          <div className="catalog-heading-main d-flex flex-wrap align-items-end">
             <h1 className="catalog-page-title">КАТАЛОГ ТОВАРОВ</h1>
             {selectedCategoryTags.length > 0 && (
-              <div className="catalog-selected-tags">
+              <div className="catalog-selected-tags d-flex flex-wrap align-items-end">
                 {selectedCategoryTags.map((category) => (
                   <button
                     key={category.id}
@@ -290,7 +300,7 @@ const CatalogPage = () => {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="catalog-sort__select"
+              className="catalog-sort__select form-select"
               aria-label="Сортировка товаров"
             >
               <option value="popular">ПО ПОПУЛЯРНОСТИ</option>
@@ -301,8 +311,8 @@ const CatalogPage = () => {
           </div>
         </div>
 
-        <div className="catalog-body">
-          <aside className="catalog-sidebar">
+        <div className="catalog-body row g-4">
+          <aside className="catalog-sidebar col-12 col-xl-3">
             <section className="catalog-filter-section">
               <h2 className="catalog-sidebar-title">КАТЕГОРИИ</h2>
               <ul className="catalog-category-list">
@@ -326,11 +336,11 @@ const CatalogPage = () => {
 
             <section className="catalog-filter-section catalog-price-section">
               <h2 className="catalog-sidebar-title">СТОИМОСТЬ</h2>
-              <div className="catalog-price-fields">
+              <div className="catalog-price-fields d-flex">
                 <input
                   type="text"
                   inputMode="numeric"
-                  className="catalog-price-input"
+                  className="catalog-price-input form-control"
                   placeholder={minPlaceholder}
                   value={priceFrom}
                   onChange={handlePriceFromChange}
@@ -339,7 +349,7 @@ const CatalogPage = () => {
                 <input
                   type="text"
                   inputMode="numeric"
-                  className="catalog-price-input"
+                  className="catalog-price-input form-control"
                   placeholder={maxPlaceholder}
                   value={priceTo}
                   onChange={handlePriceToChange}
@@ -349,7 +359,7 @@ const CatalogPage = () => {
             </section>
           </aside>
 
-          <section className="catalog-content">
+          <section className="catalog-content col-12 col-xl-9">
             <div className="catalog-grid">
               {loading ? (
                 <div className="catalog-empty-state">

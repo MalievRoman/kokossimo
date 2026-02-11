@@ -5,9 +5,8 @@
 
 /* Верхняя часть (Split Layout) */
 .product-main {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4rem;
+  margin-left: 0;
+  margin-right: 0;
   margin-bottom: 5rem;
 }
 
@@ -202,8 +201,6 @@
 .review-form textarea {
   resize: vertical;
   min-height: 90px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
   padding: 0.75rem;
   font-family: inherit;
 }
@@ -214,7 +211,6 @@
 
 .review-submit {
   align-self: flex-start;
-  border: none;
   background: #8B4513;
   color: #fff;
   padding: 0.6rem 1.4rem;
@@ -304,14 +300,10 @@
 
 /* Кнопки действий */
 .product-actions {
-  display: flex;
-  gap: 1rem;
   margin-bottom: 1.5rem;
 }
 
 .quantity-control {
-  display: flex;
-  align-items: center;
   border: 1px solid #ddd;
   border-radius: 4px;
 }
@@ -404,15 +396,11 @@
 }
 
 .tabs-header {
-  display: flex;
-  gap: 2rem;
   border-bottom: 1px solid #eee;
   margin-bottom: 2rem;
 }
 
 .tab-btn {
-  background: none;
-  border: none;
   padding: 1rem 0;
   font-size: 1rem;
   font-weight: 600;
@@ -458,8 +446,7 @@
 /* Адаптив */
 @media (max-width: 900px) {
   .product-main {
-    grid-template-columns: 1fr;
-    gap: 2rem;
+    gap: 0;
   }
 }
 

@@ -127,7 +127,7 @@ const AuthPage = () => {
   };
 
   return (
-    <div className="auth-page page-animation">
+    <div className="auth-page page-animation py-4 py-md-5">
       <div className="container">
         <div className="breadcrumbs">
           <Link to="/">Главная</Link> / <span>Вход и регистрация</span>
@@ -135,10 +135,11 @@ const AuthPage = () => {
 
         <h1 className="page-title">АККАУНТ</h1>
 
-        <div className="auth-card">
+        <div className="auth-card border rounded-3 p-4 mx-auto">
           <div className="auth-tabs">
             <button
-              className={`auth-tab ${activeTab === 'login' ? 'is-active' : ''}`}
+              type="button"
+              className={`auth-tab btn ${activeTab === 'login' ? 'btn-outline-primary is-active' : 'btn-outline-secondary'}`}
               onClick={() => {
                 setActiveTab('login');
                 setResetMode(false);
@@ -147,7 +148,8 @@ const AuthPage = () => {
               Вход
             </button>
             <button
-              className={`auth-tab ${activeTab === 'register' ? 'is-active' : ''}`}
+              type="button"
+              className={`auth-tab btn ${activeTab === 'register' ? 'btn-outline-primary is-active' : 'btn-outline-secondary'}`}
               onClick={() => {
                 setActiveTab('register');
                 setResetMode(false);
@@ -159,7 +161,8 @@ const AuthPage = () => {
 
           <div className="auth-methods">
             <button
-              className={`auth-method ${authMethod === 'phone' ? 'is-active' : ''}`}
+              type="button"
+              className={`auth-method btn ${authMethod === 'phone' ? 'btn-outline-primary is-active' : 'btn-outline-secondary'}`}
               onClick={() => {
                 setAuthMethod('phone');
                 setResetMode(false);
@@ -169,7 +172,8 @@ const AuthPage = () => {
               По номеру телефона
             </button>
             <button
-              className={`auth-method ${authMethod === 'email' ? 'is-active' : ''}`}
+              type="button"
+              className={`auth-method btn ${authMethod === 'email' ? 'btn-outline-primary is-active' : 'btn-outline-secondary'}`}
               onClick={() => {
                 setAuthMethod('email');
                 setResetMode(false);
@@ -189,6 +193,7 @@ const AuthPage = () => {
                 <label className="auth-field">
                   <span>Номер телефона</span>
                   <input
+                    className="form-control"
                     type="tel"
                     placeholder="+7 (___) ___-__-__"
                     value={form.identifier}
@@ -204,6 +209,7 @@ const AuthPage = () => {
                 <label className="auth-field">
                   <span>Email</span>
                   <input
+                    className="form-control"
                     type="email"
                     placeholder="email@example.com"
                     value={form.identifier}
@@ -216,6 +222,7 @@ const AuthPage = () => {
                 <label className="auth-field">
                   <span>Пароль</span>
                   <input
+                    className="form-control"
                     type="password"
                     placeholder="Введите пароль"
                     value={form.password}
@@ -229,7 +236,7 @@ const AuthPage = () => {
                   <div className="auth-field auth-field--inline">
                     <button
                       type="button"
-                      className="btn-secondary"
+                      className="btn btn-outline-secondary"
                       onClick={handleSendCode}
                       disabled={isSendingCode}
                     >
@@ -239,6 +246,7 @@ const AuthPage = () => {
                   <label className="auth-field">
                     <span>Код из письма</span>
                     <input
+                      className="form-control"
                       type="text"
                       placeholder="Введите код"
                       value={form.emailCode}
@@ -253,6 +261,7 @@ const AuthPage = () => {
                   <label className="auth-field">
                     <span>Новый пароль</span>
                     <input
+                      className="form-control"
                       type="password"
                       placeholder="Придумайте пароль"
                       value={form.password}
@@ -263,6 +272,7 @@ const AuthPage = () => {
                   <label className="auth-field">
                     <span>Повторите пароль</span>
                     <input
+                      className="form-control"
                       type="password"
                       placeholder="Повторите пароль"
                       value={form.passwordRepeat}
@@ -273,7 +283,7 @@ const AuthPage = () => {
                   <div className="auth-field auth-field--inline">
                     <button
                       type="button"
-                      className="btn-secondary"
+                      className="btn btn-outline-secondary"
                       onClick={handleSendCode}
                       disabled={isSendingCode}
                     >
@@ -283,6 +293,7 @@ const AuthPage = () => {
                   <label className="auth-field">
                     <span>Код из письма</span>
                     <input
+                      className="form-control"
                       type="text"
                       placeholder="Введите код"
                       value={form.emailCode}
@@ -292,12 +303,12 @@ const AuthPage = () => {
                 </>
               )}
 
-              <button type="submit" className="btn-primary btn-primary--full" disabled={isSubmitting}>
+              <button type="submit" className="btn btn-primary w-100" disabled={isSubmitting}>
                 {isSubmitting ? (resetMode ? 'СБРОС...' : 'ВХОД...') : resetMode ? 'Сбросить пароль' : 'Войти'}
               </button>
               <button
                 type="button"
-                className="btn-link btn-link--center"
+                className="btn btn-link w-100 text-center text-decoration-none"
                 onClick={() => {
                   if (authMethod !== 'email') {
                     setStatus({ type: 'error', message: 'Восстановление доступно только по почте.' });
@@ -315,6 +326,7 @@ const AuthPage = () => {
               <label className="auth-field">
                 <span>Имя</span>
                 <input
+                  className="form-control"
                   type="text"
                   placeholder="Введите имя"
                   value={form.name}
@@ -324,6 +336,7 @@ const AuthPage = () => {
               <label className="auth-field">
                 <span>Фамилия</span>
                 <input
+                  className="form-control"
                   type="text"
                   placeholder="Введите фамилию"
                   value={form.lastName}
@@ -335,6 +348,7 @@ const AuthPage = () => {
                 <label className="auth-field">
                   <span>Номер телефона</span>
                   <input
+                    className="form-control"
                     type="tel"
                     placeholder="+7 (___) ___-__-__"
                     value={form.identifier}
@@ -350,6 +364,7 @@ const AuthPage = () => {
                 <label className="auth-field">
                   <span>Email</span>
                   <input
+                    className="form-control"
                     type="email"
                     placeholder="email@example.com"
                     value={form.identifier}
@@ -361,6 +376,7 @@ const AuthPage = () => {
               <label className="auth-field">
                 <span>Пароль</span>
                 <input
+                  className="form-control"
                   type="password"
                   placeholder="Придумайте пароль"
                   value={form.password}
@@ -371,6 +387,7 @@ const AuthPage = () => {
               <label className="auth-field">
                 <span>Повторите пароль</span>
                 <input
+                  className="form-control"
                   type="password"
                   placeholder="Повторите пароль"
                   value={form.passwordRepeat}
@@ -383,7 +400,7 @@ const AuthPage = () => {
                   <div className="auth-field auth-field--inline">
                     <button
                       type="button"
-                      className="btn-secondary"
+                      className="btn btn-outline-secondary"
                       onClick={handleSendCode}
                       disabled={isSendingCode}
                     >
@@ -393,6 +410,7 @@ const AuthPage = () => {
                   <label className="auth-field">
                     <span>Код из письма</span>
                     <input
+                      className="form-control"
                       type="text"
                       placeholder="Введите код"
                       value={form.emailCode}
@@ -402,7 +420,7 @@ const AuthPage = () => {
                 </>
               )}
 
-              <button type="submit" className="btn-primary btn-primary--full" disabled={isSubmitting}>
+              <button type="submit" className="btn btn-primary w-100" disabled={isSubmitting}>
                 {isSubmitting ? 'СОЗДАНИЕ...' : 'Создать аккаунт'}
               </button>
               <p className="auth-note">

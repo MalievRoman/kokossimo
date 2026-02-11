@@ -1,25 +1,24 @@
 import React from 'react';
-import './AboutPage.css';
 
 const AboutPage = () => {
   return (
-    <div className="about-page page-animation">
+    <div className="page-animation py-5 bg-white">
       <div className="container">
         <h1 className="page-title">О КОМПАНИИ</h1>
 
-        <section className="about-section about-mission">
-          <h2 className="section-title section-title--center">НАША МИССИЯ</h2>
-          <p className="about-quote">
+        <section className="mt-5 p-4 border rounded-3" style={{ background: '#fcf8f7', borderColor: '#e7dcd8' }}>
+          <h2 className="section-title text-center">НАША МИССИЯ</h2>
+          <p className="mb-0 text-center" style={{ fontSize: '1.1rem', color: '#7c2b2a', lineHeight: 1.6 }}>
             «Мы дарим эмоции и красоту, открывая для каждого новый уровень
             вдохновения и уверенности».
           </p>
         </section>
 
-        <section className="about-section">
-          <p className="about-lead">
+        <section className="mt-4">
+          <p className="mb-3" style={{ fontSize: '1.1rem', color: '#4b3a39' }}>
             С 2023 года КОКО — это:
           </p>
-          <ul className="about-list">
+          <ul className="mb-0 ps-3 d-grid gap-2" style={{ color: '#6b5a58', lineHeight: 1.6 }}>
             <li>
               ведущая компания парфюмерно-косметического рынка в Республике
               Калмыкии;

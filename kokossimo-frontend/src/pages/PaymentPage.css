@@ -13,22 +13,15 @@
 }
 
 .payment-layout {
-  display: grid;
-  grid-template-columns: 1fr 360px;
-  gap: 2rem;
-  margin-top: 2rem;
+  margin-top: 0;
 }
 
 .payment-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
+  min-width: 0;
 }
 
 .payment-card {
-  background: white;
-  border-radius: 12px;
-  padding: 1.5rem;
+  min-width: 0;
 }
 
 .payment-card h2 {
@@ -38,9 +31,7 @@
 }
 
 .payment-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
+  margin: 0;
 }
 
 .payment-field {
@@ -101,9 +92,6 @@
 }
 
 .payment-summary {
-  background: white;
-  border-radius: 12px;
-  padding: 1.5rem;
   height: fit-content;
   position: sticky;
   top: 100px;
@@ -156,16 +144,4 @@
   background: #f3fbf6;
   color: #2c6b45;
   border: 1px solid #ccebd9;
-}
-
-@media (max-width: 1024px) {
-  .payment-layout {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 768px) {
-  .payment-grid {
-    grid-template-columns: 1fr;
-  }
 }

@@ -25,9 +25,13 @@ const Header = () => {
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    setSearchValue(params.get('q') || '');
-    setSuggestions([]);
-    setIsSuggestionsOpen(false);
+    const nextValue = params.get('q') || '';
+    const syncTimer = window.setTimeout(() => {
+      setSearchValue(nextValue);
+      setSuggestions([]);
+      setIsSuggestionsOpen(false);
+    }, 0);
+    return () => window.clearTimeout(syncTimer);
   }, [location.search]);
 
   const normalizeText = (value) =>
@@ -55,9 +59,11 @@ const Header = () => {
 
     const rawQuery = searchValue.trim();
     if (!rawQuery) {
-      setSuggestions([]);
-      setIsSuggestionsOpen(false);
-      return undefined;
+      const resetTimer = window.setTimeout(() => {
+        setSuggestions([]);
+        setIsSuggestionsOpen(false);
+      }, 0);
+      return () => window.clearTimeout(resetTimer);
     }
 
     suggestionsTimerRef.current = setTimeout(async () => {
@@ -185,10 +191,10 @@ const Header = () => {
   <>
     <header className="header">
         <div className="container">
-          <div className="header__inner">
+          <div className="header__inner d-flex align-items-center">
 
         
-            <div className="header__desktop">
+            <div className="header__desktop w-100">
               <Link className="header__logo" to="/" aria-label="KOKOSSIMO">
                 <img src={`${import.meta.env.BASE_URL}assets/logo.svg`} alt="KOKOSSIMO" />
               </Link>
@@ -233,7 +239,7 @@ const Header = () => {
               </form>
 
               
-              <nav className="header__nav" aria-label="Навигация">
+              <nav className="header__nav d-flex align-items-center" aria-label="Навигация">
                 <div className="header__dropdown header__dropdown--customers">
                   <button className="header__dropdown-btn" type="button">
                     <span className="header__dropdown-text">КЛИЕНТАМ</span>
@@ -272,7 +278,7 @@ const Header = () => {
 
 
 
-              <div className="header__actions" aria-label="Действия">
+              <div className="header__actions d-flex align-items-center" aria-label="Действия">
                 <Link className="header__icon-btn" to="/cart" aria-label="Корзина">
                   <span className="icon icon--cart" aria-hidden="true"></span>
                   {cartCount > 0 && <span className="header__icon-badge">{cartCount}</span>}
@@ -290,8 +296,8 @@ const Header = () => {
             </div>
 
         
-            <div className="header__mobile" aria-label="Мобильная шапка">
-              <div className="header__mobile-left">
+            <div className="header__mobile w-100" aria-label="Мобильная шапка">
+              <div className="header__mobile-left d-flex align-items-center">
                 <button
                   className="header__icon-btn"
                   type="button"
@@ -319,7 +325,7 @@ const Header = () => {
                 <img src={`${import.meta.env.BASE_URL}assets/logo_shot.svg`} alt="KOKOSSIMO" />
               </a>
 
-              <div className="header__mobile-right">
+              <div className="header__mobile-right d-flex align-items-center">
                 <Link className="header__icon-btn" to="/cart" aria-label="Корзина">
                   <span className="icon icon--cart" aria-hidden="true"></span>
                   {cartCount > 0 && <span className="header__icon-badge">{cartCount}</span>}
@@ -404,7 +410,7 @@ const Header = () => {
             ×
           </button>
 
-          <nav className="mobile-menu__nav">
+          <nav className="mobile-menu__nav d-grid gap-2">
             <Link to="/catalog" onClick={closeMobileMenu}>КАТАЛОГ</Link>
 
             <div className="mobile-menu__group">

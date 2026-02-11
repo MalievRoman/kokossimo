@@ -4,8 +4,8 @@ import { Link } from 'react-router-dom';
 const Footer = () => (
   <footer className="footer">
     <div className="footer__inner container">
-      <div className="footer__cols">
-        <div className="footer__col">
+      <div className="footer__cols row g-4">
+        <div className="footer__col col-12 col-md-6 col-xl-3">
           <h3 className="footer__title">КАТАЛОГ</h3>
           <ul className="footer__list">
             <li><Link className="footer__link" to="/catalog?filter=uhod-za-licom">Уход за лицом</Link></li>
@@ -18,7 +18,7 @@ const Footer = () => (
           </ul>
         </div>
 
-        <div className="footer__col">
+        <div className="footer__col col-12 col-md-6 col-xl-3">
           <h3 className="footer__title">ПОКУПАТЕЛЯМ</h3>
           <ul className="footer__list">
             <li><Link className="footer__link" to="/delivery">Доставка и оплата</Link></li>
@@ -28,13 +28,13 @@ const Footer = () => (
           </ul>
         </div>
 
-        <div className="footer__col">
+        <div className="footer__col col-12 col-md-6 col-xl-3">
           <h3 className="footer__title">КОНТАКТЫ</h3>
           <ul className="footer__list">
             <li><a className="footer__link" href="tel:+79375068999">+7 (937) 506-89-99</a></li>
           </ul>
 
-          <div className="footer__social">
+          <div className="footer__social d-flex align-items-center">
             <a className="footer__social-btn" href="https://instagram.com" aria-label="Instagram" target="_blank" rel="noreferrer">
               <img src={`${import.meta.env.BASE_URL}assets/insta.svg`} alt="" />
             </a>
@@ -50,7 +50,7 @@ const Footer = () => (
           </div>
         </div>
 
-        <div className="footer__col">
+        <div className="footer__col col-12 col-md-6 col-xl-3">
           <h3 className="footer__title">ИНФОРМАЦИЯ</h3>
           <ul className="footer__list">
             <li><Link className="footer__link" to="/privacy">Политика конфиденциальности</Link></li>
@@ -64,7 +64,7 @@ const Footer = () => (
         </div>
       </div>
 
-      <div className="footer__brand">
+      <div className="footer__brand d-flex flex-column align-items-center">
         <img className="footer__logo" src={`${import.meta.env.BASE_URL}assets/logo.svg`} alt="KOKOSSIMO" />
         <div className="footer__year">2026</div>
       </div>

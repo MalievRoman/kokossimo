@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { Minus, Plus, Heart, Share2, Star } from 'lucide-react';
+import { Minus, Plus, Heart, Star } from 'lucide-react';
 import { getProduct, getProducts, getProductRatings, rateProduct } from '../services/api';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
@@ -117,7 +117,7 @@ const ProductPage = () => {
       setRatingComment('');
       const freshRatings = await getProductRatings(product.id);
       setRatingsList(Array.isArray(freshRatings.data) ? freshRatings.data : []);
-    } catch (error) {
+    } catch {
       setRatingError('Не удалось сохранить оценку. Попробуйте позже.');
     } finally {
       setRatingSaving(false);
@@ -125,14 +125,14 @@ const ProductPage = () => {
   };
 
   return (
-    <div className="product-page page-animation">
+    <div className="product-page page-animation py-4 py-md-5">
       <div className="container">
         
         {/* Верхняя часть: Галерея и Инфо */}
-        <div className="product-main">
+        <div className="product-main row g-4 mb-5">
           
           {/* ГАЛЕРЕЯ */}
-          <div className="product-gallery">
+          <div className="product-gallery col-12 col-lg-6">
             <div className="gallery-main-wrapper">
                <img src={images[currentImage]} alt={product.name} className="gallery-main-image" />
                {isNew && <span className="product-badge new">New</span>}
@@ -155,7 +155,7 @@ const ProductPage = () => {
           </div>
 
           {/* ИНФОРМАЦИЯ */}
-          <div className="product-info">
+          <div className="product-info col-12 col-lg-6">
             <div className="product-meta">
               <span className="sku">Артикул: {product.id}00{product.id}</span>
             </div>
@@ -187,29 +187,32 @@ const ProductPage = () => {
               )}
             </div>
 
-            <div className="product-actions">
-              <div className="quantity-control">
-                <button 
+            <div className="product-actions d-flex flex-wrap gap-3">
+              <div className="quantity-control d-inline-flex align-items-center border rounded-1">
+                <button
+                  type="button"
                   onClick={() => setQuantity(q => q > 1 ? q - 1 : 1)}
                   disabled={quantity <= 1}
                 >
                   <Minus size={18} />
                 </button>
                 <span>{quantity}</span>
-                <button onClick={() => setQuantity(q => q + 1)}>
+                <button type="button" onClick={() => setQuantity(q => q + 1)}>
                   <Plus size={18} />
                 </button>
               </div>
 
-              <button 
-                className={`add-to-cart-btn-large ${added ? 'added' : ''}`}
+              <button
+                type="button"
+                className={`add-to-cart-btn-large btn btn-primary ${added ? 'added' : ''}`}
                 onClick={handleAddToCart}
               >
                 {added ? '✓ ДОБАВЛЕНО' : 'ДОБАВИТЬ В КОРЗИНУ'}
               </button>
               
-              <button 
-                className={`wishlist-btn ${favorite ? 'active' : ''}`}
+              <button
+                type="button"
+                className={`wishlist-btn btn btn-outline-secondary ${favorite ? 'active' : ''}`}
                 onClick={handleFavoriteClick}
                 aria-label={favorite ? 'Удалить из избранного' : 'Добавить в избранное'}
               >
@@ -221,22 +224,25 @@ const ProductPage = () => {
         </div>
 
         {/* Табы с описанием */}
-        <div className="product-tabs-section">
-          <div className="tabs-header">
-            <button 
-              className={`tab-btn ${activeTab === 'description' ? 'active' : ''}`}
+        <div className="product-tabs-section mb-5">
+          <div className="tabs-header d-flex gap-4 border-bottom mb-4">
+            <button
+              type="button"
+              className={`tab-btn btn btn-link text-decoration-none p-0 ${activeTab === 'description' ? 'active' : ''}`}
               onClick={() => setActiveTab('description')}
             >
               ОПИСАНИЕ
             </button>
-            <button 
-              className={`tab-btn ${activeTab === 'specs' ? 'active' : ''}`}
+            <button
+              type="button"
+              className={`tab-btn btn btn-link text-decoration-none p-0 ${activeTab === 'specs' ? 'active' : ''}`}
               onClick={() => setActiveTab('specs')}
             >
               ХАРАКТЕРИСТИКИ
             </button>
-            <button 
-              className={`tab-btn ${activeTab === 'reviews' ? 'active' : ''}`}
+            <button
+              type="button"
+              className={`tab-btn btn btn-link text-decoration-none p-0 ${activeTab === 'reviews' ? 'active' : ''}`}
               onClick={() => setActiveTab('reviews')}
             >
               ОТЗЫВЫ ({ratingCount})
@@ -286,7 +292,7 @@ const ProductPage = () => {
                 {!ratingsLoading && ratingsList.length === 0 && (
                   <div className="reviews-empty">Пока нет отзывов. Будьте первым!</div>
                 )}
-                <div className="review-form">
+                <div className="review-form border rounded-3 p-3">
                   <label htmlFor="review-comment">Ваш отзыв</label>
                   <div className="review-rating-actions">
                     {[1, 2, 3, 4, 5].map((value) => (
@@ -304,6 +310,7 @@ const ProductPage = () => {
                     {userRating && <span className="user-rating">Ваша оценка: {userRating}</span>}
                   </div>
                   <textarea
+                    className="form-control"
                     id="review-comment"
                     rows={4}
                     placeholder="Напишите пару слов о товаре (необязательно)"
@@ -313,7 +320,7 @@ const ProductPage = () => {
                   />
                   <button
                     type="button"
-                    className="review-submit"
+                    className="review-submit btn btn-primary"
                     onClick={() => handleRate(userRating || 5)}
                     disabled={ratingSaving}
                   >
@@ -324,7 +331,7 @@ const ProductPage = () => {
                 {!ratingsLoading && ratingsList.length > 0 && (
                   <div className="reviews-list">
                     {ratingsList.map((item) => (
-                      <div key={item.id} className="review-card">
+                      <div key={item.id} className="review-card border rounded-3 p-3 bg-white">
                         <div className="review-header">
                           <span className="review-author">{item.user_name}</span>
                           <span className="review-date">

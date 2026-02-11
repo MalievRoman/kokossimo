@@ -60,11 +60,11 @@ const CertificatesPage = () => {
   };
 
   return (
-    <div className="certificates-page page-animation">
+    <div className="certificates-page page-animation py-4 py-md-5">
       <div className="container">
 
-        <div className="certificates-hero">
-          <div className="certificate-preview">
+        <div className="certificates-hero row g-4 align-items-start mb-5">
+          <div className="certificate-preview col-12 col-xl-8">
             <div className="certificate-card">
               <div className="certificate-logo">
                 <img src={`${import.meta.env.BASE_URL}assets/logo.svg`} alt="Кокоссимо" />
@@ -84,23 +84,23 @@ const CertificatesPage = () => {
             </div>
           </div>
 
-          <div className="certificate-form">
-            <h1 className="certificate-form__title">ПОДАРОЧНЫЙ СЕРТИФИКАТ</h1>
-            <p className="certificate-form__text">
+          <div className="certificate-form col-12 col-xl-4 d-flex flex-column">
+            <h1 className="certificate-form__title mb-0">ПОДАРОЧНЫЙ СЕРТИФИКАТ</h1>
+            <p className="certificate-form__text mt-3 mb-0">
               Иногда самый лучший подарок — это возможность выбрать именно то,
               что хочется. Подарочный сертификат — идеальный способ выразить
               внимание, порадовать близкого человека и подарить ему немного
               красоты и удовольствия.
             </p>
 
-            <div className="certificate-form__section">
-              <h2 className="certificate-form__subtitle">ВЫБОР НОМИНАЛА</h2>
-              <div className="certificate-form__amounts">
+            <div className="certificate-form__section mt-4 mt-md-5">
+              <h2 className="certificate-form__subtitle mb-0">ВЫБОР НОМИНАЛА</h2>
+              <div className="certificate-form__amounts d-flex flex-wrap gap-2">
                 {CERTIFICATE_AMOUNTS.map((amount) => (
                   <button
                     key={amount}
                     type="button"
-                    className={`amount-button ${activeAmount === amount ? 'is-active' : ''}`}
+                    className={`amount-button btn ${activeAmount === amount ? 'is-active' : ''}`}
                     onClick={() => handleSelectAmount(amount)}
                   >
                     {amount.toLocaleString('ru-RU')} ₽
@@ -108,10 +108,10 @@ const CertificatesPage = () => {
                 ))}
               </div>
 
-              <div className="certificate-form__custom">
+              <div className="certificate-form__custom d-flex flex-wrap align-items-center gap-2">
                 <button
                   type="button"
-                  className={`amount-button ${isCustom ? 'is-active' : ''}`}
+                  className={`amount-button btn ${isCustom ? 'is-active' : ''}`}
                   onClick={handleSelectCustom}
                 >
                   СВОЯ СУММА
@@ -119,6 +119,7 @@ const CertificatesPage = () => {
                 {isCustom && (
                   <input
                     type="number"
+                    className="form-control"
                     min={CUSTOM_AMOUNT_MIN}
                     max={CUSTOM_AMOUNT_MAX}
                     step={CUSTOM_AMOUNT_STEP}
@@ -141,10 +142,10 @@ const CertificatesPage = () => {
             </div>
 
             <div className="certificate-form__section">
-              <h2 className="certificate-form__subtitle">ИМЯ ПОЛУЧАТЕЛЯ</h2>
+              <h2 className="certificate-form__subtitle mb-0">ИМЯ ПОЛУЧАТЕЛЯ</h2>
               <input
                 type="text"
-                className="certificate-form__input"
+                className="certificate-form__input form-control"
                 placeholder="Имя"
                 value={recipientName}
                 onChange={(event) => setRecipientName(event.target.value)}
@@ -171,15 +172,19 @@ const CertificatesPage = () => {
               </div>
             </div>
 
-            <button type="button" className="certificate-form__purchase" onClick={handlePurchase}>
+            <button
+              type="button"
+              className="certificate-form__purchase btn btn-primary mt-4 mt-md-5"
+              onClick={handlePurchase}
+            >
               ПРИОБРЕСТИ
             </button>
-            {status && <div className="certificate-form__status">{status}</div>}
+            {status && <div className="certificate-form__status mt-2">{status}</div>}
           </div>
         </div>
 
-        <div className="certificates-info">
-          <div className="certificates-info__section">
+        <div className="certificates-info d-grid gap-4 mb-5">
+          <div className="certificates-info__section p-4">
             <h2 className="section-title">ЧТО ТАКОЕ ПОДАРОЧНЫЕ СЕРТИФИКАТЫ</h2>
             <p>
               Подарочный сертификат — это сертификат с фиксированным номиналом,
@@ -193,7 +198,7 @@ const CertificatesPage = () => {
             </p>
           </div>
 
-          <div className="certificates-info__section">
+          <div className="certificates-info__section p-4">
             <h2 className="section-title">КАК КУПИТЬ СЕРТИФИКАТ</h2>
             <ol>
               <li>В магазине — у кассы</li>
@@ -201,7 +206,7 @@ const CertificatesPage = () => {
             </ol>
           </div>
 
-          <div className="certificates-info__section">
+          <div className="certificates-info__section p-4">
             <h2 className="section-title">КАК ИСПОЛЬЗОВАТЬ СЕРТИФИКАТ</h2>
             <ul>
               <li>Выберите товары в магазине</li>

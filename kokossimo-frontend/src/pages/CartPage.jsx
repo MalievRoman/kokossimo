@@ -26,9 +26,8 @@ const CartPage = () => {
   const getProductLink = (item) => (!item.is_gift_certificate ? `/product/${item.id}` : null);
 
   return (
-    <div className="cart-page page-animation">
+    <div className="cart-page page-animation py-4 py-md-5">
       <div className="container">
-        {/* Хлебные крошки */}
         <div className="breadcrumbs">
           <Link to="/">Главная</Link> / <span>Корзина</span>
         </div>
@@ -36,22 +35,21 @@ const CartPage = () => {
         <h1 className="page-title">КОРЗИНА</h1>
 
         {cartItems.length === 0 ? (
-          <div className="cart-empty">
+          <div className="cart-empty text-center py-5 px-3">
             <ShoppingBag size={64} />
-            <h2>Ваша корзина пуста</h2>
+            <h2 className="h3">Ваша корзина пуста</h2>
             <p>Добавьте товары из каталога</p>
             <Link to="/catalog" className="btn-primary">
               Перейти в каталог
             </Link>
           </div>
         ) : (
-          <div className="cart-layout">
-            {/* Список товаров */}
-            <div className="cart-items">
-              <div className="cart-items__header">
+          <div className="cart-layout row g-4 mt-4">
+            <div className="cart-items col-12 col-xl-8 bg-white rounded-3 p-4">
+              <div className="cart-items__header d-flex justify-content-between align-items-center gap-3 flex-wrap">
                 <h2>Товары в корзине ({cartItems.length})</h2>
                 <button
-                  className="btn-secondary btn-secondary--outline"
+                  className="btn btn-outline-secondary btn-sm"
                   onClick={clearCart}
                 >
                   Очистить корзину
@@ -121,7 +119,7 @@ const CartPage = () => {
             </div>
 
             {/* Итого */}
-            <div className="cart-summary">
+            <div className="cart-summary col-12 col-xl-4 bg-white rounded-3 p-4">
               <h2>Итого</h2>
               <div className="cart-summary__row">
                 <span>Товаров:</span>
@@ -134,12 +132,12 @@ const CartPage = () => {
               
               <Link
                 to={isAuthenticated ? '/checkout' : '/auth'}
-                className="btn-primary btn-primary--full"
+                className="btn btn-primary w-100 mb-3"
               >
                 Оформить заказ
               </Link>
-              
-              <Link to="/catalog" className="btn-link btn-link--center">
+
+              <Link to="/catalog" className="btn btn-link w-100 text-center text-decoration-none">
                 Продолжить покупки
               </Link>
             </div>

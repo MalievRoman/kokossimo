@@ -69,14 +69,6 @@ const HeroBlock = () => {
 
   // Автопрокрутка
   useEffect(() => {
-    const startAutoplay = () => {
-      if (autoplayRef.current) return;
-      autoplayRef.current = window.setInterval(() => {
-        if (isPointerDownRef.current) return;
-        nextSlide();
-      }, AUTO_PLAY_INTERVAL);
-    };
-
     const stopAutoplay = () => {
       if (autoplayRef.current) {
         window.clearInterval(autoplayRef.current);
@@ -84,12 +76,23 @@ const HeroBlock = () => {
       }
     };
 
-    startAutoplay();
+    autoplayRef.current = window.setInterval(() => {
+      if (isPointerDownRef.current) return;
+      setCurrent((prev) => {
+        const next = ((prev + 1) % slides.length + slides.length) % slides.length;
+        const track = trackRef.current;
+        if (track) {
+          const width = track.clientWidth;
+          track.scrollTo({ left: next * width, behavior: 'smooth' });
+        }
+        return next;
+      });
+    }, AUTO_PLAY_INTERVAL);
 
     return () => {
       stopAutoplay();
     };
-  }, [current]);
+  }, []);
 
   // Синхронизация current при ручном скролле (свайпы/колёсико)
   useEffect(() => {

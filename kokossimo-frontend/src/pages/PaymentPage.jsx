@@ -130,7 +130,7 @@ const PaymentPage = () => {
 
   if (cartItems.length === 0) {
     return (
-      <div className="payment-page page-animation">
+      <div className="payment-page page-animation py-4 py-md-5">
         <div className="container">
           <div className="breadcrumbs">
             <Link to="/">Главная</Link> / <Link to="/cart">Корзина</Link> /{' '}
@@ -139,7 +139,7 @@ const PaymentPage = () => {
 
           <h1 className="page-title">ОПЛАТА</h1>
 
-          <div className="payment-empty">
+          <div className="payment-empty bg-white rounded-3 p-4 text-center">
             <p>Корзина пуста. Добавьте товары, чтобы перейти к оплате.</p>
             <Link to="/catalog" className="btn-primary">
               Перейти в каталог
@@ -151,7 +151,7 @@ const PaymentPage = () => {
   }
 
   return (
-    <div className="payment-page page-animation">
+    <div className="payment-page page-animation py-4 py-md-5">
       <div className="container">
         <div className="breadcrumbs">
           <Link to="/">Главная</Link> / <Link to="/cart">Корзина</Link> /{' '}
@@ -160,14 +160,15 @@ const PaymentPage = () => {
 
         <h1 className="page-title">ОФОРМЛЕНИЕ ЗАКАЗА</h1>
 
-        <div className="payment-layout">
-          <form className="payment-form" onSubmit={handleSubmit}>
-            <div className="payment-card">
+        <div className="payment-layout row g-4 mt-4">
+          <form className="payment-form col-12 col-xl-8 d-flex flex-column gap-4" onSubmit={handleSubmit}>
+            <div className="payment-card bg-white rounded-3 p-4">
               <h2>Контактные данные</h2>
-              <div className="payment-grid">
-                <label className="payment-field">
+              <div className="payment-grid row g-3">
+                <label className="payment-field col-12 col-md-6">
                   <span>Имя и фамилия</span>
                   <input
+                    className="form-control"
                     type="text"
                     value={form.name}
                     onChange={handleChange('name')}
@@ -175,9 +176,10 @@ const PaymentPage = () => {
                     required
                   />
                 </label>
-                <label className="payment-field">
+                <label className="payment-field col-12 col-md-6">
                   <span>Телефон</span>
                   <input
+                    className="form-control"
                     type="tel"
                     value={form.phone}
                     onChange={(event) =>
@@ -192,9 +194,10 @@ const PaymentPage = () => {
                     required
                   />
                 </label>
-                <label className="payment-field">
+                <label className="payment-field col-12 col-md-6">
                   <span>Email</span>
                   <input
+                    className="form-control"
                     type="email"
                     value={form.email}
                     onChange={handleChange('email')}
@@ -204,12 +207,13 @@ const PaymentPage = () => {
               </div>
             </div>
 
-            <div className="payment-card">
+            <div className="payment-card bg-white rounded-3 p-4">
               <h2>Доставка</h2>
-              <div className="payment-grid">
-                <label className="payment-field">
+              <div className="payment-grid row g-3">
+                <label className="payment-field col-12 col-md-6">
                   <span>Город</span>
                   <input
+                    className="form-control"
                     type="text"
                     value={form.city}
                     onChange={handleChange('city')}
@@ -217,9 +221,10 @@ const PaymentPage = () => {
                     required
                   />
                 </label>
-                <label className="payment-field">
+                <label className="payment-field col-12 col-md-6">
                   <span>Улица</span>
                   <input
+                    className="form-control"
                     type="text"
                     value={form.street}
                     onChange={handleChange('street')}
@@ -227,9 +232,10 @@ const PaymentPage = () => {
                     required
                   />
                 </label>
-                <label className="payment-field">
+                <label className="payment-field col-12 col-md-6">
                   <span>Дом</span>
                   <input
+                    className="form-control"
                     type="text"
                     value={form.house}
                     onChange={handleChange('house')}
@@ -237,27 +243,30 @@ const PaymentPage = () => {
                     required
                   />
                 </label>
-                <label className="payment-field">
+                <label className="payment-field col-12 col-md-6">
                   <span>Квартира</span>
                   <input
+                    className="form-control"
                     type="text"
                     value={form.apartment}
                     onChange={handleChange('apartment')}
                     placeholder="Квартира"
                   />
                 </label>
-                <label className="payment-field">
+                <label className="payment-field col-12 col-md-6">
                   <span>Индекс</span>
                   <input
+                    className="form-control"
                     type="text"
                     value={form.postal_code}
                     onChange={handleChange('postal_code')}
                     placeholder="Индекс"
                   />
                 </label>
-                <label className="payment-field payment-field--full">
+                <label className="payment-field payment-field--full col-12">
                   <span>Комментарий к заказу</span>
                   <textarea
+                    className="form-control"
                     value={form.comment}
                     onChange={handleChange('comment')}
                     placeholder="Пожелания по доставке"
@@ -267,7 +276,7 @@ const PaymentPage = () => {
               </div>
             </div>
 
-            <div className="payment-card">
+            <div className="payment-card bg-white rounded-3 p-4">
               <h2>Способ доставки</h2>
               <div className="payment-options">
                 <label className="payment-option">
@@ -305,7 +314,7 @@ const PaymentPage = () => {
               </div>
             </div>
 
-            <div className="payment-card">
+            <div className="payment-card bg-white rounded-3 p-4">
               <h2>Способ оплаты</h2>
               <div className="payment-options">
                 <label className="payment-option">
@@ -343,7 +352,7 @@ const PaymentPage = () => {
               <span>Я согласен с условиями обработки персональных данных</span>
             </label>
 
-            <button className="btn-primary btn-primary--full" type="submit">
+            <button className="btn btn-primary w-100" type="submit">
               {isSubmitting ? 'Создание заказа...' : 'Готово!'}
             </button>
             {status.message && (
@@ -353,7 +362,7 @@ const PaymentPage = () => {
             )}
           </form>
 
-          <aside className="payment-summary">
+          <aside className="payment-summary col-12 col-xl-4 bg-white rounded-3 p-4">
             <h2>Ваш заказ</h2>
             <div className="payment-summary__row">
               <span>Товаров:</span>
@@ -370,7 +379,7 @@ const PaymentPage = () => {
             <p className="payment-summary__note">
               Онлайн-оплата пока недоступна. Выберите оплату при получении.
             </p>
-            <Link to="/cart" className="btn-link btn-link--center">
+            <Link to="/cart" className="btn btn-link w-100 text-center text-decoration-none">
               Вернуться в корзину
             </Link>
           </aside>

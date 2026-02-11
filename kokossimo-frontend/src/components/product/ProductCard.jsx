@@ -13,22 +13,22 @@ import { resolveMediaUrl } from '../../utils/media';
 // - цвета, размеры и отступы полностью берутся из koko-main.css.
 
 const ProductCard = ({ product }) => {
-  if (!product) return null;
-
   const { addToCart, updateQuantity, removeFromCart, cartItems } = useCart();
   const { toggleFavorite, isFavorite } = useFavorites();
+  const source = product || {};
+  const productId = source.id;
 
   // Текущее количество товара в корзине
-  const cartItem = cartItems.find((item) => item.id === product.id);
+  const cartItem = cartItems.find((item) => item.id === productId);
   const quantity = cartItem?.quantity || 0;
 
   // Флаги и данные из API
-  const isNew = Boolean(product.is_new ?? product.isNew);
-  const discount = Number.isFinite(Number(product.discount))
-    ? Number(product.discount)
+  const isNew = Boolean(source.is_new ?? source.isNew);
+  const discount = Number.isFinite(Number(source.discount))
+    ? Number(source.discount)
     : 0;
-  const ratingValue = Number(product.rating_avg ?? product.rating ?? product.average_rating ?? 0);
-  const ratingCount = Number(product.rating_count ?? product.ratingCount ?? 0);
+  const ratingValue = Number(source.rating_avg ?? source.rating ?? source.average_rating ?? 0);
+  const ratingCount = Number(source.rating_count ?? source.ratingCount ?? 0);
   const [ratingData, setRatingData] = useState({
     avg: Number.isFinite(ratingValue) ? ratingValue : 0,
     count: Number.isFinite(ratingCount) ? ratingCount : 0,
@@ -38,10 +38,10 @@ const ProductCard = ({ product }) => {
   // Цена
   let price = 0;
   try {
-    if (typeof product.price === 'string') {
-      price = parseFloat(product.price);
-    } else if (typeof product.price === 'number') {
-      price = product.price;
+    if (typeof source.price === 'string') {
+      price = parseFloat(source.price);
+    } else if (typeof source.price === 'number') {
+      price = source.price;
     }
     if (!Number.isFinite(price)) {
       price = 0;
@@ -58,23 +58,29 @@ const ProductCard = ({ product }) => {
 
   // Картинка: относительные пути дополняем адресом бэкенда
   const imageUrl = resolveMediaUrl(
-    product.image,
+    source.image,
     'https://placehold.co/400x400/F5E6D3/8B4513?text=No+Image'
   );
-  const description = String(product.short_description ?? product.description ?? '').trim();
+  const description = String(source.short_description ?? source.description ?? '').trim();
 
-  const favorite = isFavorite(product.id);
+  const favorite = productId ? isFavorite(productId) : false;
 
   useEffect(() => {
-    const hasServerStats = Number.isFinite(ratingValue) && Number.isFinite(ratingCount);
-    const shouldFetch = !hasServerStats || (ratingValue === 0 && ratingCount === 0);
-    if (!shouldFetch) {
-      setRatingData({ avg: ratingValue, count: ratingCount });
+    if (!productId) {
       return undefined;
     }
 
+    const hasServerStats = Number.isFinite(ratingValue) && Number.isFinite(ratingCount);
+    const shouldFetch = !hasServerStats || (ratingValue === 0 && ratingCount === 0);
+    if (!shouldFetch) {
+      const syncTimer = window.setTimeout(() => {
+        setRatingData({ avg: ratingValue, count: ratingCount });
+      }, 0);
+      return () => window.clearTimeout(syncTimer);
+    }
+
     let isActive = true;
-    getProductRatings(product.id)
+    getProductRatings(productId)
       .then((response) => {
         if (!isActive) return;
         const list = Array.isArray(response.data) ? response.data : [];
@@ -92,7 +98,9 @@ const ProductCard = ({ product }) => {
     return () => {
       isActive = false;
     };
-  }, [product.id, ratingValue, ratingCount]);
+  }, [productId, ratingValue, ratingCount]);
+
+  if (!product) return null;
 
   // Обработчики корзины
   const handleAddToCart = (e) => {
@@ -104,16 +112,16 @@ const ProductCard = ({ product }) => {
   const handleIncrease = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    updateQuantity(product.id, quantity + 1);
+    updateQuantity(productId, quantity + 1);
   };
 
   const handleDecrease = (e) => {
     e.preventDefault();
     e.stopPropagation();
     if (quantity <= 1) {
-      removeFromCart(product.id);
+      removeFromCart(productId);
     } else {
-      updateQuantity(product.id, quantity - 1);
+      updateQuantity(productId, quantity - 1);
     }
   };
 
@@ -132,7 +140,7 @@ const ProductCard = ({ product }) => {
   const showQtyControls = quantity > 0;
 
   return (
-    <div className="product-card" data-product-id={product.id}>
+    <div className="product-card" data-product-id={productId}>
       <div className="product-card__media">
         {(isNew || discount > 0) && (
           <div className="product-card__badges">
@@ -160,7 +168,7 @@ const ProductCard = ({ product }) => {
 
         <Link
           className="product-card__image-link"
-          to={`/product/${product.id}`}
+          to={`/product/${productId}`}
           aria-label={product.name}
         >
           <div className="product-card__image">

@@ -69,7 +69,7 @@ const ProfilePage = () => {
       setProfile(response.data);
       setStatus({ type: 'success', message: 'Данные профиля сохранены.' });
       setTimeout(() => setStatus({ type: '', message: '' }), 3000);
-    } catch (error) {
+    } catch {
       setStatus({ type: 'error', message: 'Не удалось сохранить профиль.' });
       setTimeout(() => setStatus({ type: '', message: '' }), 3000);
     }
@@ -93,7 +93,7 @@ const ProfilePage = () => {
       setProfile(response.data);
       setStatus({ type: 'success', message: 'Адрес доставки сохранен.' });
       setTimeout(() => setStatus({ type: '', message: '' }), 3000);
-    } catch (error) {
+    } catch {
       setStatus({ type: 'error', message: 'Не удалось сохранить адрес.' });
       setTimeout(() => setStatus({ type: '', message: '' }), 3000);
     }
@@ -104,7 +104,7 @@ const ProfilePage = () => {
 
     try {
       await logoutUser(token);
-    } catch (error) {
+    } catch {
       // Даже если сервер не ответил, очищаем токен локально
     } finally {
       localStorage.removeItem('authToken');
@@ -126,7 +126,7 @@ const ProfilePage = () => {
     }
   };
   return (
-    <div className="profile-page page-animation">
+    <div className="profile-page page-animation py-4 py-md-5">
       <div className="container">
         <div className="breadcrumbs">
           <Link to="/">Главная</Link> / <span>Личный кабинет</span>
@@ -134,9 +134,9 @@ const ProfilePage = () => {
 
         <h1 className="page-title">ЛИЧНЫЙ КАБИНЕТ</h1>
 
-        <div className="profile-layout">
-          <aside className="profile-sidebar">
-            <div className="profile-card">
+        <div className="profile-layout row g-4 mt-2">
+          <aside className="profile-sidebar col-12 col-xl-3">
+            <div className="profile-card border rounded-3 p-4 text-center bg-body-tertiary">
               <div className="profile-avatar">К</div>
               <div className="profile-name">
                 {profile.first_name || profile.last_name
@@ -149,11 +149,11 @@ const ProfilePage = () => {
                   : 'Войдите, чтобы сохранять заказы'}
               </div>
               {!isAuthenticated ? (
-                <Link to="/auth" className="btn-primary btn-primary--full">
+                <Link to="/auth" className="btn btn-primary w-100">
                   Вход/Регистрация
                 </Link>
               ) : (
-                <button className="btn-primary btn-primary--full" onClick={handleLogout}>
+                <button className="btn btn-primary w-100" onClick={handleLogout}>
                   Выйти
                 </button>
               )}
@@ -161,8 +161,8 @@ const ProfilePage = () => {
 
           </aside>
 
-          <section className="profile-content">
-            <div className="profile-section">
+          <section className="profile-content col-12 col-xl-9 d-grid gap-4">
+            <div className="profile-section border rounded-3 p-4 bg-white">
               <h2 className="section-title">ИСТОРИЯ ЗАКАЗОВ</h2>
               {ordersLoading ? (
                 <p style={{ color: '#777' }}>Загрузка заказов...</p>
@@ -224,12 +224,13 @@ const ProfilePage = () => {
               )}
             </div>
 
-            <div className="profile-section">
+            <div className="profile-section border rounded-3 p-4 bg-white">
               <h2 className="section-title">ЛИЧНЫЕ ДАННЫЕ</h2>
-              <div className="profile-grid">
-                <label className="profile-field">
+              <div className="profile-grid row g-3">
+                <label className="profile-field col-12 col-md-6">
                   <span>Имя</span>
                   <input
+                    className="form-control"
                     type="text"
                     placeholder="Введите имя"
                     value={profile.first_name}
@@ -238,9 +239,10 @@ const ProfilePage = () => {
                     }
                   />
                 </label>
-                <label className="profile-field">
+                <label className="profile-field col-12 col-md-6">
                   <span>Фамилия</span>
                   <input
+                    className="form-control"
                     type="text"
                     placeholder="Введите фамилию"
                     value={profile.last_name}
@@ -249,9 +251,10 @@ const ProfilePage = () => {
                     }
                   />
                 </label>
-                <label className="profile-field">
+                <label className="profile-field col-12 col-md-6">
                   <span>Телефон</span>
                   <input
+                    className="form-control"
                     type="tel"
                     placeholder="+7 (___) ___-__-__"
                     value={profile.phone}
@@ -265,9 +268,10 @@ const ProfilePage = () => {
                     }}
                   />
                 </label>
-                <label className="profile-field">
+                <label className="profile-field col-12 col-md-6">
                   <span>Email</span>
                   <input
+                    className="form-control"
                     type="email"
                     placeholder="email@example.com"
                     value={profile.email}
@@ -277,17 +281,18 @@ const ProfilePage = () => {
                   />
                 </label>
               </div>
-              <button className="btn-primary" onClick={handleSaveProfile}>
+              <button className="btn btn-primary" onClick={handleSaveProfile}>
                 Сохранить
               </button>
             </div>
 
-            <div className="profile-section">
+            <div className="profile-section border rounded-3 p-4 bg-white">
               <h2 className="section-title">АДРЕС ДОСТАВКИ</h2>
-              <div className="profile-grid">
-                <label className="profile-field">
+              <div className="profile-grid row g-3">
+                <label className="profile-field col-12 col-md-6">
                   <span>Город</span>
                   <input
+                    className="form-control"
                     type="text"
                     placeholder="Город"
                     value={profile.city}
@@ -296,9 +301,10 @@ const ProfilePage = () => {
                     }
                   />
                 </label>
-                <label className="profile-field">
+                <label className="profile-field col-12 col-md-6">
                   <span>Улица</span>
                   <input
+                    className="form-control"
                     type="text"
                     placeholder="Улица"
                     value={profile.street}
@@ -307,9 +313,10 @@ const ProfilePage = () => {
                     }
                   />
                 </label>
-                <label className="profile-field">
+                <label className="profile-field col-12 col-md-6">
                   <span>Дом</span>
                   <input
+                    className="form-control"
                     type="text"
                     placeholder="Дом"
                     value={profile.house}
@@ -318,9 +325,10 @@ const ProfilePage = () => {
                     }
                   />
                 </label>
-                <label className="profile-field">
+                <label className="profile-field col-12 col-md-6">
                   <span>Квартира</span>
                   <input
+                    className="form-control"
                     type="text"
                     placeholder="Квартира"
                     value={profile.apartment}
@@ -329,9 +337,10 @@ const ProfilePage = () => {
                     }
                   />
                 </label>
-                <label className="profile-field">
+                <label className="profile-field col-12 col-md-6">
                   <span>Индекс</span>
                   <input
+                    className="form-control"
                     type="text"
                     placeholder="000000"
                     value={profile.postal_code}
@@ -341,7 +350,7 @@ const ProfilePage = () => {
                   />
                 </label>
               </div>
-              <button className="btn-primary" onClick={handleSaveAddress}>
+              <button className="btn btn-primary" onClick={handleSaveAddress}>
                 Сохранить адрес
               </button>
             </div>
