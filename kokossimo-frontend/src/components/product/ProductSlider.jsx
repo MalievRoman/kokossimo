@@ -9,15 +9,20 @@ import ProductCard from './ProductCard';
 const ProductSlider = ({ title, products, linkTo = "/catalog" }) => {
   const scrollerRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
 
   const updateScrollState = () => {
     const scroller = scrollerRef.current;
     if (!scroller) return;
+    const maxScrollLeft = scroller.scrollWidth - scroller.clientWidth;
     setCanScrollLeft(scroller.scrollLeft > 0);
+    setCanScrollRight(scroller.scrollLeft < maxScrollLeft - 1);
   };
 
   useEffect(() => {
     updateScrollState();
+    window.addEventListener('resize', updateScrollState);
+    return () => window.removeEventListener('resize', updateScrollState);
   }, [products]);
 
   const scrollByStep = (direction) => {
@@ -109,9 +114,10 @@ const ProductSlider = ({ title, products, linkTo = "/catalog" }) => {
           </div>
 
           <button
-            className="bestsellers__arrow bestsellers__arrow--next"
+            className={`bestsellers__arrow bestsellers__arrow--next ${canScrollRight ? '' : 'is-hidden'}`}
             type="button"
             aria-label="Вперёд"
+            aria-hidden={!canScrollRight}
             onClick={() => scrollByStep(1)}
           />
         </div>

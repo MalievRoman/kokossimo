@@ -3,13 +3,11 @@ import { useSearchParams } from 'react-router-dom';
 import ProductCard from '../components/product/ProductCard';
 import { getProducts, getCategories } from '../services/api';
 import { useCatalogFilters } from '../context/CatalogFiltersContext';
-import { ChevronDown } from 'lucide-react';
 import './CatalogPage.css';
 
 const CatalogPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [sortBy, setSortBy] = useState('popular');
-  const [openFilter, setOpenFilter] = useState(null);
   const [catalogProducts, setCatalogProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [selectedCategories, setSelectedCategories] = useState([]);
@@ -17,8 +15,9 @@ const CatalogPage = () => {
   const [priceTo, setPriceTo] = useState('');
   const [priceError, setPriceError] = useState('');
   const [loading, setLoading] = useState(true);
-  const categoryMenuRef = useRef(null);
-  const priceMenuRef = useRef(null);
+  const [isMobilePriceOpen, setIsMobilePriceOpen] = useState(false);
+  const [isMobileCategoryOpen, setIsMobileCategoryOpen] = useState(false);
+  const mobileCategoryDetailsRef = useRef(null);
   const catalogFiltersContext = useCatalogFilters();
 
   // Синхронизация выбранных фильтров в контекст (чтобы поиск в шапке их сохранял)
@@ -189,17 +188,6 @@ const CatalogPage = () => {
       });
   }, [searchParams, selectedCategories, sortBy]);
 
-  useEffect(() => {
-    if (!openFilter) return;
-    const handleOutsideClick = (event) => {
-      if (categoryMenuRef.current?.contains(event.target)) return;
-      if (priceMenuRef.current?.contains(event.target)) return;
-      setOpenFilter(null);
-    };
-    document.addEventListener('mousedown', handleOutsideClick);
-    return () => document.removeEventListener('mousedown', handleOutsideClick);
-  }, [openFilter]);
-
   const handleCategoryChange = (categorySlug) => {
     setSelectedCategories(prev => 
       prev.includes(categorySlug) 
@@ -272,8 +260,36 @@ const CatalogPage = () => {
     setPriceTo(value);
   };
 
+  const handleMobilePriceApply = () => {
+    applyFilters();
+    setIsMobilePriceOpen(false);
+  };
+
+  const handleMobilePriceReset = () => {
+    setPriceFrom('');
+    setPriceTo('');
+    setPriceError('');
+    const nextParams = {};
+    if (selectedCategories.length > 0) {
+      nextParams.category = selectedCategories;
+    }
+    if (searchParams.get('q')) {
+      nextParams.q = searchParams.get('q');
+    }
+    setSearchParams(nextParams);
+    setIsMobilePriceOpen(false);
+  };
+
+  const closeMobileFiltersOverlay = () => {
+    setIsMobilePriceOpen(false);
+    if (mobileCategoryDetailsRef.current?.open) {
+      mobileCategoryDetailsRef.current.open = false;
+    }
+    setIsMobileCategoryOpen(false);
+  };
+
   return (
-    <div className="catalog-page page-animation">
+    <div className="catalog-page">
       <div className="container">
         
         {/* Хлебные крошки (Breadcrumbs) */}
@@ -283,116 +299,238 @@ const CatalogPage = () => {
 
         <h1 className="page-title">КАТАЛОГ ТОВАРОВ</h1>
         {searchParams.get('q') && (
-          <div style={{ marginTop: '0.5rem', color: '#6b5a58' }}>
+          <div className="catalog-search-query">
             Результаты по запросу: «{searchParams.get('q')}»
           </div>
         )}
 
         <div className="catalog-layout">
+          <aside className="catalog-sidebar">
+            <section className="catalog-sidebar-section">
+              <h2 className="catalog-sidebar-title">КАТЕГОРИИ</h2>
+              {categories.length === 0 ? (
+                <div className="catalog-filter-empty">Категории не найдены</div>
+              ) : (
+                <ul className="catalog-filter-list">
+                  {categories.map((category) => (
+                    <li key={category.id}>
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={selectedCategories.includes(category.slug)}
+                          onChange={() => handleCategoryChange(category.slug)}
+                        />
+                        {category.name}
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
 
-          {/* ОСНОВНОЙ КОНТЕНТ */}
+            <section className="catalog-sidebar-section">
+              <h2 className="catalog-sidebar-title">СТОИМОСТЬ</h2>
+              <div className="catalog-filter-price">
+                <input
+                  type="number"
+                  min={0}
+                  placeholder="от 159"
+                  value={priceFrom}
+                  onChange={handlePriceFromChange}
+                />
+                <input
+                  type="number"
+                  min={0}
+                  placeholder="до 35389"
+                  value={priceTo}
+                  onChange={handlePriceToChange}
+                />
+              </div>
+              {priceError && (
+                <p className="catalog-filter-price-error" role="alert">
+                  {priceError}
+                </p>
+              )}
+            </section>
+
+            <div className="catalog-sidebar-actions">
+              <button className="catalog-filter-action" onClick={applyFilters}>
+                Применить
+              </button>
+              <button
+                className="catalog-filter-action catalog-filter-action--ghost"
+                onClick={resetFilters}
+              >
+                Сбросить
+              </button>
+            </div>
+          </aside>
+
           <div className="catalog-content">
-            
-            {/* Верхняя панель управления */}
-            <div className="catalog-controls">
-              <div className="catalog-filters">
-                <div className="catalog-filter" ref={categoryMenuRef}>
-                  <button
-                    type="button"
-                    className="catalog-filter-toggle"
-                    onClick={() =>
-                      setOpenFilter(openFilter === 'categories' ? null : 'categories')
-                    }
-                    aria-expanded={openFilter === 'categories'}
-                    aria-haspopup="true"
-                  >
-                    Категории
-                    {selectedCategories.length > 0 && (
-                      <span className="catalog-filter-count">{selectedCategories.length}</span>
-                    )}
-                    <ChevronDown size={16} />
-                  </button>
-                  <div
-                    className={`catalog-filter-menu ${openFilter === 'categories' ? 'is-open' : ''}`}
-                  >
-                    {categories.length === 0 ? (
-                      <div className="catalog-filter-empty">Категории не найдены</div>
-                    ) : (
-                      <ul className="catalog-filter-list">
-                        {categories.map((category) => (
-                          <li key={category.id}>
-                            <label>
-                              <input
-                                type="checkbox"
-                                checked={selectedCategories.includes(category.slug)}
-                                onChange={() => handleCategoryChange(category.slug)}
-                              />
-                              {category.name}
-                            </label>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                </div>
+            {(isMobilePriceOpen || isMobileCategoryOpen) && (
+              <button
+                type="button"
+                className="catalog-mobile-price-backdrop"
+                aria-label="Закрыть фильтры"
+                onClick={closeMobileFiltersOverlay}
+              />
+            )}
 
-                <div className="catalog-filter" ref={priceMenuRef}>
-                  <button
-                    type="button"
-                    className="catalog-filter-toggle"
-                    onClick={() => setOpenFilter(openFilter === 'price' ? null : 'price')}
-                    aria-expanded={openFilter === 'price'}
-                    aria-haspopup="true"
-                  >
-                    Цена
-                    {(priceFrom || priceTo) && <span className="catalog-filter-count">1</span>}
-                    <ChevronDown size={16} />
-                  </button>
-                  <div
-                    className={`catalog-filter-menu ${openFilter === 'price' ? 'is-open' : ''}`}
-                  >
-                    <div className="catalog-filter-price">
-                      <input
-                        type="number"
-                        min={0}
-                        placeholder="от 0"
-                        value={priceFrom}
-                        onChange={handlePriceFromChange}
-                      />
-                      <span className="dash">—</span>
-                      <input
-                        type="number"
-                        min={0}
-                        placeholder="до 50000"
-                        value={priceTo}
-                        onChange={handlePriceToChange}
-                      />
+            <div className="catalog-mobile-filters">
+              <details
+                className="catalog-mobile-filter"
+                ref={mobileCategoryDetailsRef}
+                onToggle={(event) => setIsMobileCategoryOpen(event.currentTarget.open)}
+              >
+                <summary className="catalog-mobile-filter__summary">КАТЕГОРИИ</summary>
+                <div className="catalog-mobile-filter__content">
+                  {categories.length === 0 ? (
+                    <div className="catalog-filter-empty">Категории не найдены</div>
+                  ) : (
+                    <ul className="catalog-filter-list catalog-mobile-filter-list">
+                      {categories.map((category) => (
+                        <li key={`mobile-${category.id}`}>
+                          <button
+                            type="button"
+                            className={`catalog-mobile-category-item ${selectedCategories.includes(category.slug) ? 'is-active' : ''}`}
+                            onClick={() => handleCategoryChange(category.slug)}
+                          >
+                            {category.name}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </details>
+
+              <div className="catalog-mobile-filter catalog-mobile-filter--price">
+                <button
+                  type="button"
+                  className="catalog-mobile-filter__summary catalog-mobile-filter__button"
+                  onClick={() => {
+                    if (mobileCategoryDetailsRef.current?.open) {
+                      mobileCategoryDetailsRef.current.open = false;
+                      setIsMobileCategoryOpen(false);
+                    }
+                    setIsMobilePriceOpen((prev) => !prev);
+                  }}
+                >
+                  СТОИМОСТЬ
+                </button>
+
+                {isMobilePriceOpen && (
+                  <div className="catalog-mobile-price-modal" role="dialog" aria-modal="false">
+                    <button
+                      type="button"
+                      className="catalog-mobile-price-modal__close"
+                      aria-label="Закрыть окно фильтра цены"
+                      onClick={() => setIsMobilePriceOpen(false)}
+                    >
+                      ×
+                    </button>
+
+                    <div className="catalog-mobile-price-modal__row">
+                      <label className="catalog-mobile-price-modal__field">
+                        <span>ОТ</span>
+                        <input
+                          type="number"
+                          min={0}
+                          placeholder="159"
+                          value={priceFrom}
+                          onChange={handlePriceFromChange}
+                        />
+                      </label>
+
+                      <label className="catalog-mobile-price-modal__field">
+                        <span>ДО</span>
+                        <input
+                          type="number"
+                          min={0}
+                          placeholder="3538327"
+                          value={priceTo}
+                          onChange={handlePriceToChange}
+                        />
+                      </label>
                     </div>
+
                     {priceError && (
                       <p className="catalog-filter-price-error" role="alert">
                         {priceError}
                       </p>
                     )}
-                  </div>
-                </div>
 
-                <button className="catalog-filter-action" onClick={applyFilters}>
-                  Применить
-                </button>
-                <button
-                  className="catalog-filter-action catalog-filter-action--ghost"
-                  onClick={resetFilters}
-                >
-                  Сбросить
-                </button>
+                    <div className="catalog-mobile-price-modal__actions">
+                      <button
+                        type="button"
+                        className="catalog-mobile-price-modal__submit"
+                        onClick={handleMobilePriceApply}
+                      >
+                        ПОДТВЕРДИТЬ
+                      </button>
+                      <button
+                        type="button"
+                        className="catalog-mobile-price-modal__reset"
+                        onClick={handleMobilePriceReset}
+                      >
+                        СБРОСИТЬ
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {(selectedCategories.length > 0 || priceFrom || priceTo) && (
+                <div className="catalog-mobile-selected">
+                  {(priceFrom || priceTo) && (
+                    <button
+                      type="button"
+                      className="catalog-mobile-selected-tag"
+                      onClick={handleMobilePriceReset}
+                    >
+                      {`ЦЕНА: ${priceFrom || '0'}–${priceTo || '∞'} ×`}
+                    </button>
+                  )}
+                  {selectedCategories.map((slug) => {
+                    const category = categories.find((item) => item.slug === slug);
+                    return (
+                      <button
+                        key={`mobile-tag-${slug}`}
+                        type="button"
+                        className="catalog-mobile-selected-tag"
+                        onClick={() => handleCategoryChange(slug)}
+                      >
+                        {category?.name || slug} ×
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="catalog-controls">
+              <div className="catalog-controls-left">
+                {selectedCategories.map((slug) => {
+                  const category = categories.find((item) => item.slug === slug);
+                  return (
+                    <button
+                      key={slug}
+                      type="button"
+                      className="catalog-tag"
+                      onClick={() => handleCategoryChange(slug)}
+                    >
+                      {category?.name || slug} ×
+                    </button>
+                  );
+                })}
               </div>
 
               <div className="sort-wrapper">
-                <span className="sort-label">Сортировка:</span>
-                <select 
-                  value={sortBy} 
+                <select
+                  value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
                   className="sort-select"
+                  aria-label="Сортировка товаров"
                 >
                   <option value="popular">По популярности</option>
                   <option value="price_asc">Сначала дешевые</option>
@@ -400,17 +538,16 @@ const CatalogPage = () => {
                   <option value="new">Новинки</option>
                 </select>
                 {!loading && (
-                  <span style={{ marginLeft: '15px', fontSize: '14px', color: '#666' }}>
-                    Найдено товаров: {catalogProducts.length}
+                  <span className="catalog-count">
+                    Найдено: {catalogProducts.length}
                   </span>
                 )}
               </div>
             </div>
 
-            {/* Сетка товаров */}
             <div className="catalog-grid">
               {loading ? (
-                <div style={{ padding: '40px', textAlign: 'center', width: '100%' }}>
+                <div className="catalog-status">
                   <p>Загрузка товаров...</p>
                 </div>
               ) : catalogProducts.length > 0 ? (
@@ -418,10 +555,10 @@ const CatalogPage = () => {
                   <ProductCard key={product.id} product={product} />
                 ))
               ) : (
-                <div style={{ padding: '40px', textAlign: 'center', width: '100%' }}>
+                <div className="catalog-status">
                   <p>Товары не найдены</p>
                   {searchParams.get('q') && (
-                    <p style={{ marginTop: '8px', color: '#8b7b78' }}>
+                    <p className="catalog-status-subtext">
                       По запросу «{searchParams.get('q')}» ничего не найдено
                     </p>
                   )}
@@ -429,14 +566,11 @@ const CatalogPage = () => {
               )}
             </div>
 
-            {/* Пагинация - пока скрыта, можно добавить позже */}
             {catalogProducts.length > 0 && (
               <div className="pagination">
                 <button className="page-btn active">1</button>
-                {/* Пагинация будет добавлена позже при необходимости */}
               </div>
             )}
-            
           </div>
         </div>
       </div>
