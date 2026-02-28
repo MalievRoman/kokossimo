@@ -18,6 +18,7 @@ const CatalogPage = () => {
   const [isMobilePriceOpen, setIsMobilePriceOpen] = useState(false);
   const [isMobileCategoryOpen, setIsMobileCategoryOpen] = useState(false);
   const mobileCategoryDetailsRef = useRef(null);
+  const productsRequestIdRef = useRef(0);
   const catalogFiltersContext = useCatalogFilters();
 
   // Синхронизация выбранных фильтров в контекст (чтобы поиск в шапке их сохранял)
@@ -97,6 +98,25 @@ const CatalogPage = () => {
     return 1 - distance / Math.max(query.length, text.length);
   };
 
+  const sanitizeNonNegativePrice = (rawValue) => {
+    if (rawValue == null) return null;
+    const value = String(rawValue).trim();
+    if (!value) return null;
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue) || numericValue < 0) {
+      return null;
+    }
+    return String(numericValue);
+  };
+
+  // Синхронизация значений цены в UI с URL (при возврате на страницу/перезагрузке)
+  useEffect(() => {
+    const minFromUrl = sanitizeNonNegativePrice(searchParams.get('price_min'));
+    const maxFromUrl = sanitizeNonNegativePrice(searchParams.get('price_max'));
+    setPriceFrom(minFromUrl ?? '');
+    setPriceTo(maxFromUrl ?? '');
+  }, [searchParams]);
+
   // Загрузка товаров
   useEffect(() => {
     setLoading(true);
@@ -104,21 +124,32 @@ const CatalogPage = () => {
     const params = {};
     
     const categoryFilter = searchParams.get('filter');
-    let minPrice = searchParams.get('price_min');
-    let maxPrice = searchParams.get('price_max');
-    // Игнорируем отрицательные значения — не показываем "Товары не найдены" из-за некорректного ввода
-    if (minPrice != null && minPrice !== '' && parseFloat(minPrice) < 0) minPrice = null;
-    if (maxPrice != null && maxPrice !== '' && parseFloat(maxPrice) < 0) maxPrice = null;
+    const minPrice = sanitizeNonNegativePrice(searchParams.get('price_min'));
+    const maxPrice = sanitizeNonNegativePrice(searchParams.get('price_max'));
     
-    // Используем только текущий выбор в UI: тогда снятие категории сразу обновляет список
-    // (URL синхронизируется при загрузке в другом эффекте и при нажатии «Применить»)
-    const categoriesToFilter = selectedCategories;
+    // Приоритет: category из URL -> выбранные в UI -> legacy filter=<slug>
+    const categoriesFromUrl = searchParams.getAll('category');
+    const legacyCategoryFromFilter =
+      categoryFilter && categoryFilter !== 'bestsellers' && categoryFilter !== 'new'
+        ? [categoryFilter]
+        : [];
+    const categoriesToFilter =
+      categoriesFromUrl.length > 0
+        ? categoriesFromUrl
+        : selectedCategories.length > 0
+          ? selectedCategories
+          : legacyCategoryFromFilter;
+
+    const requestId = ++productsRequestIdRef.current;
     
     if (searchQuery) {
       // При поиске также передаем фильтры категорий в API
       params.page = undefined;
       if (categoriesToFilter.length > 0) {
         params.category = categoriesToFilter;
+      } else if (categoryFilter && categoryFilter !== 'bestsellers' && categoryFilter !== 'new') {
+        // Поддержка /catalog?filter=<slug> на первом рендере
+        params.category = [categoryFilter];
       }
     } else if (categoryFilter === 'bestsellers') {
       params.is_bestseller = 'true';
@@ -127,12 +158,16 @@ const CatalogPage = () => {
     } else if (categoriesToFilter.length > 0) {
       // Используем категории из URL параметра category
       params.category = categoriesToFilter;
+    } else if (categoryFilter) {
+      // Поддержка старого формата ?filter=<slug>, пока selectedCategories не синхронизировался
+      params.category = [categoryFilter];
     }
     if (minPrice) params.price_min = minPrice;
     if (maxPrice) params.price_max = maxPrice;
 
     getProducts(params)
       .then(response => {
+        if (requestId !== productsRequestIdRef.current) return;
         let data = Array.isArray(response.data) ? response.data : (response.data.results || []);
 
         if (searchQuery) {
@@ -183,25 +218,33 @@ const CatalogPage = () => {
         setLoading(false);
       })
       .catch(() => {
+        if (requestId !== productsRequestIdRef.current) return;
         setCatalogProducts([]);
         setLoading(false);
       });
   }, [searchParams, selectedCategories, sortBy]);
 
   const handleCategoryChange = (categorySlug) => {
-    setSelectedCategories(prev => 
-      prev.includes(categorySlug) 
-        ? prev.filter(slug => slug !== categorySlug)
-        : [...prev, categorySlug]
-    );
+    const nextSelectedCategories = selectedCategories.includes(categorySlug)
+      ? selectedCategories.filter((slug) => slug !== categorySlug)
+      : [...selectedCategories, categorySlug];
+
+    setSelectedCategories(nextSelectedCategories);
+
+    const nextParams = new URLSearchParams(searchParams);
+    // При ручном выборе категории убираем "витринные" фильтры bestsellers/new
+    nextParams.delete('filter');
+    nextParams.delete('category');
+    nextSelectedCategories.forEach((slug) => nextParams.append('category', slug));
+    setSearchParams(nextParams, { replace: true });
   };
 
   const applyFilters = () => {
     setPriceError('');
     let fromVal = priceFrom.trim();
     let toVal = priceTo.trim();
-    const fromNum = fromVal === '' ? null : parseFloat(fromVal);
-    const toNum = toVal === '' ? null : parseFloat(toVal);
+    const fromNum = fromVal === '' ? null : Number(fromVal);
+    const toNum = toVal === '' ? null : Number(toVal);
     if (fromNum !== null && (Number.isNaN(fromNum) || fromNum < 0)) {
       setPriceError('Цена «от» не может быть отрицательной. Использовано значение 0.');
       fromVal = '0';
@@ -233,28 +276,32 @@ const CatalogPage = () => {
   };
 
   const handlePriceFromChange = (event) => {
+    setPriceError('');
     const value = event.target.value;
     if (value === '' || value === '-') {
       setPriceFrom(value);
       return;
     }
-    const num = parseFloat(value);
+    const num = Number(value);
     if (!Number.isNaN(num) && num < 0) {
       setPriceFrom('0');
+      setPriceError('Цена «от» не может быть отрицательной. Использовано значение 0.');
       return;
     }
     setPriceFrom(value);
   };
 
   const handlePriceToChange = (event) => {
+    setPriceError('');
     const value = event.target.value;
     if (value === '' || value === '-') {
       setPriceTo(value);
       return;
     }
-    const num = parseFloat(value);
+    const num = Number(value);
     if (!Number.isNaN(num) && num < 0) {
       setPriceTo('0');
+      setPriceError('Цена «до» не может быть отрицательной. Использовано значение 0.');
       return;
     }
     setPriceTo(value);

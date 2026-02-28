@@ -32,6 +32,15 @@ export const CartProvider = ({ children }) => {
 
   // Добавить товар в корзину
   const addToCart = (product, quantity = 1) => {
+    const normalizedPrice =
+      typeof product.price === 'string' ? parseFloat(product.price) : Number(product.price);
+    const safePrice = Number.isFinite(normalizedPrice) ? normalizedPrice : 0;
+    const normalizedDiscount = Number(product.discount);
+    const safeDiscount =
+      Number.isFinite(normalizedDiscount) && normalizedDiscount > 0 && normalizedDiscount < 100
+        ? normalizedDiscount
+        : 0;
+
     setCartItems(prevItems => {
       const existingItem = prevItems.find(item => item.id === product.id);
       
@@ -39,7 +48,12 @@ export const CartProvider = ({ children }) => {
         // Если товар уже есть, увеличиваем количество
         return prevItems.map(item =>
           item.id === product.id
-            ? { ...item, quantity: item.quantity + quantity }
+            ? {
+                ...item,
+                quantity: item.quantity + quantity,
+                // Актуализируем скидку, если товар добавили повторно из карточки
+                discount: safeDiscount
+              }
             : item
         );
       } else {
@@ -47,7 +61,8 @@ export const CartProvider = ({ children }) => {
         return [...prevItems, {
           id: product.id,
           name: product.name,
-          price: typeof product.price === 'string' ? parseFloat(product.price) : product.price,
+          price: safePrice,
+          discount: safeDiscount,
           image: product.image,
           quantity: quantity,
           is_gift_certificate: Boolean(product.is_gift_certificate)

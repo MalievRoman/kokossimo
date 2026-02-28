@@ -72,22 +72,24 @@
 
 .certificate-recipient {
   margin-top: auto;
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  font-size: clamp(14px, 2vw, 20px);
-  font-weight: 600;
+  display: grid;
+  gap: 4px;
+  font-size: clamp(12px, 1.5vw, 16px);
+  font-weight: 500;
   text-transform: uppercase;
 }
 
 .certificate-recipient__name {
-  font-size: clamp(18px, 4vw, 32px);
+  font-size: clamp(16px, 2.6vw, 28px);
   font-weight: 400;
   text-transform: none;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 60%;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  max-width: 100%;
+  line-height: 1.2;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .certificate-form {
@@ -223,6 +225,11 @@
 .certificate-form__input:focus-visible {
   border-color: #240100;
   outline: none;
+}
+
+.certificate-form__hint {
+  font-size: 12px;
+  color: #8b6e68;
 }
 
 .certificate-form__purchase {

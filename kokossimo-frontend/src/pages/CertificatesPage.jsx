@@ -6,6 +6,7 @@ const CERTIFICATE_AMOUNTS = [1000, 3000, 5000];
 const CUSTOM_AMOUNT_MIN = 1000;
 const CUSTOM_AMOUNT_MAX = 20000;
 const CUSTOM_AMOUNT_STEP = 500;
+const RECIPIENT_NAME_MAX_LENGTH = 48;
 
 const CertificatesPage = () => {
   const { addToCart } = useCart();
@@ -37,6 +38,36 @@ const CertificatesPage = () => {
       return;
     }
     setCustomAmount(clampCustomAmount(rawValue));
+  };
+
+  const handleCustomAmountKeyDown = (event) => {
+    // Оставляем только навигацию/фокус; ручной ввод суммы пока отключен.
+    const allowedKeys = [
+      'Tab',
+      'Shift',
+      'Control',
+      'Alt',
+      'Meta',
+      'ArrowUp',
+      'ArrowDown',
+      'ArrowLeft',
+      'ArrowRight',
+      'Home',
+      'End',
+    ];
+    if (allowedKeys.includes(event.key)) return;
+    event.preventDefault();
+  };
+
+  const normalizeRecipientName = (value) =>
+    value
+      .replace(/[\r\n\t]+/g, ' ')
+      .replace(/\s{2,}/g, ' ')
+      .slice(0, RECIPIENT_NAME_MAX_LENGTH);
+
+  const handleRecipientNameChange = (event) => {
+    setRecipientName(normalizeRecipientName(event.target.value));
+    setStatus('');
   };
 
   const createCertificateProduct = (amount) => ({
@@ -124,6 +155,9 @@ const CertificatesPage = () => {
                     step={CUSTOM_AMOUNT_STEP}
                     value={customAmount}
                     onChange={handleCustomAmountChange}
+                    onKeyDown={handleCustomAmountKeyDown}
+                    onPaste={(event) => event.preventDefault()}
+                    onDrop={(event) => event.preventDefault()}
                   />
                 )}
               </div>
@@ -147,8 +181,12 @@ const CertificatesPage = () => {
                 className="certificate-form__input"
                 placeholder="Имя"
                 value={recipientName}
-                onChange={(event) => setRecipientName(event.target.value)}
+                onChange={handleRecipientNameChange}
+                maxLength={RECIPIENT_NAME_MAX_LENGTH}
               />
+              <div className="certificate-form__hint">
+                До {RECIPIENT_NAME_MAX_LENGTH} символов
+              </div>
             </div>
 
             <div className="certificate-preview certificate-preview--mobile">

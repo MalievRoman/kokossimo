@@ -504,21 +504,20 @@ body {
   position: absolute;
   inset: 0;
   z-index: 0;
-  display: flex;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scroll-snap-type: x mandatory;
-  scroll-behavior: smooth;
-  scrollbar-width: none;
+  overflow: hidden;
 }
-.hero__slides::-webkit-scrollbar {
-  display: none;
+
+.hero__track {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  transition: transform 500ms ease;
+  will-change: transform;
 }
 
 .hero__slide {
   flex: 0 0 100%;
   height: 100%;
-  scroll-snap-align: start;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -543,6 +542,7 @@ body {
   font-weight: 600;
   line-height: 1.25;
   color: var(--bg);
+  min-height: calc(1.25em * 2);
 }
 
 .hero__btn {
@@ -660,6 +660,7 @@ body {
   .hero__title {
     font-size: 18px;
     line-height: 1.3;
+    min-height: calc(1.3em * 2);
   }
 
   .hero__btn {
