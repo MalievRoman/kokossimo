@@ -24,6 +24,7 @@ const CartPage = () => {
   const isAuthenticated = Boolean(localStorage.getItem('authToken'));
 
   const getProductLink = (item) => (!item.is_gift_certificate ? `/product/${item.id}` : null);
+  const formatRub = (value) => `${Number(value).toLocaleString('ru-RU')} ₽`;
 
   return (
     <div className="cart-page page-animation">
@@ -60,6 +61,19 @@ const CartPage = () => {
 
               {cartItems.map((item) => (
                 <div key={item.id} className="cart-item">
+                  {(() => {
+                    const hasDiscount =
+                      Number.isFinite(Number(item.discount)) &&
+                      Number(item.discount) > 0 &&
+                      Number(item.discount) < 100;
+                    const discount = hasDiscount ? Number(item.discount) : 0;
+                    const oldUnitPrice = hasDiscount
+                      ? Math.round(item.price / (1 - discount / 100))
+                      : null;
+                    const oldTotalPrice = oldUnitPrice ? oldUnitPrice * item.quantity : null;
+
+                    return (
+                      <>
                   {item.image ? (
                     getProductLink(item) ? (
                       <Link to={getProductLink(item)} className="cart-item__image">
@@ -85,7 +99,15 @@ const CartPage = () => {
                       <h3 className="cart-item__name">{item.name}</h3>
                     )}
                     <div className="cart-item__price">
-                      {item.price.toLocaleString('ru-RU')} ₽ за шт.
+                      {hasDiscount && oldUnitPrice ? (
+                        <>
+                          <span className="cart-item__price-current">{formatRub(item.price)} за шт.</span>
+                          <span className="cart-item__price-old">{formatRub(oldUnitPrice)}</span>
+                          <span className="cart-item__price-discount">−{discount}%</span>
+                        </>
+                      ) : (
+                        <span className="cart-item__price-current">{formatRub(item.price)} за шт.</span>
+                      )}
                     </div>
                   </div>
 
@@ -106,7 +128,12 @@ const CartPage = () => {
                   </div>
 
                   <div className="cart-item__total">
-                    {(item.price * item.quantity).toLocaleString('ru-RU')} ₽
+                    <div className="cart-item__total-current">{formatRub(item.price * item.quantity)}</div>
+                    {hasDiscount && oldTotalPrice ? (
+                      <>
+                        <div className="cart-item__total-old">{formatRub(oldTotalPrice)}</div>
+                      </>
+                    ) : null}
                   </div>
 
                   <button
@@ -116,6 +143,9 @@ const CartPage = () => {
                   >
                     <Trash2 size={18} />
                   </button>
+                      </>
+                    );
+                  })()}
                 </div>
               ))}
             </div>

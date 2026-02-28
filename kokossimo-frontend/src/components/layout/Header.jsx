@@ -172,9 +172,10 @@ const Header = () => {
 
   const handleSearchChange = (e) => {
     const newValue = e.target.value;
-    setSearchValue(newValue);
+    const isWhitespaceOnly = newValue !== '' && !newValue.trim();
+    setSearchValue(isWhitespaceOnly ? '' : newValue);
 
-    if (!newValue.trim() && isOnCatalogPage) {
+    if ((!newValue.trim() || isWhitespaceOnly) && isOnCatalogPage) {
       const params = buildCatalogParamsWithoutQuery();
       const newSearch = params.toString();
       navigate(newSearch ? `/catalog?${newSearch}` : '/catalog', { replace: true });
