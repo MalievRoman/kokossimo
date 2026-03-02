@@ -35,7 +35,8 @@ const formatBirthDateInput = (value) => {
 
 const ProfilePage = () => {
   const location = useLocation();
-  const isAuthenticated = Boolean(localStorage.getItem('authToken'));
+  const [authToken, setAuthToken] = useState(() => localStorage.getItem('authToken') || '');
+  const isAuthenticated = Boolean(authToken);
   const { addToCart } = useCart();
   const { favorites, removeFromFavorites } = useFavorites();
   const [activeTab, setActiveTab] = useState('main');
@@ -58,6 +59,29 @@ const ProfilePage = () => {
   const [orders, setOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
 
+  const resetAuthState = (message = '') => {
+    localStorage.removeItem('authToken');
+    setAuthToken('');
+    setProfile({
+      first_name: '',
+      last_name: '',
+      email: '',
+      phone: '+7',
+      city: '',
+      street: '',
+      house: '',
+      apartment: '',
+      postal_code: '',
+    });
+    setFullNameInput('');
+    setOrders([]);
+    setOrdersLoading(false);
+    setActiveTab('main');
+    if (message) {
+      showTemporaryStatus('error', message);
+    }
+  };
+
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const tabFromQuery = params.get('tab');
@@ -68,34 +92,45 @@ const ProfilePage = () => {
   }, [location.search]);
 
   useEffect(() => {
-    const token = localStorage.getItem('authToken');
-    if (!token) {
+    if (!authToken) {
       setOrdersLoading(false);
       return;
     }
 
-    getCurrentUser(token)
+    let unauthorizedHandled = false;
+
+    getCurrentUser(authToken)
       .then((response) => {
         setProfile({
           ...response.data,
           phone: formatRuPhone(response.data?.phone || ''),
         });
       })
-      .catch(() => {
+      .catch((error) => {
+        if (error?.response?.status === 401) {
+          unauthorizedHandled = true;
+          resetAuthState('Сессия истекла. Войдите в аккаунт заново.');
+          return;
+        }
         setStatus({ type: 'error', message: 'Не удалось загрузить профиль.' });
       });
 
-    getMyOrders(token)
+    getMyOrders(authToken)
       .then((response) => {
         setOrders(Array.isArray(response.data) ? response.data : []);
       })
-      .catch(() => {
+      .catch((error) => {
+        if (error?.response?.status === 401 && !unauthorizedHandled) {
+          unauthorizedHandled = true;
+          resetAuthState('Сессия истекла. Войдите в аккаунт заново.');
+          return;
+        }
         setOrders([]);
       })
       .finally(() => {
         setOrdersLoading(false);
       });
-  }, []);
+  }, [authToken]);
 
   useEffect(() => {
     const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
@@ -119,8 +154,7 @@ const ProfilePage = () => {
   };
 
   const handleSaveSettings = async () => {
-    const token = localStorage.getItem('authToken');
-    if (!token) {
+    if (!authToken) {
       showTemporaryStatus('error', 'Сначала войдите в аккаунт.');
       return;
     }
@@ -129,7 +163,7 @@ const ProfilePage = () => {
     const lastName = rest.join(' ');
 
     try {
-      const response = await updateProfile(token, {
+      const response = await updateProfile(authToken, {
         first_name: firstName,
         last_name: lastName,
         email: profile.email,
@@ -142,25 +176,29 @@ const ProfilePage = () => {
       localStorage.setItem('profileBirthDate', birthDate);
       showTemporaryStatus('success', 'Данные профиля сохранены.');
     } catch (error) {
+      if (error?.response?.status === 401) {
+        resetAuthState('Сессия истекла. Войдите в аккаунт заново.');
+        return;
+      }
       showTemporaryStatus('error', 'Не удалось сохранить профиль.');
     }
   };
 
   const handleLogout = async () => {
-    const token = localStorage.getItem('authToken');
-    if (!token) return;
+    if (!authToken) return;
 
     try {
-      await logoutUser(token);
+      await logoutUser(authToken);
     } catch (error) {
       // Даже если сервер не ответил, очищаем токен локально
     } finally {
       localStorage.removeItem('authToken');
+      setAuthToken('');
       setProfile({
         first_name: '',
         last_name: '',
         email: '',
-        phone: '',
+        phone: '+7',
         city: '',
         street: '',
         house: '',
