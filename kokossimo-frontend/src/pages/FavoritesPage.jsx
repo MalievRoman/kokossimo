@@ -21,7 +21,7 @@ const FavoritesPage = () => {
       <div className="container">
         {/* Хлебные крошки */}
         <div className="breadcrumbs">
-          <Link to="/">Главная</Link> / <span>Избранное</span>
+          <Link to="/">ГЛАВНАЯ</Link> <span>— ИЗБРАННОЕ</span>
         </div>
 
         <div className="favorites-header">

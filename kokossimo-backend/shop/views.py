@@ -12,6 +12,7 @@ from datetime import timedelta
 import secrets
 from django.db.models import Q, Avg, Count
 from django.shortcuts import get_object_or_404
+from django.http import JsonResponse
 from .models import Product, Category, Profile, Order, EmailVerificationCode, ProductRating
 from .serializers import (
     ProductSerializer,
@@ -128,6 +129,11 @@ def rate_product(request, product_id):
         },
         status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
     )
+
+
+def rate_product_missing_trailing_slash(request, product_id):
+    # Некорректный URL (без завершающего /) должен давать клиентскую ошибку, а не 500.
+    return JsonResponse({"detail": "Not found."}, status=404)
 
 
 @api_view(['POST'])

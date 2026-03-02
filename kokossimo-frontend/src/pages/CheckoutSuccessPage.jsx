@@ -11,7 +11,7 @@ const CheckoutSuccessPage = () => {
     <div className="checkout-success page-animation">
       <div className="container">
         <div className="breadcrumbs">
-          <Link to="/">Главная</Link> / <span>Заказ оформлен</span>
+          <Link to="/">ГЛАВНАЯ</Link> <span>— ЗАКАЗ ОФОРМЛЕН</span>
         </div>
 
         <h1 className="page-title">ЗАКАЗ ОФОРМЛЕН</h1>
