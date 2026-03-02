@@ -130,7 +130,7 @@ const AuthPage = () => {
     <div className="auth-page page-animation">
       <div className="container">
         <div className="breadcrumbs">
-          <Link to="/">Главная</Link> / <span>Вход и регистрация</span>
+          <Link to="/">ГЛАВНАЯ</Link> <span>— ВХОД И РЕГИСТРАЦИЯ</span>
         </div>
 
         <h1 className="page-title">АККАУНТ</h1>

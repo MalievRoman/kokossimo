@@ -31,7 +31,7 @@ const CartPage = () => {
       <div className="container">
         {/* Хлебные крошки */}
         <div className="breadcrumbs">
-          <Link to="/">Главная</Link> / <span>Корзина</span>
+          <Link to="/">ГЛАВНАЯ</Link> <span>— КОРЗИНА</span>
         </div>
 
         <h1 className="page-title">КОРЗИНА</h1>

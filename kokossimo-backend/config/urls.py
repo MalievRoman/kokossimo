@@ -22,6 +22,7 @@ from shop.views import (
     order_detail,
     product_ratings,
     rate_product,
+    rate_product_missing_trailing_slash,
 )
 
 # Оформление админки для сотрудников магазина
@@ -87,6 +88,7 @@ urlpatterns = [
     path('api/orders/list/', list_orders),
     path('api/orders/<int:order_id>/', order_detail),
     path('api/products/<int:product_id>/ratings/', product_ratings),
+    path('api/products/<int:product_id>/rate', rate_product_missing_trailing_slash),
     path('api/products/<int:product_id>/rate/', rate_product),
 ]
 
