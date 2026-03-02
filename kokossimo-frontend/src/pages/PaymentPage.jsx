@@ -133,8 +133,8 @@ const PaymentPage = () => {
       <div className="payment-page page-animation">
         <div className="container">
           <div className="breadcrumbs">
-            <Link to="/">Главная</Link> / <Link to="/cart">Корзина</Link> /{' '}
-            <span>Оплата</span>
+            <Link to="/">ГЛАВНАЯ</Link> <span>— </span>
+            <Link to="/cart">КОРЗИНА</Link> <span>— ОПЛАТА</span>
           </div>
 
           <h1 className="page-title">ОПЛАТА</h1>
@@ -154,8 +154,8 @@ const PaymentPage = () => {
     <div className="payment-page page-animation">
       <div className="container">
         <div className="breadcrumbs">
-          <Link to="/">Главная</Link> / <Link to="/cart">Корзина</Link> /{' '}
-          <span>Оплата</span>
+          <Link to="/">ГЛАВНАЯ</Link> <span>— </span>
+          <Link to="/cart">КОРЗИНА</Link> <span>— ОПЛАТА</span>
         </div>
 
         <h1 className="page-title">ОФОРМЛЕНИЕ ЗАКАЗА</h1>

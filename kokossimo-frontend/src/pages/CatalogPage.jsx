@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import ProductCard from '../components/product/ProductCard';
 import { getProducts, getCategories } from '../services/api';
 import { useCatalogFilters } from '../context/CatalogFiltersContext';
@@ -341,7 +341,7 @@ const CatalogPage = () => {
         
         {/* Хлебные крошки (Breadcrumbs) */}
         <div className="breadcrumbs">
-          <span>Главная</span> / <span>Каталог</span>
+          <Link to="/">ГЛАВНАЯ</Link> <span>— КАТАЛОГ</span>
         </div>
 
         <h1 className="page-title">КАТАЛОГ ТОВАРОВ</h1>
