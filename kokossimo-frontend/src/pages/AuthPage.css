@@ -8,7 +8,7 @@
 .auth-layout {
   height: 100%;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 525px;
+  grid-template-columns: minmax(0, 1fr) minmax(525px, 1fr);
   padding-right: 72px;
 }
 
@@ -35,15 +35,15 @@
 }
 
 .auth-panel {
-  width: 525px;
-  height: min(1024px, 100%);
+  width: 100%;
+  height: 100%;
   background: #fcf8f7;
-  border-radius: 6px;
+  border-radius: 0;
   margin: 0;
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 32px 20px;
+  padding: 32px 24px;
 }
 
 .auth-panel-inner {
@@ -122,6 +122,19 @@
 
 .auth-title--center {
   max-width: 260px;
+}
+
+.auth-title--success-register {
+  width: 349px;
+  min-height: 60px;
+  margin: 0 auto 20px;
+  font-family: "Open Sans", sans-serif;
+  font-weight: 600;
+  font-size: 20px;
+  line-height: 30px;
+  letter-spacing: 0;
+  text-align: center;
+  color: #240100;
 }
 
 .auth-description {
@@ -206,6 +219,34 @@
 
 .auth-form--register .auth-back-link {
   margin-top: 64px;
+  padding-top: 0;
+}
+
+.auth-form--register-code {
+  gap: 0;
+}
+
+.auth-form--register-code .auth-description {
+  width: 349px;
+  margin: 0 auto 16px;
+  color: #4f4a4d;
+  font-family: "Open Sans", sans-serif;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: 0;
+}
+
+.auth-form--register-code .auth-btn--primary {
+  margin-top: 16px;
+}
+
+.auth-form--register-code .auth-link--resend {
+  margin-top: 16px;
+}
+
+.auth-form--register-code .auth-back-link {
+  margin-top: 16px;
   padding-top: 0;
 }
 
@@ -349,6 +390,18 @@
   color: #9f999b;
 }
 
+.auth-link--resend {
+  width: 100%;
+  min-height: 20px;
+  font-family: "Open Sans", sans-serif;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: 0;
+  color: #9e9291;
+  text-align: center;
+}
+
 .auth-link:hover:not(:disabled) {
   color: #740400;
 }
@@ -378,10 +431,10 @@
 }
 
 .auth-congrats-image {
-  width: 96px;
-  height: 96px;
+  width: 200px;
+  height: 200px;
   object-fit: contain;
-  margin: 6px 0 18px;
+  margin: 6px 0 20px;
 }
 
 .auth-status {

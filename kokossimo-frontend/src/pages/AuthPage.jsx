@@ -82,6 +82,7 @@ const AuthPage = () => {
         password: form.loginPassword,
       });
       localStorage.setItem('authToken', response.data.token);
+      window.dispatchEvent(new Event('auth-token-changed'));
       navigate('/profile');
     } catch (error) {
       const message =
@@ -139,6 +140,7 @@ const AuthPage = () => {
         password: form.registerPassword,
       });
       localStorage.setItem('authToken', response.data.token);
+      window.dispatchEvent(new Event('auth-token-changed'));
       setAuthToken(response.data.token);
       setScreen('registerSuccess');
     } catch (error) {
@@ -324,8 +326,8 @@ const AuthPage = () => {
             )}
 
             {screen === 'registerCode' && (
-              <form className="auth-content auth-form" onSubmit={handleRegisterVerify}>
-                <h1 className="auth-title">Регистрация</h1>
+              <form className="auth-content auth-form auth-form--register-code" onSubmit={handleRegisterVerify}>
+                <h1 className="auth-title auth-title--register">Регистрация</h1>
                 <p className="auth-description">
                   На вашу электронную почту отправлен код подтверждения. Если письмо не пришло, проверьте
                   папку &laquo;Спам&raquo;.
@@ -339,12 +341,12 @@ const AuthPage = () => {
                     onChange={handleChange('registerCode')}
                   />
                 </label>
-                <button type="submit" className="auth-btn auth-btn--primary" disabled={isSubmitting}>
+                <button type="submit" className="auth-btn auth-btn--primary auth-btn--form-primary" disabled={isSubmitting}>
                   {isSubmitting ? 'Проверка...' : 'Продолжить'}
                 </button>
                 <button
                   type="button"
-                  className="auth-link auth-link--muted"
+                  className="auth-link auth-link--resend"
                   onClick={resendRegisterCode}
                   disabled={isSendingCode || !canResendCode}
                 >
@@ -358,14 +360,15 @@ const AuthPage = () => {
 
             {screen === 'registerSuccess' && (
               <div className="auth-content auth-content--center">
-                <h1 className="auth-title auth-title--center">Вы успешно зарегистрированы</h1>
+                <h1 className="auth-title auth-title--success-register">Вы успешно зарегистрированы</h1>
                 <img src="/assets/congrats.png" alt="Успешно" className="auth-congrats-image" />
                 <button
                   type="button"
-                  className="auth-btn auth-btn--primary"
+                  className="auth-btn auth-btn--primary auth-btn--form-primary"
                   onClick={() => {
                     if (authToken) {
                       localStorage.setItem('authToken', authToken);
+                      window.dispatchEvent(new Event('auth-token-changed'));
                     }
                     navigate('/profile');
                   }}

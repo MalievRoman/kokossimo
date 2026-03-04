@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
 import { getCurrentUser, getMyOrders, logoutUser, updateProfile } from '../services/api';
@@ -35,6 +35,7 @@ const formatBirthDateInput = (value) => {
 
 const ProfilePage = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [authToken, setAuthToken] = useState(() => localStorage.getItem('authToken') || '');
   const isAuthenticated = Boolean(authToken);
   const { addToCart } = useCart();
@@ -58,9 +59,11 @@ const ProfilePage = () => {
   const [status, setStatus] = useState({ type: '', message: '' });
   const [orders, setOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
+  const [detailsOrder, setDetailsOrder] = useState(null);
 
   const resetAuthState = (message = '') => {
     localStorage.removeItem('authToken');
+    window.dispatchEvent(new Event('auth-token-changed'));
     setAuthToken('');
     setProfile({
       first_name: '',
@@ -88,7 +91,9 @@ const ProfilePage = () => {
     const isValidTab = PROFILE_TABS.some((tab) => tab.key === tabFromQuery);
     if (isValidTab) {
       setActiveTab(tabFromQuery);
+      return;
     }
+    setActiveTab('main');
   }, [location.search]);
 
   useEffect(() => {
@@ -147,10 +152,21 @@ const ProfilePage = () => {
   const formatPrice = (value) => Number(value || 0).toLocaleString('ru-RU');
 
   const getOrderStatusLabel = (orderStatus) => STATUS_LABELS[orderStatus] || orderStatus || '—';
+  const formatOrderAddress = (order) => {
+    const parts = [order?.city, order?.street, order?.house, order?.apartment]
+      .map((part) => (part || '').trim())
+      .filter(Boolean);
+    return parts.join(', ') || '—';
+  };
 
   const showTemporaryStatus = (type, message) => {
     setStatus({ type, message });
     setTimeout(() => setStatus({ type: '', message: '' }), 3000);
+  };
+
+  const handleTabChange = (tabKey) => {
+    setActiveTab(tabKey);
+    navigate(`/profile?tab=${tabKey}`);
   };
 
   const handleSaveSettings = async () => {
@@ -193,6 +209,7 @@ const ProfilePage = () => {
       // Даже если сервер не ответил, очищаем токен локально
     } finally {
       localStorage.removeItem('authToken');
+      window.dispatchEvent(new Event('auth-token-changed'));
       setAuthToken('');
       setProfile({
         first_name: '',
@@ -243,7 +260,7 @@ const ProfilePage = () => {
   };
 
   return (
-    <div className="profile-page page-animation">
+    <div className="profile-page">
       <div className="container profile-container">
         <div className="breadcrumbs">
           <Link to="/">ГЛАВНАЯ</Link> <span>— ПРОФИЛЬ</span>
@@ -254,7 +271,7 @@ const ProfilePage = () => {
             <button
               key={tab.key}
               className={`profile-tab ${activeTab === tab.key ? 'is-active' : ''}`}
-              onClick={() => setActiveTab(tab.key)}
+              onClick={() => handleTabChange(tab.key)}
               type="button"
             >
               {tab.label}
@@ -284,13 +301,6 @@ const ProfilePage = () => {
                     <h2 className="profile-user-name">{userName}</h2>
                     <p className="profile-user-meta">{profile.phone || '+7 (___) ___-__-__'}</p>
                     <p className="profile-user-meta">{profile.email || 'Добавьте email в параметрах'}</p>
-                    <button
-                      type="button"
-                      className="profile-btn profile-btn--outline profile-btn--logout-main"
-                      onClick={handleLogout}
-                    >
-                      ВЫЙТИ ИЗ ПРОФИЛЯ
-                    </button>
                   </div>
                 </section>
 
@@ -305,7 +315,7 @@ const ProfilePage = () => {
                   <button
                     type="button"
                     className="profile-shortcut"
-                    onClick={() => setActiveTab('orders')}
+                    onClick={() => handleTabChange('orders')}
                   >
                     <img
                       src={`${import.meta.env.BASE_URL}assets/cart.png`}
@@ -318,7 +328,7 @@ const ProfilePage = () => {
                   <button
                     type="button"
                     className="profile-shortcut"
-                    onClick={() => setActiveTab('favorites')}
+                    onClick={() => handleTabChange('favorites')}
                   >
                     <img
                       src={`${import.meta.env.BASE_URL}assets/heart.png`}
@@ -404,14 +414,11 @@ const ProfilePage = () => {
                       <div className="profile-order-actions profile-order-actions--list">
                         <button
                           type="button"
-                          className="profile-btn profile-btn--primary profile-btn--repeat"
-                          onClick={() => handleRepeatOrder(order)}
+                          className="profile-btn profile-btn--outline profile-btn--details"
+                          onClick={() => setDetailsOrder(order)}
                         >
-                          ПОВТОРИТЬ
+                          ПОДРОБНЕЕ
                         </button>
-                        <Link to="/catalog" className="profile-btn profile-btn--outline profile-btn--review">
-                          ОСТАВИТЬ ОТЗЫВ
-                        </Link>
                       </div>
                     </article>
                   ))
@@ -549,6 +556,64 @@ const ProfilePage = () => {
             {status.message && (
               <div className={`profile-toast profile-toast--${status.type}`}>
                 {status.message}
+              </div>
+            )}
+            {detailsOrder && (
+              <div className="profile-modal" onClick={() => setDetailsOrder(null)}>
+                <div className="profile-modal__dialog" onClick={(event) => event.stopPropagation()}>
+                  <button
+                    type="button"
+                    className="profile-modal__close"
+                    onClick={() => setDetailsOrder(null)}
+                    aria-label="Закрыть"
+                  >
+                    ×
+                  </button>
+                  <h3 className="profile-modal__title">ИНФОРМАЦИЯ О ЗАКАЗЕ</h3>
+                  <div className="profile-modal__meta">
+                    <div className="profile-modal__meta-label">Номер заказа</div>
+                    <div className="profile-modal__meta-value">{detailsOrder.id}</div>
+                    <div className="profile-modal__meta-label">Дата заказа</div>
+                    <div className="profile-modal__meta-value">{new Date(detailsOrder.created_at).toLocaleDateString('ru-RU')}</div>
+                    <div className="profile-modal__meta-label">Статус</div>
+                    <div className="profile-modal__meta-value">{getOrderStatusLabel(detailsOrder.status)}</div>
+                    <div className="profile-modal__meta-label">Адрес доставки</div>
+                    <div className="profile-modal__meta-value">{formatOrderAddress(detailsOrder)}</div>
+                  </div>
+                  <h4 className="profile-modal__subtitle">СОСТАВ ЗАКАЗА</h4>
+                  <div className="profile-modal__items">
+                    {(detailsOrder.items || []).map((item, index) => (
+                      <article
+                        key={`${detailsOrder.id}-${item.product_id || item.product_name}-${index}`}
+                        className="profile-modal__item"
+                      >
+                        <img
+                          src={item.product_image || `${import.meta.env.BASE_URL}assets/account.png`}
+                          alt={item.product_name}
+                          className="profile-modal__item-image"
+                        />
+                        <div className="profile-modal__item-main">
+                          <div className="profile-modal__item-name">{item.product_name}</div>
+                          <div className="profile-modal__item-category">
+                            {item.category_name || (item.is_gift_certificate ? 'Подарочный сертификат' : 'Категория товара')}
+                          </div>
+                        </div>
+                        <div className="profile-modal__item-price">{formatPrice(item.line_total || item.price)} ₽</div>
+                      </article>
+                    ))}
+                  </div>
+                  <div className="profile-modal__total">Итого: {formatPrice(detailsOrder.total_price)} ₽</div>
+                  <button
+                    type="button"
+                    className="profile-btn profile-btn--outline profile-modal__repeat-btn"
+                    onClick={() => {
+                      handleRepeatOrder(detailsOrder);
+                      setDetailsOrder(null);
+                    }}
+                  >
+                    ПОВТОРИТЬ ЗАКАЗ
+                  </button>
+                </div>
               </div>
             )}
           </>

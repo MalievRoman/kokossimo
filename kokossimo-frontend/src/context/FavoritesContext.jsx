@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { getCurrentUser } from '../services/api';
 
 const FavoritesContext = createContext();
 
@@ -12,23 +13,82 @@ export const useFavorites = () => {
 
 export const FavoritesProvider = ({ children }) => {
   const [favorites, setFavorites] = useState([]);
+  const [storageKey, setStorageKey] = useState('favorites:guest');
 
-  // Загружаем избранное из localStorage при монтировании
-  useEffect(() => {
-    const savedFavorites = localStorage.getItem('favorites');
-    if (savedFavorites) {
-      try {
-        setFavorites(JSON.parse(savedFavorites));
-      } catch (e) {
-        console.error('Ошибка загрузки избранного из localStorage:', e);
-      }
+  const parseFavorites = (rawValue) => {
+    if (!rawValue) return [];
+    try {
+      const parsed = JSON.parse(rawValue);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      console.error('Ошибка загрузки избранного из localStorage:', e);
+      return [];
     }
+  };
+
+  const buildUserFavoritesKey = (profile) => {
+    const email = (profile?.email || '').trim().toLowerCase();
+    if (email) {
+      return `favorites:user:${email}`;
+    }
+    const phone = (profile?.phone || '').replace(/\D/g, '');
+    if (phone) {
+      return `favorites:user:phone:${phone}`;
+    }
+    return 'favorites:guest';
+  };
+
+  // Следим за сменой токена авторизации и подгружаем избранное конкретного пользователя.
+  useEffect(() => {
+    let cancelled = false;
+
+    const syncFavoritesWithAuth = async () => {
+      const token = localStorage.getItem('authToken');
+
+      if (!token) {
+        const guestKey = 'favorites:guest';
+        if (!cancelled) {
+          setStorageKey(guestKey);
+          setFavorites(parseFavorites(localStorage.getItem(guestKey)));
+        }
+        return;
+      }
+
+      try {
+        const response = await getCurrentUser(token);
+        const nextKey = buildUserFavoritesKey(response.data);
+        if (!cancelled) {
+          setStorageKey(nextKey);
+          setFavorites(parseFavorites(localStorage.getItem(nextKey)));
+        }
+      } catch {
+        // Если токен невалиден, откатываемся к гостевому избранному.
+        const guestKey = 'favorites:guest';
+        if (!cancelled) {
+          setStorageKey(guestKey);
+          setFavorites(parseFavorites(localStorage.getItem(guestKey)));
+        }
+      }
+    };
+
+    syncFavoritesWithAuth();
+
+    const handleAuthTokenChanged = () => {
+      syncFavoritesWithAuth();
+    };
+
+    window.addEventListener('auth-token-changed', handleAuthTokenChanged);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener('auth-token-changed', handleAuthTokenChanged);
+    };
   }, []);
 
-  // Сохраняем избранное в localStorage при изменении
+  // Сохраняем избранное в localStorage при изменении для активного пользователя.
   useEffect(() => {
-    localStorage.setItem('favorites', JSON.stringify(favorites));
-  }, [favorites]);
+    localStorage.setItem(storageKey, JSON.stringify(favorites));
+  }, [favorites, storageKey]);
 
   // Добавить товар в избранное
   const addToFavorites = (product) => {
