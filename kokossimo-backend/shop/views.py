@@ -137,6 +137,7 @@ def rate_product_missing_trailing_slash(request, product_id):
 
 
 @api_view(['POST'])
+@authentication_classes([])
 @permission_classes([AllowAny])
 def register_user(request):
     serializer = RegisterSerializer(data=request.data)
@@ -179,6 +180,7 @@ def register_user(request):
 
 
 @api_view(['POST'])
+@authentication_classes([])
 @permission_classes([AllowAny])
 def login_user(request):
     serializer = LoginSerializer(data=request.data)
