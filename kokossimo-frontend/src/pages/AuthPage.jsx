@@ -82,6 +82,7 @@ const AuthPage = () => {
         password: form.loginPassword,
       });
       localStorage.setItem('authToken', response.data.token);
+      window.dispatchEvent(new Event('auth-token-changed'));
       navigate('/profile');
     } catch (error) {
       const message =
@@ -139,6 +140,7 @@ const AuthPage = () => {
         password: form.registerPassword,
       });
       localStorage.setItem('authToken', response.data.token);
+      window.dispatchEvent(new Event('auth-token-changed'));
       setAuthToken(response.data.token);
       setScreen('registerSuccess');
     } catch (error) {
@@ -366,6 +368,7 @@ const AuthPage = () => {
                   onClick={() => {
                     if (authToken) {
                       localStorage.setItem('authToken', authToken);
+                      window.dispatchEvent(new Event('auth-token-changed'));
                     }
                     navigate('/profile');
                   }}

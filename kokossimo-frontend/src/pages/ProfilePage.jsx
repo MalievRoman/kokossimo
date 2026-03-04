@@ -38,7 +38,7 @@ const ProfilePage = () => {
   const [authToken, setAuthToken] = useState(() => localStorage.getItem('authToken') || '');
   const isAuthenticated = Boolean(authToken);
   const { addToCart } = useCart();
-  const { favorites, removeFromFavorites, clearFavorites } = useFavorites();
+  const { favorites, removeFromFavorites } = useFavorites();
   const [activeTab, setActiveTab] = useState('main');
   const [profile, setProfile] = useState({
     first_name: '',
@@ -61,7 +61,7 @@ const ProfilePage = () => {
 
   const resetAuthState = (message = '') => {
     localStorage.removeItem('authToken');
-    clearFavorites();
+    window.dispatchEvent(new Event('auth-token-changed'));
     setAuthToken('');
     setProfile({
       first_name: '',
@@ -194,7 +194,7 @@ const ProfilePage = () => {
       // Даже если сервер не ответил, очищаем токен локально
     } finally {
       localStorage.removeItem('authToken');
-      clearFavorites();
+      window.dispatchEvent(new Event('auth-token-changed'));
       setAuthToken('');
       setProfile({
         first_name: '',

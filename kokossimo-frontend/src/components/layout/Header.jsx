@@ -18,10 +18,23 @@ const Header = () => {
   const location = useLocation();
   const { getTotalItems } = useCart();
   const { getFavoritesCount } = useFavorites();
+  const [isAuthenticated, setIsAuthenticated] = useState(() => Boolean(localStorage.getItem('authToken')));
   const catalogFilters = useCatalogFilters();
   const isOnCatalogPage = location.pathname === '/catalog' || location.pathname.endsWith('/catalog');
   const cartCount = getTotalItems();
   const favoritesCount = getFavoritesCount();
+
+  useEffect(() => {
+    const syncAuthState = () => {
+      setIsAuthenticated(Boolean(localStorage.getItem('authToken')));
+    };
+    window.addEventListener('auth-token-changed', syncAuthState);
+    window.addEventListener('storage', syncAuthState);
+    return () => {
+      window.removeEventListener('auth-token-changed', syncAuthState);
+      window.removeEventListener('storage', syncAuthState);
+    };
+  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -280,7 +293,7 @@ const Header = () => {
                 </Link>
                 <Link className="header__icon-btn" to="/profile?tab=favorites" aria-label="Избранное">
                   <span className="icon icon--fav" aria-hidden="true"></span>
-                  {favoritesCount > 0 && (
+                  {isAuthenticated && favoritesCount > 0 && (
                     <span className="header__icon-badge">{favoritesCount}</span>
                   )}
                 </Link>
