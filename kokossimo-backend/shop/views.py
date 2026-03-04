@@ -1,8 +1,9 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.authentication import TokenAuthentication
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate, get_user_model
 from django.conf import settings
@@ -12,8 +13,9 @@ from datetime import timedelta
 import secrets
 from django.db.models import Q, Avg, Count
 from django.shortcuts import get_object_or_404
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from .models import Product, Category, Profile, Order, EmailVerificationCode, ProductRating
+from .moysklad import MoySkladClient, MoySkladError, MoySkladConfigError
 from .serializers import (
     ProductSerializer,
     CategorySerializer,
@@ -42,30 +44,51 @@ def _purge_expired_codes():
     cutoff = timezone.now() - timedelta(minutes=_email_code_ttl())
     EmailVerificationCode.objects.filter(created_at__lt=cutoff).delete()
 
+
 class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    
+
+    def get_queryset(self):
+        if getattr(settings, "MOYSKLAD_SITE_SYNC_ENABLED", False):
+            return Category.objects.filter(slug=getattr(settings, "MOYSKLAD_SITE_CATEGORY_SLUG", "site-kokossimo"))
+        return Category.objects.all()
+
     def get_serializer_context(self):
         context = super().get_serializer_context()
         context['request'] = self.request
         return context
 
 class ProductViewSet(viewsets.ReadOnlyModelViewSet):
+    class CatalogPagination(PageNumberPagination):
+        page_size = 30
+        page_size_query_param = "page_size"
+        max_page_size = 60
+
     queryset = Product.objects.annotate(
         rating_avg=Avg('ratings__rating'),
         rating_count=Count('ratings')
     )
     serializer_class = ProductSerializer
+    pagination_class = CatalogPagination
 
     def get_queryset(self):
+        if getattr(settings, "MOYSKLAD_SITE_SYNC_ENABLED", False):
+            return Product.objects.filter(
+                moysklad_id__isnull=False,
+                category__slug=getattr(settings, "MOYSKLAD_SITE_CATEGORY_SLUG", "site-kokossimo"),
+            ).annotate(
+                rating_avg=Avg('ratings__rating'),
+                rating_count=Count('ratings')
+            ).order_by('-created_at', '-id')
+
         # Фильтрация товаров через параметры URL
         # Пример: /api/products/?is_new=true&category=face&category=body
         # Поддерживает множественный выбор категорий
         queryset = Product.objects.annotate(
             rating_avg=Avg('ratings__rating'),
             rating_count=Count('ratings')
-        )
+        ).order_by('-created_at', '-id')
         
         is_new = self.request.query_params.get('is_new', None)
         is_bestseller = self.request.query_params.get('is_bestseller', None)
@@ -83,7 +106,7 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
             queryset = queryset.filter(category__slug__in=category_slugs)
 
         return queryset
-    
+
     def get_serializer_context(self):
         context = super().get_serializer_context()
         context['request'] = self.request
@@ -427,3 +450,98 @@ def order_detail(request, order_id):
     except Order.DoesNotExist:
         return Response({"detail": "Заказ не найден."}, status=status.HTTP_404_NOT_FOUND)
     return Response(OrderSerializer(order, context={'request': request}).data)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def product_image_proxy(request, product_id):
+    product = get_object_or_404(Product, id=product_id)
+    if not product.external_image_url:
+        return Response({"detail": "Изображение не найдено."}, status=status.HTTP_404_NOT_FOUND)
+
+    try:
+        client = MoySkladClient()
+        payload, content_type = client.download_binary(product.external_image_url)
+    except MoySkladConfigError as exc:
+        return Response({"detail": str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+    except MoySkladError as exc:
+        detail = str(exc)
+        if "HTTP 404" in detail:
+            return Response({"detail": "Изображение не найдено."}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"detail": detail}, status=status.HTTP_502_BAD_GATEWAY)
+
+    response = HttpResponse(payload, content_type=content_type)
+    response["Cache-Control"] = "public, max-age=3600"
+    return response
+
+
+@api_view(['GET'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAdminUser])
+def moysklad_status(request):
+    try:
+        client = MoySkladClient()
+        result = client.ping()
+    except MoySkladConfigError as exc:
+        return Response({"detail": str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+    except MoySkladError as exc:
+        return Response({"detail": str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
+
+    rows_count = len(result.get('rows', []))
+    return Response(
+        {
+            "ok": True,
+            "rows_count": rows_count,
+            "offset": result.get("meta", {}).get("offset", 0),
+            "limit": result.get("meta", {}).get("limit", 1),
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(['GET'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAdminUser])
+def moysklad_assortment(request):
+    try:
+        limit = int(request.query_params.get('limit', 20))
+        offset = int(request.query_params.get('offset', 0))
+    except ValueError:
+        return Response(
+            {"detail": "Параметры limit и offset должны быть целыми числами."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    search = request.query_params.get('search', '')
+
+    try:
+        client = MoySkladClient()
+        result = client.get_assortment(limit=limit, offset=offset, search=search)
+    except MoySkladConfigError as exc:
+        return Response({"detail": str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+    except MoySkladError as exc:
+        return Response({"detail": str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
+
+    rows = result.get('rows', [])
+    normalized_rows = [
+        {
+            "id": row.get("id"),
+            "name": row.get("name"),
+            "code": row.get("code"),
+            "article": row.get("article"),
+            "sale_prices": row.get("salePrices", []),
+            "stock": row.get("stock", 0),
+            "path_name": row.get("pathName", ""),
+        }
+        for row in rows
+    ]
+
+    return Response(
+        {
+            "count": result.get("meta", {}).get("size", len(normalized_rows)),
+            "offset": result.get("meta", {}).get("offset", offset),
+            "limit": result.get("meta", {}).get("limit", limit),
+            "rows": normalized_rows,
+        },
+        status=status.HTTP_200_OK,
+    )

@@ -5,10 +5,17 @@ import { getProducts, getCategories } from '../services/api';
 import { useCatalogFilters } from '../context/CatalogFiltersContext';
 import './CatalogPage.css';
 
+const CATALOG_PAGE_SIZE = 30;
+
 const CatalogPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [sortBy, setSortBy] = useState('popular');
   const [catalogProducts, setCatalogProducts] = useState([]);
+  const [totalProducts, setTotalProducts] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [categories, setCategories] = useState([]);
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [priceFrom, setPriceFrom] = useState('');
@@ -117,9 +124,19 @@ const CatalogPage = () => {
     setPriceTo(maxFromUrl ?? '');
   }, [searchParams]);
 
+  // При изменении фильтров/поиска/сортировки заново грузим с первой страницы.
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchParams, selectedCategories, sortBy]);
+
   // Загрузка товаров
   useEffect(() => {
-    setLoading(true);
+    if (currentPage === 1) {
+      setLoading(true);
+      setLoadingMore(false);
+    } else {
+      setLoadingMore(true);
+    }
     const searchQuery = normalizeText(searchParams.get('q') || '');
     const params = {};
     
@@ -164,11 +181,18 @@ const CatalogPage = () => {
     }
     if (minPrice) params.price_min = minPrice;
     if (maxPrice) params.price_max = maxPrice;
+    params.page = currentPage;
+    params.page_size = CATALOG_PAGE_SIZE;
 
     getProducts(params)
       .then(response => {
         if (requestId !== productsRequestIdRef.current) return;
+        const isPaginatedResponse =
+          response.data &&
+          !Array.isArray(response.data) &&
+          Array.isArray(response.data.results);
         let data = Array.isArray(response.data) ? response.data : (response.data.results || []);
+        const serverCount = isPaginatedResponse ? Number(response.data.count || 0) : data.length;
 
         if (searchQuery) {
           const scored = data
@@ -214,15 +238,32 @@ const CatalogPage = () => {
           });
         }
 
-        setCatalogProducts(data);
+        setCatalogProducts((prevProducts) => {
+          if (currentPage === 1) return data;
+          const existingIds = new Set(prevProducts.map((item) => item.id));
+          const toAppend = data.filter((item) => !existingIds.has(item.id));
+          return [...prevProducts, ...toAppend];
+        });
+        const safeCount = Number.isFinite(serverCount) ? serverCount : data.length;
+        const computedTotalPages = Math.max(1, Math.ceil(safeCount / CATALOG_PAGE_SIZE));
+        setTotalProducts(safeCount);
+        setTotalPages(computedTotalPages);
+        setHasMore(currentPage < computedTotalPages);
         setLoading(false);
+        setLoadingMore(false);
       })
       .catch(() => {
         if (requestId !== productsRequestIdRef.current) return;
-        setCatalogProducts([]);
+        if (currentPage === 1) {
+          setCatalogProducts([]);
+          setTotalProducts(0);
+          setTotalPages(1);
+        }
+        setHasMore(false);
         setLoading(false);
+        setLoadingMore(false);
       });
-  }, [searchParams, selectedCategories, sortBy]);
+  }, [searchParams, selectedCategories, sortBy, currentPage]);
 
   const handleCategoryChange = (categorySlug) => {
     const nextSelectedCategories = selectedCategories.includes(categorySlug)
@@ -333,6 +374,11 @@ const CatalogPage = () => {
       mobileCategoryDetailsRef.current.open = false;
     }
     setIsMobileCategoryOpen(false);
+  };
+
+  const handleLoadMore = () => {
+    if (!hasMore || loadingMore) return;
+    setCurrentPage((prev) => prev + 1);
   };
 
   return (
@@ -586,7 +632,7 @@ const CatalogPage = () => {
                 </select>
                 {!loading && (
                   <span className="catalog-count">
-                    Найдено: {catalogProducts.length}
+                    Найдено: {totalProducts}
                   </span>
                 )}
               </div>
@@ -613,9 +659,15 @@ const CatalogPage = () => {
               )}
             </div>
 
-            {catalogProducts.length > 0 && (
+            {catalogProducts.length > 0 && hasMore && (
               <div className="pagination">
-                <button className="page-btn active">1</button>
+                <button
+                  className="page-btn page-btn--load-more"
+                  onClick={handleLoadMore}
+                  disabled={loadingMore}
+                >
+                  {loadingMore ? 'Загрузка...' : 'Загрузить еще'}
+                </button>
               </div>
             )}
           </div>

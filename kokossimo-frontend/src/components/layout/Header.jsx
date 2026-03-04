@@ -53,7 +53,7 @@ const Header = () => {
 
   const loadAllProducts = async () => {
     if (allProductsRef.current.length > 0) return allProductsRef.current;
-    const response = await getProducts({ page_size: 1000 });
+    const response = await getProducts({ page: 1, page_size: 120 });
     const data = Array.isArray(response.data)
       ? response.data
       : response.data?.results || [];

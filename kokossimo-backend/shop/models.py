@@ -17,10 +17,12 @@ class Category(models.Model):
 
 class Product(models.Model):
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name="products", verbose_name="Категория")
+    moysklad_id = models.CharField("ID в МойСклад", max_length=64, blank=True, null=True, unique=True, db_index=True)
     name = models.CharField("Название товара", max_length=200)
     description = models.TextField("Описание")
     price = models.DecimalField("Цена", max_digits=10, decimal_places=2)
-    image = models.ImageField("Основное фото", upload_to="products/")
+    external_image_url = models.URLField("Внешняя ссылка на фото", blank=True, null=True)
+    image = models.ImageField("Основное фото", upload_to="products/", blank=True, null=True)
     
     # Флаги для главной страницы
     is_bestseller = models.BooleanField("Бестселлер", default=False)
