@@ -33,7 +33,7 @@ const CategoryList = () => {
       const entries = await Promise.all(
         categories.map(async (category) => {
           try {
-            const response = await getProducts({ category: category.slug });
+            const response = await getProducts({ category: category.slug, page_size: 1 });
             const data = Array.isArray(response.data)
               ? response.data
               : response.data?.results || [];

@@ -86,3 +86,52 @@ python manage.py run_telegram_bot
 - Пользователь пишет боту `/start`, выбирает тип: **Отзыв**, **Предложение** или **Просьба о связи**.
 - Вводит текст; для «Просьба о связи» бот дополнительно запросит телефон/email.
 - Данные сохраняются в БД. Просмотр и отметка «Обработано» — в админке Django: раздел **Обратная связь**.
+
+---
+
+## Интеграция с МойСклад (базовый этап)
+
+В backend добавлен API-клиент МойСклад и 2 служебные ручки для проверки интеграции.
+
+### Настройка `.env`
+
+```env
+MOYSKLAD_API_BASE_URL=https://api.moysklad.ru/api/remap/1.2
+# Вариант 1 (рекомендуется): токен
+MOYSKLAD_TOKEN=ваш_токен_мойсклад
+# Вариант 2: логин + пароль/токен
+MOYSKLAD_LOGIN=ваш_логин_в_мойсклад
+MOYSKLAD_PASSWORD=ваш_api_токен_мойсклад
+MOYSKLAD_TIMEOUT_SECONDS=15
+MOYSKLAD_SITE_SYNC_ENABLED=true
+MOYSKLAD_SITE_CATEGORY_NAME=САЙТ КОКОССИМО
+MOYSKLAD_SITE_CATEGORY_SLUG=site-kokossimo
+MOYSKLAD_SYNC_INTERVAL_SECONDS=300
+MOYSKLAD_SYNC_RETRY_INTERVAL_SECONDS=120
+MOYSKLAD_VERIFY_SSL=true
+MOYSKLAD_USE_FOLDER_TREE_FILTER=false
+MOYSKLAD_IMAGE_META_FETCH=false
+```
+
+### Ручки API
+
+- Проверка подключения: `GET /api/integrations/moysklad/status/`
+- Получение ассортимента: `GET /api/integrations/moysklad/assortment/?limit=20&offset=0&search=крем`
+
+Обе ручки доступны только авторизованному staff-пользователю (Token auth + IsAdminUser).
+
+### Публичный каталог (frontend)
+
+Если `MOYSKLAD_SITE_SYNC_ENABLED=true`, то:
+
+- `GET /api/products/` и `GET /api/products/<id>/` перед ответом синхронизируют товары из МойСклад;
+- в каталог попадают только товары из категории `MOYSKLAD_SITE_CATEGORY_NAME` (по умолчанию `САЙТ КОКОССИМО`);
+- `GET /api/categories/` возвращает только категорию сайта (`site-kokossimo`).
+
+### Ручная синхронизация товаров и фото
+
+Чтобы обновить уже загруженные товары и подтянуть ссылки на изображения из МойСклад:
+
+```powershell
+python manage.py sync_moysklad_site_products
+```
