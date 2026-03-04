@@ -59,6 +59,7 @@ const ProfilePage = () => {
   const [status, setStatus] = useState({ type: '', message: '' });
   const [orders, setOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
+  const [detailsOrder, setDetailsOrder] = useState(null);
 
   const resetAuthState = (message = '') => {
     localStorage.removeItem('authToken');
@@ -151,6 +152,12 @@ const ProfilePage = () => {
   const formatPrice = (value) => Number(value || 0).toLocaleString('ru-RU');
 
   const getOrderStatusLabel = (orderStatus) => STATUS_LABELS[orderStatus] || orderStatus || '—';
+  const formatOrderAddress = (order) => {
+    const parts = [order?.city, order?.street, order?.house, order?.apartment]
+      .map((part) => (part || '').trim())
+      .filter(Boolean);
+    return parts.join(', ') || '—';
+  };
 
   const showTemporaryStatus = (type, message) => {
     setStatus({ type, message });
@@ -414,14 +421,11 @@ const ProfilePage = () => {
                       <div className="profile-order-actions profile-order-actions--list">
                         <button
                           type="button"
-                          className="profile-btn profile-btn--primary profile-btn--repeat"
-                          onClick={() => handleRepeatOrder(order)}
+                          className="profile-btn profile-btn--outline profile-btn--details"
+                          onClick={() => setDetailsOrder(order)}
                         >
-                          ПОВТОРИТЬ
+                          ПОДРОБНЕЕ
                         </button>
-                        <Link to="/catalog" className="profile-btn profile-btn--outline profile-btn--review">
-                          ОСТАВИТЬ ОТЗЫВ
-                        </Link>
                       </div>
                     </article>
                   ))
@@ -559,6 +563,52 @@ const ProfilePage = () => {
             {status.message && (
               <div className={`profile-toast profile-toast--${status.type}`}>
                 {status.message}
+              </div>
+            )}
+            {detailsOrder && (
+              <div className="profile-modal" onClick={() => setDetailsOrder(null)}>
+                <div className="profile-modal__dialog" onClick={(event) => event.stopPropagation()}>
+                  <button
+                    type="button"
+                    className="profile-modal__close"
+                    onClick={() => setDetailsOrder(null)}
+                    aria-label="Закрыть"
+                  >
+                    ×
+                  </button>
+                  <h3 className="profile-modal__title">ИНФОРМАЦИЯ О ЗАКАЗЕ</h3>
+                  <div className="profile-modal__meta">
+                    <div>Номер заказа</div>
+                    <div>{detailsOrder.id}</div>
+                    <div>Дата заказа</div>
+                    <div>{new Date(detailsOrder.created_at).toLocaleDateString('ru-RU')}</div>
+                    <div>Статус</div>
+                    <div>{getOrderStatusLabel(detailsOrder.status)}</div>
+                    <div>Адрес доставки</div>
+                    <div>{formatOrderAddress(detailsOrder)}</div>
+                  </div>
+                  <h4 className="profile-modal__subtitle">СОСТАВ ЗАКАЗА</h4>
+                  <div className="profile-modal__items">
+                    {(detailsOrder.items || []).map((item, index) => (
+                      <article
+                        key={`${detailsOrder.id}-${item.product_id || item.product_name}-${index}`}
+                        className="profile-modal__item"
+                      >
+                        <img
+                          src={item.product_image || `${import.meta.env.BASE_URL}assets/account.png`}
+                          alt={item.product_name}
+                          className="profile-modal__item-image"
+                        />
+                        <div className="profile-modal__item-main">
+                          <div className="profile-modal__item-name">{item.product_name}</div>
+                          <div className="profile-modal__item-qty">{item.quantity} шт</div>
+                        </div>
+                        <div className="profile-modal__item-price">{formatPrice(item.line_total || item.price)} ₽</div>
+                      </article>
+                    ))}
+                  </div>
+                  <div className="profile-modal__total">Итого: {formatPrice(detailsOrder.total_price)} ₽</div>
+                </div>
               </div>
             )}
           </>
