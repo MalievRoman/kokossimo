@@ -1,8 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
 import { useFavorites } from '../../context/FavoritesContext';
-import { getProductRatings } from '../../services/api';
 import { resolveMediaUrl } from '../../utils/media';
 
 // Карточка товара в верстке под koko_website (main_page.html).
@@ -29,10 +28,10 @@ const ProductCard = ({ product }) => {
     : 0;
   const ratingValue = Number(product.rating_avg ?? product.rating ?? product.average_rating ?? 0);
   const ratingCount = Number(product.rating_count ?? product.ratingCount ?? 0);
-  const [ratingData, setRatingData] = useState({
+  const ratingData = {
     avg: Number.isFinite(ratingValue) ? ratingValue : 0,
     count: Number.isFinite(ratingCount) ? ratingCount : 0,
-  });
+  };
   const roundedRating = Math.round(ratingData.avg || 0);
 
   // Цена
@@ -64,35 +63,6 @@ const ProductCard = ({ product }) => {
   const description = String(product.short_description ?? product.description ?? '').trim();
 
   const favorite = isFavorite(product.id);
-
-  useEffect(() => {
-    const hasServerStats = Number.isFinite(ratingValue) && Number.isFinite(ratingCount);
-    const shouldFetch = !hasServerStats || (ratingValue === 0 && ratingCount === 0);
-    if (!shouldFetch) {
-      setRatingData({ avg: ratingValue, count: ratingCount });
-      return undefined;
-    }
-
-    let isActive = true;
-    getProductRatings(product.id)
-      .then((response) => {
-        if (!isActive) return;
-        const list = Array.isArray(response.data) ? response.data : [];
-        if (list.length === 0) {
-          setRatingData({ avg: 0, count: 0 });
-          return;
-        }
-        const total = list.reduce((sum, item) => sum + Number(item.rating || 0), 0);
-        setRatingData({ avg: total / list.length, count: list.length });
-      })
-      .catch(() => {
-        if (isActive) setRatingData({ avg: ratingValue || 0, count: ratingCount || 0 });
-      });
-
-    return () => {
-      isActive = false;
-    };
-  }, [product.id, ratingValue, ratingCount]);
 
   // Обработчики корзины
   const handleAddToCart = (e) => {

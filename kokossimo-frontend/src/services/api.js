@@ -73,7 +73,7 @@ export const getOrderDetail = (token, orderId) =>
   });
 
 // Специальные фильтры
-export const getBestsellers = () => api.get('/products/', { params: { is_bestseller: 'true' } });
-export const getNewProducts = () => api.get('/products/', { params: { is_new: 'true' } });
+export const getBestsellers = () => api.get('/products/', { params: { is_bestseller: 'true', page_size: 12 } });
+export const getNewProducts = () => api.get('/products/', { params: { is_new: 'true', page_size: 12 } });
 
 export default api;
