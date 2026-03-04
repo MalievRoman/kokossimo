@@ -455,7 +455,7 @@
 @media (max-width: 1024px) {
   .auth-layout {
     grid-template-columns: 1fr;
-    padding-right: 72px;
+    padding-right: 0;
   }
 
   .auth-brand {

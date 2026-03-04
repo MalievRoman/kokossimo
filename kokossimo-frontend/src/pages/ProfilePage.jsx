@@ -301,13 +301,6 @@ const ProfilePage = () => {
                     <h2 className="profile-user-name">{userName}</h2>
                     <p className="profile-user-meta">{profile.phone || '+7 (___) ___-__-__'}</p>
                     <p className="profile-user-meta">{profile.email || 'Добавьте email в параметрах'}</p>
-                    <button
-                      type="button"
-                      className="profile-btn profile-btn--outline profile-btn--logout-main"
-                      onClick={handleLogout}
-                    >
-                      ВЫЙТИ ИЗ ПРОФИЛЯ
-                    </button>
                   </div>
                 </section>
 
