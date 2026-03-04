@@ -260,7 +260,7 @@ const ProfilePage = () => {
   };
 
   return (
-    <div className="profile-page page-animation">
+    <div className="profile-page">
       <div className="container profile-container">
         <div className="breadcrumbs">
           <Link to="/">ГЛАВНАЯ</Link> <span>— ПРОФИЛЬ</span>
@@ -578,14 +578,14 @@ const ProfilePage = () => {
                   </button>
                   <h3 className="profile-modal__title">ИНФОРМАЦИЯ О ЗАКАЗЕ</h3>
                   <div className="profile-modal__meta">
-                    <div>Номер заказа</div>
-                    <div>{detailsOrder.id}</div>
-                    <div>Дата заказа</div>
-                    <div>{new Date(detailsOrder.created_at).toLocaleDateString('ru-RU')}</div>
-                    <div>Статус</div>
-                    <div>{getOrderStatusLabel(detailsOrder.status)}</div>
-                    <div>Адрес доставки</div>
-                    <div>{formatOrderAddress(detailsOrder)}</div>
+                    <div className="profile-modal__meta-label">Номер заказа</div>
+                    <div className="profile-modal__meta-value">{detailsOrder.id}</div>
+                    <div className="profile-modal__meta-label">Дата заказа</div>
+                    <div className="profile-modal__meta-value">{new Date(detailsOrder.created_at).toLocaleDateString('ru-RU')}</div>
+                    <div className="profile-modal__meta-label">Статус</div>
+                    <div className="profile-modal__meta-value">{getOrderStatusLabel(detailsOrder.status)}</div>
+                    <div className="profile-modal__meta-label">Адрес доставки</div>
+                    <div className="profile-modal__meta-value">{formatOrderAddress(detailsOrder)}</div>
                   </div>
                   <h4 className="profile-modal__subtitle">СОСТАВ ЗАКАЗА</h4>
                   <div className="profile-modal__items">
@@ -601,13 +601,25 @@ const ProfilePage = () => {
                         />
                         <div className="profile-modal__item-main">
                           <div className="profile-modal__item-name">{item.product_name}</div>
-                          <div className="profile-modal__item-qty">{item.quantity} шт</div>
+                          <div className="profile-modal__item-category">
+                            {item.category_name || (item.is_gift_certificate ? 'Подарочный сертификат' : 'Категория товара')}
+                          </div>
                         </div>
                         <div className="profile-modal__item-price">{formatPrice(item.line_total || item.price)} ₽</div>
                       </article>
                     ))}
                   </div>
                   <div className="profile-modal__total">Итого: {formatPrice(detailsOrder.total_price)} ₽</div>
+                  <button
+                    type="button"
+                    className="profile-btn profile-btn--outline profile-modal__repeat-btn"
+                    onClick={() => {
+                      handleRepeatOrder(detailsOrder);
+                      setDetailsOrder(null);
+                    }}
+                  >
+                    ПОВТОРИТЬ ЗАКАЗ
+                  </button>
                 </div>
               </div>
             )}

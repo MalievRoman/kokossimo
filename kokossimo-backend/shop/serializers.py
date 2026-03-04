@@ -221,6 +221,13 @@ class OrderSerializer(serializers.ModelSerializer):
             {
                 'product_id': item.product_id,
                 'product_name': item.product.name if item.product else item.title,
+                'category_name': (
+                    item.product.category.name
+                    if item.product and item.product.category
+                    else "Подарочный сертификат"
+                    if item.is_gift_certificate
+                    else ""
+                ),
                 'product_image': (
                     self.context.get('request').build_absolute_uri(item.product.image.url)
                     if item.product and item.product.image and self.context.get('request')
