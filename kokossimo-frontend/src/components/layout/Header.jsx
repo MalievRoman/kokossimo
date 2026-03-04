@@ -297,7 +297,7 @@ const Header = () => {
                     <span className="header__icon-badge">{favoritesCount}</span>
                   )}
                 </Link>
-                <Link className="header__icon-btn" to="/profile" aria-label="Профиль">
+                <Link className="header__icon-btn" to="/profile?tab=main" aria-label="Профиль">
                   <span className="icon icon--profile" aria-hidden="true"></span>
                 </Link>
               </div>
@@ -338,7 +338,7 @@ const Header = () => {
                   <span className="icon icon--cart" aria-hidden="true"></span>
                   {cartCount > 0 && <span className="header__icon-badge">{cartCount}</span>}
                 </Link>
-                <Link className="header__icon-btn" to="/profile" aria-label="Профиль">
+                <Link className="header__icon-btn" to="/profile?tab=main" aria-label="Профиль">
                   <span className="icon icon--profile" aria-hidden="true"></span>
                 </Link>
               </div>

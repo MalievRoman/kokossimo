@@ -89,7 +89,9 @@ const ProfilePage = () => {
     const isValidTab = PROFILE_TABS.some((tab) => tab.key === tabFromQuery);
     if (isValidTab) {
       setActiveTab(tabFromQuery);
+      return;
     }
+    setActiveTab('main');
   }, [location.search]);
 
   useEffect(() => {
