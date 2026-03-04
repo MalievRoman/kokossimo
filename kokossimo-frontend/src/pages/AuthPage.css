@@ -9,7 +9,7 @@
   height: 100%;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(525px, 1fr);
-  padding-right: 0;
+  padding-right: 72px;
 }
 
 .auth-brand {
@@ -455,7 +455,7 @@
 @media (max-width: 1024px) {
   .auth-layout {
     grid-template-columns: 1fr;
-    padding-right: 0;
+    padding-right: 72px;
   }
 
   .auth-brand {
