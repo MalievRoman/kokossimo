@@ -111,6 +111,12 @@
   line-height: 22px;
 }
 
+.profile-btn--logout-main {
+  margin-top: 14px;
+  min-height: 40px;
+  padding: 10px 14px;
+}
+
 .profile-balance-panel {
   min-height: 192px;
   display: grid;
