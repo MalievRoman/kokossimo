@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
 import { getCurrentUser, getMyOrders, logoutUser, updateProfile } from '../services/api';
@@ -35,6 +35,7 @@ const formatBirthDateInput = (value) => {
 
 const ProfilePage = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [authToken, setAuthToken] = useState(() => localStorage.getItem('authToken') || '');
   const isAuthenticated = Boolean(authToken);
   const { addToCart } = useCart();
@@ -156,6 +157,11 @@ const ProfilePage = () => {
     setTimeout(() => setStatus({ type: '', message: '' }), 3000);
   };
 
+  const handleTabChange = (tabKey) => {
+    setActiveTab(tabKey);
+    navigate(`/profile?tab=${tabKey}`);
+  };
+
   const handleSaveSettings = async () => {
     if (!authToken) {
       showTemporaryStatus('error', 'Сначала войдите в аккаунт.');
@@ -258,7 +264,7 @@ const ProfilePage = () => {
             <button
               key={tab.key}
               className={`profile-tab ${activeTab === tab.key ? 'is-active' : ''}`}
-              onClick={() => setActiveTab(tab.key)}
+              onClick={() => handleTabChange(tab.key)}
               type="button"
             >
               {tab.label}
@@ -309,7 +315,7 @@ const ProfilePage = () => {
                   <button
                     type="button"
                     className="profile-shortcut"
-                    onClick={() => setActiveTab('orders')}
+                    onClick={() => handleTabChange('orders')}
                   >
                     <img
                       src={`${import.meta.env.BASE_URL}assets/cart.png`}
@@ -322,7 +328,7 @@ const ProfilePage = () => {
                   <button
                     type="button"
                     className="profile-shortcut"
-                    onClick={() => setActiveTab('favorites')}
+                    onClick={() => handleTabChange('favorites')}
                   >
                     <img
                       src={`${import.meta.env.BASE_URL}assets/heart.png`}
