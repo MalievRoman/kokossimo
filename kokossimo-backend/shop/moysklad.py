@@ -4,7 +4,7 @@ import json
 import socket
 import ssl
 import time
-from urllib.parse import urlparse, parse_qs, urljoin
+from urllib.parse import urlparse, parse_qs, urljoin, urlunparse
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
@@ -34,12 +34,15 @@ class MoySkladClient:
         self.verify_ssl = bool(getattr(settings, "MOYSKLAD_VERIFY_SSL", True))
         self.max_retries = max(0, int(getattr(settings, "MOYSKLAD_MAX_RETRIES", 3)))
         self.retry_delay_seconds = max(0.2, float(getattr(settings, "MOYSKLAD_RETRY_DELAY_SECONDS", 1.5)))
+        self._basic_auth_header = ""
+        if self.login and self.password:
+            basic_token = base64.b64encode(f"{self.login}:{self.password}".encode("utf-8")).decode("ascii")
+            self._basic_auth_header = f"Basic {basic_token}"
 
         if self.token:
             self._auth_header = f"Bearer {self.token}"
         elif self.login and self.password:
-            token = base64.b64encode(f"{self.login}:{self.password}".encode("utf-8")).decode("ascii")
-            self._auth_header = f"Basic {token}"
+            self._auth_header = self._basic_auth_header
         else:
             raise MoySkladConfigError(
                 "Интеграция не настроена: укажите MOYSKLAD_TOKEN или пару MOYSKLAD_LOGIN/MOYSKLAD_PASSWORD."
@@ -106,6 +109,26 @@ class MoySkladClient:
             return href
         return urljoin(f"{self.base_url}/", str(href or "").lstrip("/"))
 
+    def _binary_url_candidates(self, href):
+        absolute = self._absolute_href(href)
+        candidates = [absolute]
+        parsed = urlparse(absolute)
+        path = parsed.path or ""
+        if path and not path.endswith("/download"):
+            with_download = urlunparse(parsed._replace(path=f"{path.rstrip('/')}/download"))
+            candidates.append(with_download)
+        elif path.endswith("/download"):
+            without_download = urlunparse(parsed._replace(path=path[:-9]))
+            candidates.append(without_download)
+
+        uniq = []
+        seen = set()
+        for url in candidates:
+            if url and url not in seen:
+                uniq.append(url)
+                seen.add(url)
+        return uniq
+
     def ping(self):
         # Минимальный запрос для проверки авторизации и доступности API.
         return self._request("GET", "/entity/assortment", query={"limit": 1, "offset": 0})
@@ -158,25 +181,67 @@ class MoySkladClient:
         if not href:
             raise MoySkladError("Пустая ссылка на изображение.")
 
-        url = self._absolute_href(href)
-        request = Request(
-            url=url,
-            method="GET",
-            headers={
-                "Authorization": self._auth_header,
-                "Accept-Encoding": "identity",
-            },
-        )
+        urls_to_try = self._binary_url_candidates(href)
+        auth_headers = [self._auth_header]
+        # Для media endpoint МойСклад иногда принимает только Basic,
+        # даже когда API-запросы с Bearer работают.
+        if (
+            self._basic_auth_header
+            and self._basic_auth_header not in auth_headers
+        ):
+            auth_headers.append(self._basic_auth_header)
+        # Некоторые downloadHref уже подписаны и могут работать без Authorization.
+        auth_headers.append("")
 
-        try:
-            with urlopen(request, timeout=self.timeout, context=self._ssl_context()) as response:
-                content_type = response.headers.get("Content-Type", "application/octet-stream")
-                payload = response.read()
-                return payload, content_type
-        except HTTPError as exc:
-            body = exc.read().decode("utf-8", errors="ignore")
-            raise MoySkladError(
-                f"Не удалось скачать изображение (HTTP {exc.code}): {body or exc.reason}"
-            ) from exc
-        except URLError as exc:
-            raise MoySkladError(f"Ошибка сети при скачивании изображения: {exc.reason}") from exc
+        last_http_error = None
+        last_network_error = ""
+        total_attempts = len(urls_to_try) * len(auth_headers)
+        network_attempts = self.max_retries + 1
+        ssl_context = self._ssl_context()
+
+        for url in urls_to_try:
+            for auth_header in auth_headers:
+                headers = {
+                    "Accept": "*/*",
+                    "Accept-Encoding": "identity",
+                }
+                if auth_header:
+                    headers["Authorization"] = auth_header
+
+                for net_try in range(1, network_attempts + 1):
+                    request = Request(
+                        url=url,
+                        method="GET",
+                        headers=headers,
+                    )
+                    try:
+                        with urlopen(request, timeout=self.timeout, context=ssl_context) as response:
+                            content_type = response.headers.get("Content-Type", "application/octet-stream")
+                            payload = response.read()
+                            if content_type.lower().startswith("image/") and payload:
+                                return payload, content_type
+                            # Если пришел не image/*, продолжаем пробовать другие варианты.
+                            last_http_error = (415, f"Неверный content-type для media: {content_type}")
+                            break
+                    except HTTPError as exc:
+                        body = exc.read().decode("utf-8", errors="ignore")
+                        last_http_error = (exc.code, body or exc.reason)
+                        # Для бинарных endpoint иногда один и тот же URL может вести себя по-разному
+                        # в зависимости от auth/суффикса download, поэтому продолжаем перебор.
+                        break
+                    except (URLError, TimeoutError, socket.timeout, ConnectionResetError) as exc:
+                        reason = getattr(exc, "reason", str(exc))
+                        last_network_error = str(reason)
+                        if net_try < network_attempts:
+                            time.sleep(self.retry_delay_seconds * net_try)
+                            continue
+                        break
+
+        if last_http_error:
+            code, body = last_http_error
+            raise MoySkladError(f"Не удалось скачать изображение (HTTP {code}): {body}")
+
+        if last_network_error:
+            raise MoySkladError(f"Ошибка сети при скачивании изображения: {last_network_error}")
+
+        raise MoySkladError("Не удалось скачать изображение: неизвестная ошибка.")

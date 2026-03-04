@@ -16,6 +16,7 @@ from django.shortcuts import get_object_or_404
 from django.http import JsonResponse, HttpResponse
 from .models import Product, Category, Profile, Order, EmailVerificationCode, ProductRating
 from .moysklad import MoySkladClient, MoySkladError, MoySkladConfigError
+from .moysklad_sync import _extract_image_url
 from .serializers import (
     ProductSerializer,
     CategorySerializer,
@@ -459,20 +460,129 @@ def product_image_proxy(request, product_id):
     if not product.external_image_url:
         return Response({"detail": "Изображение не найдено."}, status=status.HTTP_404_NOT_FOUND)
 
+    def _image_response(binary_payload, mime_type):
+        response = HttpResponse(binary_payload, content_type=mime_type)
+        response["Cache-Control"] = "public, max-age=3600"
+        return response
+
+    def _extract_image_url_candidates(row):
+        candidates = []
+        images_data = (row or {}).get("images") or {}
+
+        if isinstance(images_data, list):
+            for image_item in images_data:
+                item = image_item or {}
+                meta = item.get("meta") or {}
+                miniature = item.get("miniature") or {}
+                candidates.extend(
+                    [
+                        meta.get("downloadHref") or "",
+                        miniature.get("downloadHref") or "",
+                        meta.get("href") or "",
+                    ]
+                )
+        else:
+            rows = images_data.get("rows") or []
+            for image_row in rows:
+                row_item = image_row or {}
+                meta = row_item.get("meta") or {}
+                miniature = row_item.get("miniature") or {}
+                candidates.extend(
+                    [
+                        meta.get("downloadHref") or "",
+                        miniature.get("downloadHref") or "",
+                        meta.get("href") or "",
+                    ]
+                )
+
+            images_meta = images_data.get("meta") or {}
+            if images_meta:
+                try:
+                    fetched_rows = client.get_images_rows_from_meta(images_meta, limit=5)
+                except Exception:
+                    fetched_rows = []
+                for fetched in fetched_rows:
+                    meta = (fetched or {}).get("meta") or {}
+                    miniature = (fetched or {}).get("miniature") or {}
+                    candidates.extend(
+                        [
+                            meta.get("downloadHref") or "",
+                            miniature.get("downloadHref") or "",
+                            meta.get("href") or "",
+                        ]
+                    )
+
+        uniq = []
+        seen = set()
+        for url in candidates:
+            if not url:
+                continue
+            if url in seen:
+                continue
+            seen.add(url)
+            uniq.append(url)
+        return uniq
+
     try:
         client = MoySkladClient()
-        payload, content_type = client.download_binary(product.external_image_url)
     except MoySkladConfigError as exc:
         return Response({"detail": str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+    def _refresh_image_url_and_download(current_url, reason_detail=""):
+        if not product.moysklad_id:
+            return None
+        try:
+            row = client.get_assortment_item(product.moysklad_id)
+            candidates = _extract_image_url_candidates(row)
+            if not candidates:
+                fresh_image_url = _extract_image_url(
+                    row,
+                    client,
+                    # Для восстановления ссылки всегда пробуем дочитать images.meta->rows.
+                    allow_meta_fetch=True,
+                )
+                if fresh_image_url:
+                    candidates = [fresh_image_url]
+            for candidate_url in candidates:
+                try:
+                    payload, content_type = client.download_binary(candidate_url)
+                except MoySkladError:
+                    continue
+                if candidate_url != current_url:
+                    product.external_image_url = candidate_url
+                    product.save(update_fields=["external_image_url"])
+                return _image_response(payload, content_type)
+            return None
+        except (MoySkladError, MoySkladConfigError):
+            return None
+
+    # Устаревшие записи могли сохранить meta.href вместо downloadHref.
+    # Такие URL часто не являются бинарным download endpoint.
+    if "download" not in (product.external_image_url or "").lower():
+        refreshed = _refresh_image_url_and_download(product.external_image_url, "non-download URL")
+        if refreshed is not None:
+            return refreshed
+
+    try:
+        payload, content_type = client.download_binary(product.external_image_url)
+        return _image_response(payload, content_type)
     except MoySkladError as exc:
         detail = str(exc)
+        # downloadHref у МойСклад может стать невалидным (например, после ротации/истечения),
+        # либо ссылкой окажется не "скачиваемый" endpoint (HTTP 415).
+        # Пытаемся один раз обновить ссылку из актуального assortment и повторить скачивание.
+        can_refresh_url = (
+            bool(product.moysklad_id)
+            and any(code in detail for code in ("HTTP 403", "HTTP 404", "HTTP 410", "HTTP 415"))
+        )
+        if can_refresh_url:
+            refreshed = _refresh_image_url_and_download(product.external_image_url, detail)
+            if refreshed is not None:
+                return refreshed
+
         if "HTTP 404" in detail:
             return Response({"detail": "Изображение не найдено."}, status=status.HTTP_404_NOT_FOUND)
         return Response({"detail": detail}, status=status.HTTP_502_BAD_GATEWAY)
-
-    response = HttpResponse(payload, content_type=content_type)
-    response["Cache-Control"] = "public, max-age=3600"
-    return response
 
 
 @api_view(['GET'])

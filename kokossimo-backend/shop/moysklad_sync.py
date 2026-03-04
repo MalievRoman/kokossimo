@@ -195,7 +195,6 @@ def _extract_image_url(row, client, allow_meta_fetch=False):
         href = (
             meta.get("downloadHref")
             or (first.get("miniature") or {}).get("downloadHref")
-            or meta.get("href")
             or ""
         )
         if href:
@@ -205,7 +204,8 @@ def _extract_image_url(row, client, allow_meta_fetch=False):
     if rows:
         meta = (rows[0].get("meta") or {})
         miniature = rows[0].get("miniature") or {}
-        return miniature.get("downloadHref") or meta.get("downloadHref") or meta.get("href") or ""
+        # В приоритете оригинал: miniature часто низкого разрешения.
+        return meta.get("downloadHref") or miniature.get("downloadHref") or ""
 
     images_meta = images_data.get("meta") or {}
     if allow_meta_fetch and images_meta:
@@ -215,7 +215,8 @@ def _extract_image_url(row, client, allow_meta_fetch=False):
             return ""
         if fetched_rows:
             meta = (fetched_rows[0].get("meta") or {})
-            return meta.get("downloadHref") or meta.get("href") or ""
+            miniature = fetched_rows[0].get("miniature") or {}
+            return meta.get("downloadHref") or miniature.get("downloadHref") or ""
 
     return ""
 
