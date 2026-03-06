@@ -56,10 +56,13 @@ const ProductCard = ({ product }) => {
   }
 
   // Картинка: относительные пути дополняем адресом бэкенда
+  const placeholderImage = 'https://placehold.co/400x400/F5E6D3/8B4513?text=No+Image';
+  const [imageError, setImageError] = React.useState(false);
   const imageUrl = resolveMediaUrl(
     product.image,
-    'https://placehold.co/400x400/F5E6D3/8B4513?text=No+Image'
+    placeholderImage
   );
+  const displayImageUrl = imageError ? placeholderImage : imageUrl;
   const description = String(product.short_description ?? product.description ?? '').trim();
 
   const favorite = isFavorite(product.id);
@@ -134,7 +137,17 @@ const ProductCard = ({ product }) => {
           aria-label={product.name}
         >
           <div className="product-card__image">
-            {imageUrl && <img src={imageUrl} alt={product.name} />}
+            {displayImageUrl && (
+              <img
+                src={displayImageUrl}
+                alt={product.name}
+                onError={() => setImageError(true)}
+                onLoad={(e) => {
+                  const img = e.target;
+                  if (img.naturalWidth === 1 && img.naturalHeight === 1) setImageError(true);
+                }}
+              />
+            )}
           </div>
         </Link>
       </div>

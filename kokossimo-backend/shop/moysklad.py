@@ -6,7 +6,7 @@ import ssl
 import time
 from urllib.parse import urlparse, parse_qs, urljoin, urlunparse
 from urllib.parse import urlencode
-from urllib.request import Request, urlopen
+from urllib.request import Request, urlopen, build_opener, HTTPErrorProcessor, HTTPRedirectHandler, HTTPSHandler
 from urllib.error import HTTPError, URLError
 
 from django.conf import settings
@@ -177,65 +177,192 @@ class MoySkladClient:
         payload = self._request("GET", path, query=query)
         return payload.get("rows", []) or []
 
+    def get_image_by_href(self, href):
+        """Загружает сущность изображения по meta.href и возвращает её (с meta.downloadHref для оригинала)."""
+        if not href:
+            return {}
+        path, query = self._path_from_href(href)
+        return self._request("GET", path, query=query or None)
+
+    def get_entity_by_href(self, href, expand=None):
+        """Загружает сущность по meta.href (например, товар с expand=images)."""
+        if not href:
+            return {}
+        path, query = self._path_from_href(href)
+        if expand:
+            query = dict(query) if query else {}
+            query["expand"] = expand
+        return self._request("GET", path, query=query if query else None)
+
+    def _download_via_api_download(self, url, auth_headers):
+        """Запрос к api.moysklad.ru/download/ с Accept: application/json;charset=utf-8.
+        Сервер может вернуть 302 на бинарный файл или 200 с JSON с URL.
+        Редирект обрабатываем вручную и запрашиваем Location с Accept: image/*.
+        """
+        class NoRedirect(HTTPRedirectHandler):
+            def redirect_request(self, req, fp, code, msg, headers, newurl):
+                return None
+
+        ssl_context = self._ssl_context()
+        for auth_header in auth_headers:
+            headers = {
+                "Accept": "application/json;charset=utf-8",
+                "Accept-Encoding": "gzip",
+            }
+            if auth_header:
+                headers["Authorization"] = auth_header
+            try:
+                request = Request(url, method="GET", headers=headers)
+                opener = build_opener(
+                    NoRedirect,
+                    HTTPSHandler(context=ssl_context),
+                    HTTPErrorProcessor(),
+                )
+                response = opener.open(request, timeout=self.timeout)
+                content_type = (response.headers.get("Content-Type") or "").split(";")[0].strip().lower()
+                payload = response.read()
+                enc = (response.headers.get("Content-Encoding") or "").lower()
+                if "gzip" in enc and payload:
+                    try:
+                        payload = gzip.decompress(payload)
+                    except Exception:
+                        pass
+                if content_type.startswith("image/") and payload:
+                    return payload, response.headers.get("Content-Type", "application/octet-stream")
+                if content_type == "application/json" and payload:
+                    try:
+                        data = json.loads(payload.decode("utf-8", errors="replace"))
+                        redirect_url = (
+                            (data.get("meta") or {}).get("downloadHref")
+                            or data.get("url")
+                            or data.get("downloadUrl")
+                            or (data.get("meta") or {}).get("href")
+                        )
+                        if redirect_url:
+                            out = self._fetch_binary_from_url(redirect_url, auth_headers)
+                            if out is not None:
+                                return out
+                    except (json.JSONDecodeError, KeyError, TypeError):
+                        pass
+            except HTTPError as exc:
+                if exc.code in (301, 302, 303, 307) and exc.headers.get("Location"):
+                    location = exc.headers.get("Location")
+                    if location:
+                        location = urljoin(url, location)
+                        out = self._fetch_binary_from_url(location, auth_headers)
+                        if out is not None:
+                            return out
+                continue
+            except (URLError, TimeoutError, socket.timeout, ConnectionResetError):
+                continue
+        return None
+
+    def _fetch_binary_from_url(self, target_url, auth_headers):
+        """Скачивает бинарный файл по URL (например, после редиректа 302).
+        Временные URL хранилища часто работают только без Authorization — пробуем без auth первым.
+        """
+        ssl_context = self._ssl_context()
+        # Сначала без auth (temp URL с подписью), затем с auth
+        order = [""] + [h for h in auth_headers if h]
+        for auth_header in order:
+            headers = {"Accept": "image/*", "Accept-Encoding": "identity"}
+            if auth_header:
+                headers["Authorization"] = auth_header
+            try:
+                request = Request(target_url, method="GET", headers=headers)
+                with urlopen(request, timeout=self.timeout, context=ssl_context) as response:
+                    ct = response.headers.get("Content-Type", "application/octet-stream")
+                    payload = response.read()
+                    if (ct or "").lower().startswith("image/") and payload:
+                        return payload, ct
+            except (HTTPError, URLError, TimeoutError, socket.timeout, ConnectionResetError):
+                continue
+        return None
+
     def download_binary(self, href):
         if not href:
             raise MoySkladError("Пустая ссылка на изображение.")
 
         urls_to_try = self._binary_url_candidates(href)
         auth_headers = [self._auth_header]
-        # Для media endpoint МойСклад иногда принимает только Basic,
-        # даже когда API-запросы с Bearer работают.
         if (
             self._basic_auth_header
             and self._basic_auth_header not in auth_headers
         ):
             auth_headers.append(self._basic_auth_header)
-        # Некоторые downloadHref уже подписаны и могут работать без Authorization.
         auth_headers.append("")
 
+        # Эндпоинт api.moysklad.ru/download/ принимает только Accept: application/json;charset=utf-8.
+        for url in urls_to_try:
+            if "api.moysklad.ru" in (url or "") and "/download" in (url or ""):
+                result = self._download_via_api_download(url, auth_headers)
+                if result is not None:
+                    return result
+                break
+
+        accept_headers = [
+            "image/*",
+            "image/png, image/jpeg, image/gif, image/webp",
+            "*/*",
+        ]
+        # С декабря 2023 api.moysklad.ru требует Accept-Encoding: gzip, иначе 415.
         last_http_error = None
         last_network_error = ""
-        total_attempts = len(urls_to_try) * len(auth_headers)
         network_attempts = self.max_retries + 1
         ssl_context = self._ssl_context()
 
         for url in urls_to_try:
+            if "api.moysklad.ru" in (url or "") and "/download" in (url or ""):
+                continue
+            accept_encoding = "identity"
             for auth_header in auth_headers:
-                headers = {
-                    "Accept": "*/*",
-                    "Accept-Encoding": "identity",
-                }
-                if auth_header:
-                    headers["Authorization"] = auth_header
+                for accept_header in accept_headers:
+                    headers = {
+                        "Accept": accept_header,
+                        "Accept-Encoding": accept_encoding,
+                    }
+                    if auth_header:
+                        headers["Authorization"] = auth_header
 
-                for net_try in range(1, network_attempts + 1):
-                    request = Request(
-                        url=url,
-                        method="GET",
-                        headers=headers,
-                    )
-                    try:
-                        with urlopen(request, timeout=self.timeout, context=ssl_context) as response:
-                            content_type = response.headers.get("Content-Type", "application/octet-stream")
-                            payload = response.read()
-                            if content_type.lower().startswith("image/") and payload:
-                                return payload, content_type
-                            # Если пришел не image/*, продолжаем пробовать другие варианты.
-                            last_http_error = (415, f"Неверный content-type для media: {content_type}")
+                    for net_try in range(1, network_attempts + 1):
+                        request = Request(
+                            url=url,
+                            method="GET",
+                            headers=headers,
+                        )
+                        try:
+                            with urlopen(request, timeout=self.timeout, context=ssl_context) as response:
+                                content_type = response.headers.get("Content-Type", "application/octet-stream")
+                                payload = response.read()
+                                enc_resp = (response.headers.get("Content-Encoding") or "").lower()
+                                if "gzip" in enc_resp and payload:
+                                    try:
+                                        payload = gzip.decompress(payload)
+                                    except Exception:
+                                        pass
+                                if content_type.lower().startswith("image/") and payload:
+                                    return payload, content_type
+                                last_http_error = (415, f"Неверный content-type для media: {content_type}")
+                                break
+                        except HTTPError as exc:
+                            body = exc.read().decode("utf-8", errors="ignore")
+                            last_http_error = (exc.code, body or exc.reason)
                             break
-                    except HTTPError as exc:
-                        body = exc.read().decode("utf-8", errors="ignore")
-                        last_http_error = (exc.code, body or exc.reason)
-                        # Для бинарных endpoint иногда один и тот же URL может вести себя по-разному
-                        # в зависимости от auth/суффикса download, поэтому продолжаем перебор.
-                        break
-                    except (URLError, TimeoutError, socket.timeout, ConnectionResetError) as exc:
-                        reason = getattr(exc, "reason", str(exc))
-                        last_network_error = str(reason)
-                        if net_try < network_attempts:
-                            time.sleep(self.retry_delay_seconds * net_try)
-                            continue
-                        break
+                        except (URLError, TimeoutError, socket.timeout, ConnectionResetError) as exc:
+                            reason = getattr(exc, "reason", str(exc))
+                            last_network_error = str(reason)
+                            if net_try < network_attempts:
+                                time.sleep(self.retry_delay_seconds * net_try)
+                                continue
+                            break
+                    if last_http_error and last_http_error[0] == 415:
+                        continue
+                    break
+                if last_http_error and last_http_error[0] == 415:
+                    continue
+                break
+            if last_network_error:
+                break
 
         if last_http_error:
             code, body = last_http_error
