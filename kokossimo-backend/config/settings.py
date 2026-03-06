@@ -163,6 +163,14 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5174",
 ]
 
+# Чтобы форма входа в админку с localhost:5173 (через proxy) не давала 403 CSRF
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
+]
+
 # Альтернативный вариант - разрешить все локальные порты (только для разработки!)
 # CORS_ALLOW_ALL_ORIGINS = True  # Раскомментируйте, если нужно разрешить все порты
 
@@ -213,7 +221,7 @@ MOYSKLAD_VERIFY_SSL = os.getenv('MOYSKLAD_VERIFY_SSL', 'true').lower() in ('1', 
 MOYSKLAD_USE_FOLDER_TREE_FILTER = os.getenv('MOYSKLAD_USE_FOLDER_TREE_FILTER', 'false').lower() in ('1', 'true', 'yes')
 MOYSKLAD_RELAX_FOLDER_FILTER = os.getenv('MOYSKLAD_RELAX_FOLDER_FILTER', 'true').lower() in ('1', 'true', 'yes')
 MOYSKLAD_STRICT_CATEGORY_ONLY = os.getenv('MOYSKLAD_STRICT_CATEGORY_ONLY', 'true').lower() in ('1', 'true', 'yes')
-MOYSKLAD_IMAGE_META_FETCH = os.getenv('MOYSKLAD_IMAGE_META_FETCH', 'false').lower() in ('1', 'true', 'yes')
+MOYSKLAD_IMAGE_META_FETCH = os.getenv('MOYSKLAD_IMAGE_META_FETCH', 'true').lower() in ('1', 'true', 'yes')
 MOYSKLAD_SYNC_PAGE_SIZE = int(os.getenv('MOYSKLAD_SYNC_PAGE_SIZE', '50'))
 MOYSKLAD_USE_SEARCH_FILTER = os.getenv('MOYSKLAD_USE_SEARCH_FILTER', 'true').lower() in ('1', 'true', 'yes')
 MOYSKLAD_SITE_SEARCH_QUERY = os.getenv('MOYSKLAD_SITE_SEARCH_QUERY', '')

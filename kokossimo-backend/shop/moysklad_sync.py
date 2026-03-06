@@ -187,25 +187,40 @@ def _extract_price(row):
         return Decimal("0.00")
 
 
+def _get_original_image_url(image_obj, client):
+    """Из объекта изображения возвращает URL исходного изображения (original).
+    При отсутствии meta.downloadHref подгружает сущность по meta.href; fallback — миниатюра.
+    """
+    if not image_obj or not client:
+        return ""
+    meta = (image_obj.get("meta") or {})
+    miniature = (image_obj.get("miniature") or {})
+    download_href = meta.get("downloadHref")
+    if download_href:
+        return download_href
+    meta_href = meta.get("href")
+    if meta_href:
+        try:
+            full_image = client.get_image_by_href(meta_href)
+            full_meta = (full_image.get("meta") or {})
+            if full_meta.get("downloadHref"):
+                return full_meta.get("downloadHref")
+        except Exception:
+            pass
+    return miniature.get("downloadHref") or ""
+
+
 def _extract_image_url(row, client, allow_meta_fetch=False):
     images_data = row.get("images") or {}
     if isinstance(images_data, list) and images_data:
         first = images_data[0] or {}
-        meta = (first.get("meta") or {})
-        href = (
-            meta.get("downloadHref")
-            or (first.get("miniature") or {}).get("downloadHref")
-            or ""
-        )
-        if href:
-            return href
+        url = _get_original_image_url(first, client)
+        if url:
+            return url
 
     rows = images_data.get("rows") or []
     if rows:
-        meta = (rows[0].get("meta") or {})
-        miniature = rows[0].get("miniature") or {}
-        # В приоритете оригинал: miniature часто низкого разрешения.
-        return meta.get("downloadHref") or miniature.get("downloadHref") or ""
+        return _get_original_image_url(rows[0], client)
 
     images_meta = images_data.get("meta") or {}
     if allow_meta_fetch and images_meta:
@@ -214,9 +229,7 @@ def _extract_image_url(row, client, allow_meta_fetch=False):
         except Exception:
             return ""
         if fetched_rows:
-            meta = (fetched_rows[0].get("meta") or {})
-            miniature = fetched_rows[0].get("miniature") or {}
-            return meta.get("downloadHref") or miniature.get("downloadHref") or ""
+            return _get_original_image_url(fetched_rows[0], client)
 
     return ""
 
