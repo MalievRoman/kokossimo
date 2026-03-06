@@ -55,7 +55,9 @@ class Command(BaseCommand):
                 "Готово: "
                 f"создано {stats.get('created', 0)}, "
                 f"обновлено {stats.get('updated', 0)}, "
+                f"подготовлено {stats.get('prepared_rows', 0)} из {stats.get('processed_rows', 0)} строк, "
                 f"отфильтровано {stats.get('filtered_out', 0)}, "
+                f"пропущено без id/названия {stats.get('skipped_no_id_or_name', 0)}, с нулевой ценой {stats.get('skipped_zero_price', 0)}, "
                 f"удалено {stats.get('deleted', 0)}."
             )
         )

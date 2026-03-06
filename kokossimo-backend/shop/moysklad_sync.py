@@ -303,7 +303,7 @@ def sync_site_products(force=False, progress_callback=None):
     if strict_category_only:
         relax_folder_filter = False
         _progress("Строгий режим категории включен: товары берутся только из найденных папок категории.")
-    max_pages = int(getattr(settings, "MOYSKLAD_SYNC_MAX_PAGES", 200))
+    max_pages = int(getattr(settings, "MOYSKLAD_SYNC_MAX_PAGES", 500))
     fail_fast_empty_pages = int(getattr(settings, "MOYSKLAD_FAIL_FAST_EMPTY_PAGES", 5))
     fail_fast_empty_pages = max(0, fail_fast_empty_pages)
     allowed_folder_ids = set()
@@ -315,6 +315,8 @@ def sync_site_products(force=False, progress_callback=None):
         "processed_rows": 0,
         "prepared_rows": 0,
         "filtered_out": 0,
+        "skipped_no_id_or_name": 0,
+        "skipped_zero_price": 0,
         "created": 0,
         "updated": 0,
         "deleted": 0,
@@ -358,9 +360,18 @@ def sync_site_products(force=False, progress_callback=None):
                 _progress(f"Папка '{category_name}' не найдена в дереве папок.")
             else:
                 _progress(f"Найдено {len(allowed_folder_ids)} папок для фильтрации.")
-                if strict_category_only and resolved_target_folder_id:
+                # Фильтр productFolder=ID возвращает только товары НЕПОСРЕДСТВЕННО в этой папке,
+                # без подпапок. Поэтому используем его только когда подпапок нет (одна папка).
+                if strict_category_only and resolved_target_folder_id and len(allowed_folder_ids) == 1:
                     assortment_filter_expr = f"productFolder=https://api.moysklad.ru/api/remap/1.2/entity/productfolder/{resolved_target_folder_id}"
-                    _progress("Включен серверный фильтр assortment по productFolder целевой категории.")
+                    _progress("Включен серверный фильтр assortment по productFolder (одна папка, без подпапок).")
+                elif strict_category_only and len(allowed_folder_ids) > 1:
+                    _progress(
+                        "Папка категории содержит подпапки: серверный фильтр по productFolder не используем, "
+                        "чтобы не терять товары из подпапок. Фильтрация по списку папок (включая вложенные)."
+                    )
+                    # Не останавливаться по пустым страницам — выборка по search может идти вперемешку.
+                    fail_fast_empty_pages = 0
                 if (
                     relax_folder_filter
                     and use_search_filter
@@ -386,7 +397,10 @@ def sync_site_products(force=False, progress_callback=None):
 
         while True:
             if stats["processed_pages"] >= max_pages:
-                _progress(f"Достигнут лимит страниц ({max_pages}), прерываем синк.")
+                _progress(
+                    f"Достигнут лимит страниц ({max_pages}), прерываем синк. "
+                    f"Чтобы подгрузить все товары, увеличьте MOYSKLAD_SYNC_MAX_PAGES в .env (сейчас строк: {stats['processed_rows']}, подготовлено: {stats['prepared_rows']})."
+                )
                 break
 
             payload = client.get_assortment(
@@ -453,6 +467,7 @@ def sync_site_products(force=False, progress_callback=None):
                 external_id = row.get("id")
                 name = (row.get("name") or "").strip()
                 if not external_id or not name:
+                    stats["skipped_no_id_or_name"] += 1
                     continue
                 max_name_len = Product._meta.get_field("name").max_length
                 if len(name) > max_name_len:
@@ -460,6 +475,7 @@ def sync_site_products(force=False, progress_callback=None):
 
                 product_price = _extract_price(row)
                 if product_price <= 0:
+                    stats["skipped_zero_price"] += 1
                     continue
 
                 prepared_rows.append(
@@ -540,6 +556,7 @@ def sync_site_products(force=False, progress_callback=None):
             _progress(
                 f"Страница {stats['processed_pages']}: получено {len(rows)}, "
                 f"к загрузке {len(prepared_rows)}, отфильтровано {stats['filtered_out']}, "
+                f"без id/названия {stats['skipped_no_id_or_name']}, нулевая цена {stats['skipped_zero_price']}, "
                 f"создано {stats['created']}, обновлено {stats['updated']}."
             )
             if (
@@ -569,8 +586,9 @@ def sync_site_products(force=False, progress_callback=None):
         _progress(
             "Синк завершен: "
             f"страниц {stats['processed_pages']}, строк {stats['processed_rows']}, "
-            f"подготовлено {stats['prepared_rows']}, отфильтровано {stats['filtered_out']}, created {stats['created']}, "
-            f"обновлено {stats['updated']}, удалено {stats['deleted']}."
+            f"подготовлено {stats['prepared_rows']}, отфильтровано {stats['filtered_out']}, "
+            f"пропущено без id/названия {stats['skipped_no_id_or_name']}, с нулевой ценой {stats['skipped_zero_price']}, "
+            f"created {stats['created']}, обновлено {stats['updated']}, удалено {stats['deleted']}."
         )
         if stats["prepared_rows"] == 0:
             _progress(
