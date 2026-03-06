@@ -11,10 +11,39 @@ from django.core.mail import send_mail
 from django.utils import timezone
 from datetime import timedelta
 import secrets
+import time
 from django.db.models import Q, Avg, Count
 from django.shortcuts import get_object_or_404
 from django.http import JsonResponse, HttpResponse
+import base64
+import logging
+
 from .models import Product, Category, Profile, Order, EmailVerificationCode, ProductRating
+
+logger = logging.getLogger(__name__)
+# Миниатюра 1×1 прозрачный GIF — чтобы при ошибках отдавать изображение, а не JSON,
+# иначе браузер блокирует ответ (ERR_BLOCKED_BY_ORB) при запросе через <img src="...">.
+_PLACEHOLDER_IMAGE_GIF = base64.b64decode("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7")
+
+
+def _placeholder_or_debug(request, reason):
+    """Если в запросе ?debug=1 — вернуть JSON с причиной, иначе плейсхолдер 1×1 GIF."""
+    if request.GET.get("debug"):
+        return JsonResponse(
+            {"status": "placeholder", "reason": reason},
+            json_dumps_params={"ensure_ascii": False},
+        )
+    return _placeholder_image_response(reason)
+
+
+def _placeholder_image_response(reason=""):
+    """Ответ с прозрачным 1×1 GIF для обхода ORB при ошибках эндпоинта изображений."""
+    resp = HttpResponse(_PLACEHOLDER_IMAGE_GIF, content_type="image/gif")
+    resp["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    resp["Access-Control-Allow-Origin"] = "*"
+    if reason:
+        resp["X-Image-Proxy-Reason"] = reason
+    return resp
 from .moysklad import MoySkladClient, MoySkladError, MoySkladConfigError
 from .moysklad_sync import _extract_image_url
 from .serializers import (
@@ -456,44 +485,60 @@ def order_detail(request, order_id):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def product_image_proxy(request, product_id):
-    product = get_object_or_404(Product, id=product_id)
+    try:
+        return _product_image_proxy_impl(request, product_id)
+    except Exception as e:
+        reason = "error"
+        msg = str(e).replace("\r", " ").replace("\n", " ").strip()[:80]
+        if msg:
+            reason = f"{reason}: {msg}"
+        if request.GET.get("debug"):
+            return JsonResponse(
+                {"status": "placeholder", "reason": reason},
+                json_dumps_params={"ensure_ascii": False},
+            )
+        return _placeholder_image_response(reason)
+
+
+def _product_image_proxy_impl(request, product_id):
+    product = Product.objects.filter(id=product_id).first()
+    if not product:
+        return _placeholder_or_debug(request, "product_not_found")
     if not product.external_image_url:
-        return Response({"detail": "Изображение не найдено."}, status=status.HTTP_404_NOT_FOUND)
+        return _placeholder_or_debug(request, "no_external_image_url")
 
     def _image_response(binary_payload, mime_type):
         response = HttpResponse(binary_payload, content_type=mime_type)
         response["Cache-Control"] = "public, max-age=3600"
+        response["Access-Control-Allow-Origin"] = "*"
         return response
 
     def _extract_image_url_candidates(row):
         candidates = []
         images_data = (row or {}).get("images") or {}
 
+        def add_original_then_miniature(item):
+            meta = (item or {}).get("meta") or {}
+            miniature = (item or {}).get("miniature") or {}
+            original = meta.get("downloadHref")
+            if not original and meta.get("href"):
+                try:
+                    full = client.get_image_by_href(meta.get("href"))
+                    original = (full.get("meta") or {}).get("downloadHref")
+                except Exception:
+                    pass
+            if original:
+                candidates.append(original)
+            if miniature.get("downloadHref"):
+                candidates.append(miniature.get("downloadHref"))
+
         if isinstance(images_data, list):
             for image_item in images_data:
-                item = image_item or {}
-                meta = item.get("meta") or {}
-                miniature = item.get("miniature") or {}
-                candidates.extend(
-                    [
-                        meta.get("downloadHref") or "",
-                        miniature.get("downloadHref") or "",
-                        meta.get("href") or "",
-                    ]
-                )
+                add_original_then_miniature(image_item)
         else:
             rows = images_data.get("rows") or []
             for image_row in rows:
-                row_item = image_row or {}
-                meta = row_item.get("meta") or {}
-                miniature = row_item.get("miniature") or {}
-                candidates.extend(
-                    [
-                        meta.get("downloadHref") or "",
-                        miniature.get("downloadHref") or "",
-                        meta.get("href") or "",
-                    ]
-                )
+                add_original_then_miniature(image_row)
 
             images_meta = images_data.get("meta") or {}
             if images_meta:
@@ -502,15 +547,7 @@ def product_image_proxy(request, product_id):
                 except Exception:
                     fetched_rows = []
                 for fetched in fetched_rows:
-                    meta = (fetched or {}).get("meta") or {}
-                    miniature = (fetched or {}).get("miniature") or {}
-                    candidates.extend(
-                        [
-                            meta.get("downloadHref") or "",
-                            miniature.get("downloadHref") or "",
-                            meta.get("href") or "",
-                        ]
-                    )
+                    add_original_then_miniature(fetched)
 
         uniq = []
         seen = set()
@@ -523,17 +560,37 @@ def product_image_proxy(request, product_id):
             uniq.append(url)
         return uniq
 
+    def _row_to_image_candidates(row):
+        """Кандидаты из строки ассортимента; для варианта — подгружаем товар по product.meta.href."""
+        candidates = _extract_image_url_candidates(row)
+        if not candidates and row.get("product"):
+            product_meta = (row.get("product") or {}).get("meta") or {}
+            product_href = product_meta.get("href")
+            if product_href:
+                try:
+                    product_entity = client.get_entity_by_href(product_href, expand="images")
+                    candidates = _extract_image_url_candidates(product_entity)
+                except Exception:
+                    pass
+        if not candidates and row.get("meta", {}).get("href"):
+            try:
+                entity = client.get_entity_by_href(row["meta"]["href"], expand="images")
+                candidates = _extract_image_url_candidates(entity)
+            except Exception:
+                pass
+        return candidates
+
     try:
         client = MoySkladClient()
-    except MoySkladConfigError as exc:
-        return Response({"detail": str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+    except MoySkladConfigError:
+        return _placeholder_or_debug(request, "moysklad_not_configured")
 
     def _refresh_image_url_and_download(current_url, reason_detail=""):
         if not product.moysklad_id:
             return None
         try:
             row = client.get_assortment_item(product.moysklad_id)
-            candidates = _extract_image_url_candidates(row)
+            candidates = _row_to_image_candidates(row)
             if not candidates:
                 fresh_image_url = _extract_image_url(
                     row,
@@ -557,32 +614,37 @@ def product_image_proxy(request, product_id):
             return None
 
     # Устаревшие записи могли сохранить meta.href вместо downloadHref.
-    # Такие URL часто не являются бинарным download endpoint.
-    if "download" not in (product.external_image_url or "").lower():
-        refreshed = _refresh_image_url_and_download(product.external_image_url, "non-download URL")
+    # Сначала пробуем взять актуальную ссылку из API (работает с истёкшими URL).
+    if product.moysklad_id:
+        refreshed = _refresh_image_url_and_download(
+            product.external_image_url or "", "initial fetch"
+        )
         if refreshed is not None:
             return refreshed
-
-    try:
-        payload, content_type = client.download_binary(product.external_image_url)
-        return _image_response(payload, content_type)
-    except MoySkladError as exc:
-        detail = str(exc)
-        # downloadHref у МойСклад может стать невалидным (например, после ротации/истечения),
-        # либо ссылкой окажется не "скачиваемый" endpoint (HTTP 415).
-        # Пытаемся один раз обновить ссылку из актуального assortment и повторить скачивание.
-        can_refresh_url = (
-            bool(product.moysklad_id)
-            and any(code in detail for code in ("HTTP 403", "HTTP 404", "HTTP 410", "HTTP 415"))
-        )
-        if can_refresh_url:
+        # Refresh не вернул картинку — пробуем сохранённую ссылку
+    last_error = None
+    for attempt in range(2):  # две попытки на случай временного сбоя (таймаут, сеть)
+        try:
+            payload, content_type = client.download_binary(product.external_image_url)
+            return _image_response(payload, content_type)
+        except MoySkladError as exc:
+            last_error = exc
+            if attempt == 0:
+                time.sleep(0.5)
+                continue
+        break
+    if last_error:
+        detail = str(last_error)
+        # При любой ошибке скачивания пробуем взять свежую ссылку из API (истёкшие/неверные URL).
+        if product.moysklad_id:
             refreshed = _refresh_image_url_and_download(product.external_image_url, detail)
             if refreshed is not None:
                 return refreshed
-
-        if "HTTP 404" in detail:
-            return Response({"detail": "Изображение не найдено."}, status=status.HTTP_404_NOT_FOUND)
-        return Response({"detail": detail}, status=status.HTTP_502_BAD_GATEWAY)
+        reason = "download_failed"
+        if detail:
+            sanitized = (detail.replace("\r", " ").replace("\n", " ").strip())[:80]
+            reason = f"{reason}: {sanitized}"
+        return _placeholder_or_debug(request, reason)
 
 
 @api_view(['GET'])
