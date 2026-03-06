@@ -315,6 +315,8 @@ def sync_site_products(force=False, progress_callback=None):
         "processed_rows": 0,
         "prepared_rows": 0,
         "filtered_out": 0,
+        "skipped_no_id_or_name": 0,
+        "skipped_zero_price": 0,
         "created": 0,
         "updated": 0,
         "deleted": 0,
@@ -465,6 +467,7 @@ def sync_site_products(force=False, progress_callback=None):
                 external_id = row.get("id")
                 name = (row.get("name") or "").strip()
                 if not external_id or not name:
+                    stats["skipped_no_id_or_name"] += 1
                     continue
                 max_name_len = Product._meta.get_field("name").max_length
                 if len(name) > max_name_len:
@@ -472,6 +475,7 @@ def sync_site_products(force=False, progress_callback=None):
 
                 product_price = _extract_price(row)
                 if product_price <= 0:
+                    stats["skipped_zero_price"] += 1
                     continue
 
                 prepared_rows.append(
@@ -552,6 +556,7 @@ def sync_site_products(force=False, progress_callback=None):
             _progress(
                 f"Страница {stats['processed_pages']}: получено {len(rows)}, "
                 f"к загрузке {len(prepared_rows)}, отфильтровано {stats['filtered_out']}, "
+                f"без id/названия {stats['skipped_no_id_or_name']}, нулевая цена {stats['skipped_zero_price']}, "
                 f"создано {stats['created']}, обновлено {stats['updated']}."
             )
             if (
@@ -581,8 +586,9 @@ def sync_site_products(force=False, progress_callback=None):
         _progress(
             "Синк завершен: "
             f"страниц {stats['processed_pages']}, строк {stats['processed_rows']}, "
-            f"подготовлено {stats['prepared_rows']}, отфильтровано {stats['filtered_out']}, created {stats['created']}, "
-            f"обновлено {stats['updated']}, удалено {stats['deleted']}."
+            f"подготовлено {stats['prepared_rows']}, отфильтровано {stats['filtered_out']}, "
+            f"пропущено без id/названия {stats['skipped_no_id_or_name']}, с нулевой ценой {stats['skipped_zero_price']}, "
+            f"created {stats['created']}, обновлено {stats['updated']}, удалено {stats['deleted']}."
         )
         if stats["prepared_rows"] == 0:
             _progress(
