@@ -454,6 +454,9 @@ def sync_site_products(force=False, progress_callback=None):
                 name = (row.get("name") or "").strip()
                 if not external_id or not name:
                     continue
+                max_name_len = Product._meta.get_field("name").max_length
+                if len(name) > max_name_len:
+                    name = name[: max_name_len - 3] + "..."
 
                 product_price = _extract_price(row)
                 if product_price <= 0:
