@@ -358,9 +358,18 @@ def sync_site_products(force=False, progress_callback=None):
                 _progress(f"Папка '{category_name}' не найдена в дереве папок.")
             else:
                 _progress(f"Найдено {len(allowed_folder_ids)} папок для фильтрации.")
-                if strict_category_only and resolved_target_folder_id:
+                # Фильтр productFolder=ID возвращает только товары НЕПОСРЕДСТВЕННО в этой папке,
+                # без подпапок. Поэтому используем его только когда подпапок нет (одна папка).
+                if strict_category_only and resolved_target_folder_id and len(allowed_folder_ids) == 1:
                     assortment_filter_expr = f"productFolder=https://api.moysklad.ru/api/remap/1.2/entity/productfolder/{resolved_target_folder_id}"
-                    _progress("Включен серверный фильтр assortment по productFolder целевой категории.")
+                    _progress("Включен серверный фильтр assortment по productFolder (одна папка, без подпапок).")
+                elif strict_category_only and len(allowed_folder_ids) > 1:
+                    _progress(
+                        "Папка категории содержит подпапки: серверный фильтр по productFolder не используем, "
+                        "чтобы не терять товары из подпапок. Фильтрация по списку папок (включая вложенные)."
+                    )
+                    # Не останавливаться по пустым страницам — выборка по search может идти вперемешку.
+                    fail_fast_empty_pages = 0
                 if (
                     relax_folder_filter
                     and use_search_filter
