@@ -303,7 +303,7 @@ def sync_site_products(force=False, progress_callback=None):
     if strict_category_only:
         relax_folder_filter = False
         _progress("Строгий режим категории включен: товары берутся только из найденных папок категории.")
-    max_pages = int(getattr(settings, "MOYSKLAD_SYNC_MAX_PAGES", 200))
+    max_pages = int(getattr(settings, "MOYSKLAD_SYNC_MAX_PAGES", 500))
     fail_fast_empty_pages = int(getattr(settings, "MOYSKLAD_FAIL_FAST_EMPTY_PAGES", 5))
     fail_fast_empty_pages = max(0, fail_fast_empty_pages)
     allowed_folder_ids = set()
@@ -395,7 +395,10 @@ def sync_site_products(force=False, progress_callback=None):
 
         while True:
             if stats["processed_pages"] >= max_pages:
-                _progress(f"Достигнут лимит страниц ({max_pages}), прерываем синк.")
+                _progress(
+                    f"Достигнут лимит страниц ({max_pages}), прерываем синк. "
+                    f"Чтобы подгрузить все товары, увеличьте MOYSKLAD_SYNC_MAX_PAGES в .env (сейчас строк: {stats['processed_rows']}, подготовлено: {stats['prepared_rows']})."
+                )
                 break
 
             payload = client.get_assortment(
