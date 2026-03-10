@@ -104,7 +104,12 @@ const Header = () => {
       // Подставляем выбранные категории и цену из контекста (даже если не нажали «Применить»)
       if (isOnCatalogPage && catalogFilters) {
         params.delete('category');
-        (catalogFilters.selectedCategories || []).forEach((slug) => params.append('category', slug));
+        params.delete('subcategory');
+        params.delete('parent');
+        (catalogFilters.selectedCategories || []).forEach((c) => {
+          if (/^\d$/.test(c)) params.append('parent', c);
+          else params.append('subcategory', c);
+        });
         if (catalogFilters.priceMin) params.set('price_min', catalogFilters.priceMin);
         else params.delete('price_min');
         if (catalogFilters.priceMax) params.set('price_max', catalogFilters.priceMax);
@@ -162,7 +167,12 @@ const Header = () => {
     params.delete('q');
     if (catalogFilters) {
       params.delete('category');
-      (catalogFilters.selectedCategories || []).forEach((slug) => params.append('category', slug));
+      params.delete('subcategory');
+      params.delete('parent');
+      (catalogFilters.selectedCategories || []).forEach((c) => {
+        if (/^\d$/.test(c)) params.append('parent', c);
+        else params.append('subcategory', c);
+      });
       if (catalogFilters.priceMin) params.set('price_min', catalogFilters.priceMin);
       else params.delete('price_min');
       if (catalogFilters.priceMax) params.set('price_max', catalogFilters.priceMax);

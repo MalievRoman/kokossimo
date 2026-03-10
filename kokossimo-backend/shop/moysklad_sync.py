@@ -9,6 +9,7 @@ from django.utils import timezone
 
 from .models import Category, Product
 from .moysklad import MoySkladClient
+from .openai_categorize import enrich_product, needs_description, needs_category
 
 
 _last_sync_at = None
@@ -268,6 +269,10 @@ def sync_site_products(force=False, progress_callback=None):
             "created": 0,
             "updated": 0,
             "deleted": 0,
+            "categorized": 0,
+            "categorize_skipped": 0,
+            "descriptions_generated": 0,
+            "descriptions_skipped": 0,
         }
     _last_sync_attempt_at = timezone.now()
 
@@ -325,6 +330,10 @@ def sync_site_products(force=False, progress_callback=None):
         "sample_folder_names": [],
         "sample_folder_ids": [],
         "sample_product_folder_payloads": [],
+        "categorized": 0,
+        "categorize_skipped": 0,
+        "descriptions_generated": 0,
+        "descriptions_skipped": 0,
     }
 
     try:
@@ -581,6 +590,58 @@ def sync_site_products(force=False, progress_callback=None):
             stats["deleted"] = int(deleted_count)
             _progress(f"Удалено устаревших товаров: {stats['deleted']}.")
 
+        # Один вызов OpenAI на товар: сначала описание, затем категория
+        if getattr(settings, "OPENAI_CATEGORIZE_ENABLED", True) and getattr(settings, "OPENAI_API_KEY", ""):
+            candidates = list(
+                Product.objects.filter(category=category)
+                .select_related("product_subcategory")
+                .order_by("id")
+            )
+            to_enrich = [p for p in candidates if needs_category(p) or needs_description(p)]
+            if to_enrich:
+                _progress(
+                    f"Обогащение через OpenAI (описание + категория): товаров {len(to_enrich)}."
+                )
+            for idx, product in enumerate(to_enrich, start=1):
+                need_cat = needs_category(product)
+                need_desc = needs_description(product)
+                _progress(
+                    f"[{idx}/{len(to_enrich)}] Товар ID={product.id} '{product.name}': "
+                    f"нужна_категория={need_cat}, нужно_описание={need_desc}."
+                )
+                ok, cat_updated, desc_updated = enrich_product(product)
+                if ok:
+                    _progress(
+                        f"[{idx}/{len(to_enrich)}] Результат: "
+                        f"категория_обновлена={cat_updated}, описание_обновлено={desc_updated}."
+                    )
+                    if cat_updated:
+                        stats["categorized"] += 1
+                    if desc_updated:
+                        stats["descriptions_generated"] += 1
+                else:
+                    _progress(
+                        f"[{idx}/{len(to_enrich)}] Результат: обогащение не удалось."
+                    )
+                    if need_cat:
+                        stats["categorize_skipped"] += 1
+                    if need_desc:
+                        stats["descriptions_skipped"] += 1
+            if to_enrich:
+                _progress(
+                    f"Категоризовано {stats['categorized']}, описаний сгенерировано {stats['descriptions_generated']}, не удалось {stats['categorize_skipped']}."
+                )
+        else:
+            uncategorized_count = Product.objects.filter(
+                category=category, product_subcategory__isnull=True
+            ).count()
+            if uncategorized_count:
+                stats["categorize_skipped"] = uncategorized_count
+                _progress(
+                    "OpenAI отключен (OPENAI_CATEGORIZE_ENABLED или OPENAI_API_KEY). "
+                    f"Товаров без подкатегории: {uncategorized_count}."
+                )
+
         _last_sync_at = timezone.now()
         _last_sync_failed = False
         _progress(
@@ -588,7 +649,8 @@ def sync_site_products(force=False, progress_callback=None):
             f"страниц {stats['processed_pages']}, строк {stats['processed_rows']}, "
             f"подготовлено {stats['prepared_rows']}, отфильтровано {stats['filtered_out']}, "
             f"пропущено без id/названия {stats['skipped_no_id_or_name']}, с нулевой ценой {stats['skipped_zero_price']}, "
-            f"created {stats['created']}, обновлено {stats['updated']}, удалено {stats['deleted']}."
+            f"создано {stats['created']}, обновлено {stats['updated']}, удалено {stats['deleted']}, "
+            f"категоризовано {stats['categorized']}, описаний сгенерировано {stats['descriptions_generated']}."
         )
         if stats["prepared_rows"] == 0:
             _progress(

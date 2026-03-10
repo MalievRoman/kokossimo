@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import ProductCard from '../components/product/ProductCard';
-import { getProducts, getCategories } from '../services/api';
+import { getProducts, getProductSubcategoriesTree } from '../services/api';
 import { useCatalogFilters } from '../context/CatalogFiltersContext';
 import './CatalogPage.css';
 
@@ -16,8 +16,10 @@ const CatalogPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [categories, setCategories] = useState([]);
-  const [selectedCategories, setSelectedCategories] = useState([]);
+  const [categoryTree, setCategoryTree] = useState([]);
+  const [selectedParents, setSelectedParents] = useState([]);
+  const [selectedSubcategories, setSelectedSubcategories] = useState([]);
+  const [expandedParents, setExpandedParents] = useState(new Set());
   const [priceFrom, setPriceFrom] = useState('');
   const [priceTo, setPriceTo] = useState('');
   const [priceError, setPriceError] = useState('');
@@ -28,43 +30,49 @@ const CatalogPage = () => {
   const productsRequestIdRef = useRef(0);
   const catalogFiltersContext = useCatalogFilters();
 
-  // Синхронизация выбранных фильтров в контекст (чтобы поиск в шапке их сохранял)
+  // Синхронизация выбранных фильтров в контекст (без catalogFiltersContext в deps — иначе цикл ре-рендеров)
   useEffect(() => {
     if (catalogFiltersContext) {
-      catalogFiltersContext.setSelectedCategories(selectedCategories);
+      catalogFiltersContext.setSelectedCategories([...selectedParents, ...selectedSubcategories]);
       catalogFiltersContext.setPriceMin(priceFrom);
       catalogFiltersContext.setPriceMax(priceTo);
     }
-  }, [selectedCategories, priceFrom, priceTo, catalogFiltersContext]);
+  }, [selectedParents, selectedSubcategories, priceFrom, priceTo]);
 
-  // Загрузка категорий
+  // Загрузка дерева категорий (большие категории + подкатегории)
   useEffect(() => {
-    getCategories()
+    getProductSubcategoriesTree()
       .then(response => {
         const data = Array.isArray(response.data) ? response.data : (response.data.results || []);
-        setCategories(data);
+        setCategoryTree(data);
       })
       .catch(() => {
-        setCategories([]);
+        setCategoryTree([]);
       });
   }, []);
 
-  // Синхронизация выбранных категорий с URL при загрузке страницы
+  // Синхронизация выбора с URL
   useEffect(() => {
-    const categoryFiltersFromUrl = searchParams.getAll('category');
+    const parentsFromUrl = searchParams.getAll('parent');
+    const subcategoriesFromUrl = searchParams.getAll('subcategory');
     const categoryFilter = searchParams.get('filter');
-    
-    // Если есть категории в URL, используем их
-    if (categoryFiltersFromUrl.length > 0) {
-      setSelectedCategories(categoryFiltersFromUrl);
-    } 
-    // Поддержка старого формата с параметром filter (для обратной совместимости)
-    else if (categoryFilter && categoryFilter !== 'bestsellers' && categoryFilter !== 'new') {
-      setSelectedCategories([categoryFilter]);
-    }
-    // Если нет категорий в URL, очищаем выбранные категории
-    else if (!categoryFilter) {
-      setSelectedCategories([]);
+    if (parentsFromUrl.length > 0 || subcategoriesFromUrl.length > 0) {
+      setSelectedParents(parentsFromUrl);
+      setSelectedSubcategories(subcategoriesFromUrl);
+    } else if (categoryFilter && categoryFilter !== 'bestsellers' && categoryFilter !== 'new' && categoryFilter !== 'site-kokossimo') {
+      if (/^\d+\.\d+$/.test(categoryFilter)) {
+        setSelectedSubcategories([categoryFilter]);
+        setSelectedParents([]);
+      } else if (/^\d$/.test(categoryFilter)) {
+        setSelectedParents([categoryFilter]);
+        setSelectedSubcategories([]);
+      } else {
+        setSelectedSubcategories([categoryFilter]);
+        setSelectedParents([]);
+      }
+    } else {
+      setSelectedParents([]);
+      setSelectedSubcategories([]);
     }
   }, [searchParams]);
 
@@ -127,7 +135,7 @@ const CatalogPage = () => {
   // При изменении фильтров/поиска/сортировки заново грузим с первой страницы.
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchParams, selectedCategories, sortBy]);
+  }, [searchParams, selectedParents, selectedSubcategories, sortBy]);
 
   // Загрузка товаров
   useEffect(() => {
@@ -144,40 +152,40 @@ const CatalogPage = () => {
     const minPrice = sanitizeNonNegativePrice(searchParams.get('price_min'));
     const maxPrice = sanitizeNonNegativePrice(searchParams.get('price_max'));
     
-    // Приоритет: category из URL -> выбранные в UI -> legacy filter=<slug>
-    const categoriesFromUrl = searchParams.getAll('category');
+    const parentsFromUrl = searchParams.getAll('parent');
+    const subcategoriesFromUrl = searchParams.getAll('subcategory');
     const legacyCategoryFromFilter =
-      categoryFilter && categoryFilter !== 'bestsellers' && categoryFilter !== 'new'
+      categoryFilter && categoryFilter !== 'bestsellers' && categoryFilter !== 'new' && categoryFilter !== 'site-kokossimo'
         ? [categoryFilter]
         : [];
-    const categoriesToFilter =
-      categoriesFromUrl.length > 0
-        ? categoriesFromUrl
-        : selectedCategories.length > 0
-          ? selectedCategories
-          : legacyCategoryFromFilter;
+    const parentsToFilter = parentsFromUrl.length > 0 ? parentsFromUrl : selectedParents;
+    const subcategoriesToFilter =
+      subcategoriesFromUrl.length > 0
+        ? subcategoriesFromUrl
+        : selectedSubcategories.length > 0
+          ? selectedSubcategories
+          : legacyCategoryFromFilter.filter(c => /^\d+\.\d+$/.test(c));
+    const legacyParents = legacyCategoryFromFilter.filter(c => /^\d$/.test(c));
+    const parentsFinal = parentsFromUrl.length > 0 ? parentsFromUrl : (selectedParents.length > 0 ? selectedParents : legacyParents);
 
     const requestId = ++productsRequestIdRef.current;
     
     if (searchQuery) {
-      // При поиске также передаем фильтры категорий в API
       params.page = undefined;
-      if (categoriesToFilter.length > 0) {
-        params.category = categoriesToFilter;
-      } else if (categoryFilter && categoryFilter !== 'bestsellers' && categoryFilter !== 'new') {
-        // Поддержка /catalog?filter=<slug> на первом рендере
-        params.category = [categoryFilter];
-      }
+      if (parentsFinal.length > 0) params.parent = parentsFinal;
+      if (subcategoriesToFilter.length > 0) params.subcategory = subcategoriesToFilter;
     } else if (categoryFilter === 'bestsellers') {
       params.is_bestseller = 'true';
     } else if (categoryFilter === 'new') {
       params.is_new = 'true';
-    } else if (categoriesToFilter.length > 0) {
-      // Используем категории из URL параметра category
-      params.category = categoriesToFilter;
-    } else if (categoryFilter) {
-      // Поддержка старого формата ?filter=<slug>, пока selectedCategories не синхронизировался
-      params.category = [categoryFilter];
+    } else if (parentsFinal.length > 0 || subcategoriesToFilter.length > 0) {
+      if (parentsFinal.length > 0) params.parent = parentsFinal;
+      if (subcategoriesToFilter.length > 0) params.subcategory = subcategoriesToFilter;
+    } else if (legacyCategoryFromFilter.length > 0) {
+      const p = legacyCategoryFromFilter.filter(c => /^\d$/.test(c));
+      const s = legacyCategoryFromFilter.filter(c => /^\d+\.\d+$/.test(c));
+      if (p.length) params.parent = p;
+      if (s.length) params.subcategory = s;
     }
     if (minPrice) params.price_min = minPrice;
     if (maxPrice) params.price_max = maxPrice;
@@ -208,10 +216,15 @@ const CatalogPage = () => {
             .map(({ item }) => item);
           
           // Применяем фильтр по категориям к результатам поиска
-          if (categoriesToFilter.length > 0) {
+          const parentSet = new Set(parentsFinal);
+          const subSet = new Set(subcategoriesToFilter);
+          if (parentSet.size > 0 || subSet.size > 0) {
             data = data.filter(item => {
-              // Проверяем, что товар принадлежит хотя бы одной из выбранных категорий
-              return item.category_slug && categoriesToFilter.includes(item.category_slug);
+              if (!item.product_subcategory_code) return false;
+              const code = item.product_subcategory_code;
+              if (subSet.has(code)) return true;
+              const p = code.split('.')[0];
+              return parentSet.has(p);
             });
           }
         }
@@ -263,21 +276,51 @@ const CatalogPage = () => {
         setLoading(false);
         setLoadingMore(false);
       });
-  }, [searchParams, selectedCategories, sortBy, currentPage]);
+  }, [searchParams, selectedSubcategories, sortBy, currentPage]);
 
-  const handleCategoryChange = (categorySlug) => {
-    const nextSelectedCategories = selectedCategories.includes(categorySlug)
-      ? selectedCategories.filter((slug) => slug !== categorySlug)
-      : [...selectedCategories, categorySlug];
-
-    setSelectedCategories(nextSelectedCategories);
-
+  const handleParentChange = (parentCode) => {
+    const next = selectedParents.includes(parentCode)
+      ? selectedParents.filter((c) => c !== parentCode)
+      : [...selectedParents, parentCode];
+    setSelectedParents(next);
     const nextParams = new URLSearchParams(searchParams);
-    // При ручном выборе категории убираем "витринные" фильтры bestsellers/new
     nextParams.delete('filter');
-    nextParams.delete('category');
-    nextSelectedCategories.forEach((slug) => nextParams.append('category', slug));
+    nextParams.delete('parent');
+    nextParams.delete('subcategory');
+    next.forEach((c) => nextParams.append('parent', c));
+    selectedSubcategories.forEach((c) => nextParams.append('subcategory', c));
     setSearchParams(nextParams, { replace: true });
+  };
+
+  const handleSubcategoryChange = (code) => {
+    const next = selectedSubcategories.includes(code)
+      ? selectedSubcategories.filter((c) => c !== code)
+      : [...selectedSubcategories, code];
+    setSelectedSubcategories(next);
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete('filter');
+    nextParams.delete('parent');
+    nextParams.delete('subcategory');
+    selectedParents.forEach((c) => nextParams.append('parent', c));
+    next.forEach((c) => nextParams.append('subcategory', c));
+    setSearchParams(nextParams, { replace: true });
+  };
+
+  const toggleExpanded = (parentCode) => {
+    setExpandedParents((prev) => {
+      const next = new Set(prev);
+      if (next.has(parentCode)) next.delete(parentCode);
+      else next.add(parentCode);
+      return next;
+    });
+  };
+
+  const removeFilter = (code) => {
+    if (/^\d$/.test(code)) {
+      handleParentChange(code);
+    } else {
+      handleSubcategoryChange(code);
+    }
   };
 
   const applyFilters = () => {
@@ -297,9 +340,8 @@ const CatalogPage = () => {
       setPriceTo('0');
     }
     const nextParams = {};
-    if (selectedCategories.length > 0) {
-      nextParams.category = selectedCategories;
-    }
+    if (selectedParents.length > 0) nextParams.parent = selectedParents;
+    if (selectedSubcategories.length > 0) nextParams.subcategory = selectedSubcategories;
     if (fromVal) nextParams.price_min = fromVal;
     if (toVal) nextParams.price_max = toVal;
     if (searchParams.get('q')) {
@@ -309,7 +351,8 @@ const CatalogPage = () => {
   };
 
   const resetFilters = () => {
-    setSelectedCategories([]);
+    setSelectedParents([]);
+    setSelectedSubcategories([]);
     setPriceFrom('');
     setPriceTo('');
     setPriceError('');
@@ -358,9 +401,8 @@ const CatalogPage = () => {
     setPriceTo('');
     setPriceError('');
     const nextParams = {};
-    if (selectedCategories.length > 0) {
-      nextParams.category = selectedCategories;
-    }
+    if (selectedParents.length > 0) nextParams.parent = selectedParents;
+    if (selectedSubcategories.length > 0) nextParams.subcategory = selectedSubcategories;
     if (searchParams.get('q')) {
       nextParams.q = searchParams.get('q');
     }
@@ -401,20 +443,47 @@ const CatalogPage = () => {
           <aside className="catalog-sidebar">
             <section className="catalog-sidebar-section">
               <h2 className="catalog-sidebar-title">КАТЕГОРИИ</h2>
-              {categories.length === 0 ? (
+              {categoryTree.length === 0 ? (
                 <div className="catalog-filter-empty">Категории не найдены</div>
               ) : (
-                <ul className="catalog-filter-list">
-                  {categories.map((category) => (
-                    <li key={category.id}>
-                      <label>
-                        <input
-                          type="checkbox"
-                          checked={selectedCategories.includes(category.slug)}
-                          onChange={() => handleCategoryChange(category.slug)}
-                        />
-                        {category.name}
-                      </label>
+                <ul className="catalog-filter-list catalog-filter-tree">
+                  {categoryTree.map((parent) => (
+                    <li key={parent.code} className="catalog-filter-tree-parent">
+                      <div className="catalog-filter-tree-parent-row">
+                        <label className="catalog-filter-tree-parent-label">
+                          <input
+                            type="checkbox"
+                            checked={selectedParents.includes(parent.code)}
+                            onChange={() => handleParentChange(parent.code)}
+                          />
+                          {parent.name}
+                        </label>
+                        <button
+                          type="button"
+                          className={`catalog-filter-tree-toggle ${expandedParents.has(parent.code) ? 'is-open' : ''}`}
+                          onClick={() => toggleExpanded(parent.code)}
+                          aria-expanded={expandedParents.has(parent.code)}
+                          aria-label={expandedParents.has(parent.code) ? 'Свернуть подкатегории' : 'Показать подкатегории'}
+                        >
+                          ▼
+                        </button>
+                      </div>
+                      {expandedParents.has(parent.code) && parent.children && parent.children.length > 0 && (
+                        <ul className="catalog-filter-tree-children">
+                          {parent.children.map((child) => (
+                            <li key={child.code}>
+                              <label>
+                                <input
+                                  type="checkbox"
+                                  checked={selectedSubcategories.includes(child.code)}
+                                  onChange={() => handleSubcategoryChange(child.code)}
+                                />
+                                {child.name}
+                              </label>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -477,19 +546,44 @@ const CatalogPage = () => {
               >
                 <summary className="catalog-mobile-filter__summary">КАТЕГОРИИ</summary>
                 <div className="catalog-mobile-filter__content">
-                  {categories.length === 0 ? (
+                  {categoryTree.length === 0 ? (
                     <div className="catalog-filter-empty">Категории не найдены</div>
                   ) : (
-                    <ul className="catalog-filter-list catalog-mobile-filter-list">
-                      {categories.map((category) => (
-                        <li key={`mobile-${category.id}`}>
-                          <button
-                            type="button"
-                            className={`catalog-mobile-category-item ${selectedCategories.includes(category.slug) ? 'is-active' : ''}`}
-                            onClick={() => handleCategoryChange(category.slug)}
-                          >
-                            {category.name}
-                          </button>
+                    <ul className="catalog-filter-list catalog-mobile-filter-list catalog-filter-tree">
+                      {categoryTree.map((parent) => (
+                        <li key={`mobile-${parent.code}`} className="catalog-filter-tree-parent">
+                          <div className="catalog-filter-tree-parent-row">
+                            <button
+                              type="button"
+                              className={`catalog-mobile-category-item ${selectedParents.includes(parent.code) ? 'is-active' : ''}`}
+                              onClick={() => handleParentChange(parent.code)}
+                            >
+                              {parent.name}
+                            </button>
+                            <button
+                              type="button"
+                              className={`catalog-filter-tree-toggle ${expandedParents.has(parent.code) ? 'is-open' : ''}`}
+                              onClick={() => toggleExpanded(parent.code)}
+                              aria-label={expandedParents.has(parent.code) ? 'Свернуть' : 'Подкатегории'}
+                            >
+                              ▼
+                            </button>
+                          </div>
+                          {expandedParents.has(parent.code) && parent.children && parent.children.length > 0 && (
+                            <ul className="catalog-filter-tree-children">
+                              {parent.children.map((child) => (
+                                <li key={child.code}>
+                                  <button
+                                    type="button"
+                                    className={`catalog-mobile-category-item ${selectedSubcategories.includes(child.code) ? 'is-active' : ''}`}
+                                    onClick={() => handleSubcategoryChange(child.code)}
+                                  >
+                                    {child.name}
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
                         </li>
                       ))}
                     </ul>
@@ -573,7 +667,7 @@ const CatalogPage = () => {
                 )}
               </div>
 
-              {(selectedCategories.length > 0 || priceFrom || priceTo) && (
+              {(selectedParents.length > 0 || selectedSubcategories.length > 0 || priceFrom || priceTo) && (
                 <div className="catalog-mobile-selected">
                   {(priceFrom || priceTo) && (
                     <button
@@ -584,16 +678,36 @@ const CatalogPage = () => {
                       {`ЦЕНА: ${priceFrom || '0'}–${priceTo || '∞'} ×`}
                     </button>
                   )}
-                  {selectedCategories.map((slug) => {
-                    const category = categories.find((item) => item.slug === slug);
+                  {selectedParents.map((code) => {
+                    const parent = categoryTree.find((p) => p.code === code);
                     return (
                       <button
-                        key={`mobile-tag-${slug}`}
+                        key={`mobile-tag-parent-${code}`}
                         type="button"
                         className="catalog-mobile-selected-tag"
-                        onClick={() => handleCategoryChange(slug)}
+                        onClick={() => removeFilter(code)}
                       >
-                        {category?.name || slug} ×
+                        {parent?.name || code} ×
+                      </button>
+                    );
+                  })}
+                  {selectedSubcategories.map((code) => {
+                    let name = code;
+                    for (const p of categoryTree) {
+                      const child = p.children?.find((c) => c.code === code);
+                      if (child) {
+                        name = child.name;
+                        break;
+                      }
+                    }
+                    return (
+                      <button
+                        key={`mobile-tag-${code}`}
+                        type="button"
+                        className="catalog-mobile-selected-tag"
+                        onClick={() => removeFilter(code)}
+                      >
+                        {name} ×
                       </button>
                     );
                   })}
@@ -603,16 +717,36 @@ const CatalogPage = () => {
 
             <div className="catalog-controls">
               <div className="catalog-controls-left">
-                {selectedCategories.map((slug) => {
-                  const category = categories.find((item) => item.slug === slug);
+                {selectedParents.map((code) => {
+                  const parent = categoryTree.find((p) => p.code === code);
                   return (
                     <button
-                      key={slug}
+                      key={`parent-${code}`}
                       type="button"
                       className="catalog-tag"
-                      onClick={() => handleCategoryChange(slug)}
+                      onClick={() => removeFilter(code)}
                     >
-                      {category?.name || slug} ×
+                      {parent?.name || code} ×
+                    </button>
+                  );
+                })}
+                {selectedSubcategories.map((code) => {
+                  let name = code;
+                  for (const p of categoryTree) {
+                    const child = p.children?.find((c) => c.code === code);
+                    if (child) {
+                      name = child.name;
+                      break;
+                    }
+                  }
+                  return (
+                    <button
+                      key={code}
+                      type="button"
+                      className="catalog-tag"
+                      onClick={() => removeFilter(code)}
+                    >
+                      {name} ×
                     </button>
                   );
                 })}

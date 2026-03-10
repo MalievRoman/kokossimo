@@ -5,11 +5,7 @@ import { useFavorites } from '../../context/FavoritesContext';
 import { resolveMediaUrl } from '../../utils/media';
 
 // Карточка товара в верстке под koko_website (main_page.html).
-// Важные моменты:
-// - разметка и классы совпадают с .product-card из koko-main.css;
-// - кнопка "В КОРЗИНУ" видна сначала одна;
-// - после клика вместо неё показываются контролы количества (- / +);
-// - цвета, размеры и отступы полностью берутся из koko-main.css.
+// Разметка и классы совпадают с .product-card из koko-main.css.
 
 const ProductCard = ({ product }) => {
   if (!product) return null;
@@ -17,11 +13,9 @@ const ProductCard = ({ product }) => {
   const { addToCart, updateQuantity, removeFromCart, cartItems } = useCart();
   const { toggleFavorite, isFavorite } = useFavorites();
 
-  // Текущее количество товара в корзине
   const cartItem = cartItems.find((item) => item.id === product.id);
   const quantity = cartItem?.quantity || 0;
 
-  // Флаги и данные из API
   const isNew = Boolean(product.is_new ?? product.isNew);
   const discount = Number.isFinite(Number(product.discount))
     ? Number(product.discount)
@@ -34,7 +28,6 @@ const ProductCard = ({ product }) => {
   };
   const roundedRating = Math.round(ratingData.avg || 0);
 
-  // Цена
   let price = 0;
   try {
     if (typeof product.price === 'string') {
@@ -42,32 +35,24 @@ const ProductCard = ({ product }) => {
     } else if (typeof product.price === 'number') {
       price = product.price;
     }
-    if (!Number.isFinite(price)) {
-      price = 0;
-    }
+    if (!Number.isFinite(price)) price = 0;
   } catch {
     price = 0;
   }
 
-  // Старую цену восстанавливаем из скидки (если есть)
   let oldPrice = null;
   if (price > 0 && discount > 0 && discount < 100) {
     oldPrice = Math.round(price / (1 - discount / 100));
   }
 
-  // Картинка: относительные пути дополняем адресом бэкенда
   const placeholderImage = 'https://placehold.co/400x400/F5E6D3/8B4513?text=No+Image';
   const [imageError, setImageError] = React.useState(false);
-  const imageUrl = resolveMediaUrl(
-    product.image,
-    placeholderImage
-  );
+  const imageUrl = resolveMediaUrl(product.image, placeholderImage);
   const displayImageUrl = imageError ? placeholderImage : imageUrl;
   const description = String(product.short_description ?? product.description ?? '').trim();
 
   const favorite = isFavorite(product.id);
 
-  // Обработчики корзины
   const handleAddToCart = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -83,11 +68,8 @@ const ProductCard = ({ product }) => {
   const handleDecrease = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    if (quantity <= 1) {
-      removeFromCart(product.id);
-    } else {
-      updateQuantity(product.id, quantity - 1);
-    }
+    if (quantity <= 1) removeFromCart(product.id);
+    else updateQuantity(product.id, quantity - 1);
   };
 
   const handleFavoriteClick = (e) => {
@@ -99,8 +81,9 @@ const ProductCard = ({ product }) => {
   const formatRub = (n) =>
     price > 0 ? `${Number(n).toLocaleString('ru-RU')} ₽` : 'Цена не указана';
 
-
-  const favoriteIcon = favorite ? `${import.meta.env.BASE_URL}assets/fav_pressed.svg` : `${import.meta.env.BASE_URL}assets/fav.svg`;
+  const favoriteIcon = favorite
+    ? `${import.meta.env.BASE_URL}assets/fav_pressed.svg`
+    : `${import.meta.env.BASE_URL}assets/fav.svg`;
 
   const showQtyControls = quantity > 0;
 
@@ -110,14 +93,10 @@ const ProductCard = ({ product }) => {
         {(isNew || discount > 0) && (
           <div className="product-card__badges">
             {isNew && (
-              <span className="product-card__badge product-card__badge--new">
-                новинка
-              </span>
+              <span className="product-card__badge product-card__badge--new">новинка</span>
             )}
             {discount > 0 && (
-              <span className="product-card__badge product-card__badge--discount">
-                −{discount}%
-              </span>
+              <span className="product-card__badge product-card__badge--discount">−{discount}%</span>
             )}
           </div>
         )}
@@ -180,12 +159,8 @@ const ProductCard = ({ product }) => {
           <div className="product-card__prices">
             {discount > 0 && oldPrice ? (
               <>
-                <span className="product-card__price--new">
-                  {formatRub(price)}
-                </span>
-                <span className="product-card__price--old">
-                  {formatRub(oldPrice)}
-                </span>
+                <span className="product-card__price--new">{formatRub(price)}</span>
+                <span className="product-card__price--old">{formatRub(oldPrice)}</span>
               </>
             ) : (
               <span className="product-card__price">
@@ -194,8 +169,6 @@ const ProductCard = ({ product }) => {
             )}
           </div>
 
-          {/* Кнопка + контролы количества как в оригинальном макете:
-              сначала только кнопка "В КОРЗИНУ", после клика — минус/qty/плюс */}
           <button
             type="button"
             className={`product-card__btn ${showQtyControls ? 'is-hidden' : ''}`}
