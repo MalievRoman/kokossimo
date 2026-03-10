@@ -3,7 +3,7 @@
 Русский интерфейс задаётся в config/urls.py.
 """
 from django.contrib import admin
-from .models import Category, Product, Profile, Order, OrderItem, ProductRating, Feedback
+from .models import Category, Product, ProductSubcategory, Profile, Order, OrderItem, ProductRating, Feedback
 
 
 @admin.register(Category)
@@ -18,17 +18,25 @@ class CategoryAdmin(admin.ModelAdmin):
     )
 
 
+@admin.register(ProductSubcategory)
+class ProductSubcategoryAdmin(admin.ModelAdmin):
+    list_display = ("code", "name", "parent_code")
+    list_filter = ("parent_code",)
+    search_fields = ("code", "name")
+    ordering = ("code",)
+
+
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ("name", "price", "category", "is_new", "is_bestseller", "discount", "created_at")
-    list_filter = ("category", "is_new", "is_bestseller")
+    list_display = ("name", "price", "category", "product_subcategory", "is_new", "is_bestseller", "discount", "created_at")
+    list_filter = ("category", "product_subcategory", "is_new", "is_bestseller")
     search_fields = ("name", "description")
     list_editable = ("price", "is_new", "is_bestseller", "discount")
     list_per_page = 25
     date_hierarchy = "created_at"
-    autocomplete_fields = ("category",)
+    autocomplete_fields = ("category", "product_subcategory")
     fieldsets = (
-        (None, {"fields": ("name", "category", "description", "price", "image")}),
+        (None, {"fields": ("name", "category", "product_subcategory", "description", "price", "image")}),
         ("Главная страница", {"fields": ("is_bestseller", "is_new", "discount")}),
     )
 

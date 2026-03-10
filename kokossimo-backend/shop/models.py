@@ -15,8 +15,31 @@ class Category(models.Model):
         return self.name
 
 
+class ProductSubcategory(models.Model):
+    """Подкатегория товара для каталога (напр. «Косметика для лица» → «очищение»)."""
+    code = models.CharField("Код", max_length=20, unique=True, db_index=True)  # например 1.1, 2.3
+    name = models.CharField("Название", max_length=200)
+    parent_code = models.CharField("Код родителя", max_length=20, blank=True)  # 1, 2, 3, 4 — группа
+
+    class Meta:
+        verbose_name = "Подкатегория товара"
+        verbose_name_plural = "Подкатегории товаров"
+        ordering = ["code"]
+
+    def __str__(self):
+        return f"{self.code} — {self.name}"
+
+
 class Product(models.Model):
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name="products", verbose_name="Категория")
+    product_subcategory = models.ForeignKey(
+        ProductSubcategory,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="products",
+        verbose_name="Подкатегория (тип товара)",
+    )
     moysklad_id = models.CharField("ID в МойСклад", max_length=64, blank=True, null=True, unique=True, db_index=True)
     name = models.CharField("Название товара", max_length=500)
     description = models.TextField("Описание")

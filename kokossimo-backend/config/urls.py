@@ -10,6 +10,7 @@ from rest_framework.routers import DefaultRouter
 from shop.views import (
     ProductViewSet,
     CategoryViewSet,
+    ProductSubcategoryViewSet,
     register_user,
     login_user,
     send_email_code,
@@ -76,6 +77,7 @@ def react_app_view(request):
 router = DefaultRouter()
 router.register(r'products', ProductViewSet)
 router.register(r'categories', CategoryViewSet)
+router.register(r'product-subcategories', ProductSubcategoryViewSet, basename='product-subcategory')
 
 urlpatterns = [
     path('admin/', admin.site.urls),

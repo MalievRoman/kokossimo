@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useMemo } from 'react';
 
 const CatalogFiltersContext = createContext(null);
 
@@ -9,14 +9,17 @@ export const CatalogFiltersProvider = ({ children }) => {
   const [priceMin, setPriceMin] = useState('');
   const [priceMax, setPriceMax] = useState('');
 
-  const value = {
-    selectedCategories,
-    setSelectedCategories,
-    priceMin,
-    setPriceMin,
-    priceMax,
-    setPriceMax,
-  };
+  const value = useMemo(
+    () => ({
+      selectedCategories,
+      setSelectedCategories,
+      priceMin,
+      setPriceMin,
+      priceMax,
+      setPriceMax,
+    }),
+    [selectedCategories, priceMin, priceMax]
+  );
 
   return (
     <CatalogFiltersContext.Provider value={value}>

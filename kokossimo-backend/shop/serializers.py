@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.db import transaction
-from .models import Product, Category, Profile, Order, OrderItem, ProductRating
+from .models import Product, Category, Profile, Order, OrderItem, ProductRating, ProductSubcategory
 from django.conf import settings
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -18,8 +18,18 @@ class CategorySerializer(serializers.ModelSerializer):
             return f"{settings.MEDIA_URL}{obj.image}"
         return None
 
+
+class ProductSubcategorySerializer(serializers.ModelSerializer):
+    """Для списка подкатегорий в фильтре каталога (код, название, родитель)."""
+    class Meta:
+        model = ProductSubcategory
+        fields = ['id', 'code', 'name', 'parent_code']
+
+
 class ProductSerializer(serializers.ModelSerializer):
-    category_slug = serializers.CharField(source='category.slug', read_only=True) # Чтобы фронт знал слаг категории
+    category_slug = serializers.CharField(source='category.slug', read_only=True)
+    product_subcategory_code = serializers.SerializerMethodField()
+    product_subcategory_name = serializers.SerializerMethodField()
     image = serializers.SerializerMethodField()
     rating_avg = serializers.FloatField(read_only=True)
     rating_count = serializers.IntegerField(read_only=True)
@@ -28,18 +38,20 @@ class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = [
-            'id', 
-            'name', 
-            'description', 
-            'price', 
-            'image', 
+            'id',
+            'name',
+            'description',
+            'price',
+            'image',
             'category_slug',
-            'is_bestseller', 
-            'is_new', 
+            'product_subcategory_code',
+            'product_subcategory_name',
+            'is_bestseller',
+            'is_new',
             'discount',
             'rating_avg',
             'rating_count',
-            'user_rating'
+            'user_rating',
         ]
     
     def get_image(self, obj):
@@ -53,6 +65,16 @@ class ProductSerializer(serializers.ModelSerializer):
             if request:
                 return request.build_absolute_uri(obj.image.url)
             return f"{settings.MEDIA_URL}{obj.image}"
+        return None
+
+    def get_product_subcategory_code(self, obj):
+        if obj.product_subcategory_id:
+            return obj.product_subcategory.code
+        return None
+
+    def get_product_subcategory_name(self, obj):
+        if obj.product_subcategory_id:
+            return obj.product_subcategory.name
         return None
 
     def get_user_rating(self, obj):

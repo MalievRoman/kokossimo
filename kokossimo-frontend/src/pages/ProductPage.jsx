@@ -41,7 +41,7 @@ const ProductPage = () => {
         setUserRating(response.data.user_rating ?? null);
         setRatingError('');
         window.scrollTo(0, 0);
-        
+
         setRatingsLoading(true);
         getProductRatings(response.data.id)
           .then((ratingsResponse) => {
@@ -50,12 +50,10 @@ const ProductPage = () => {
           .catch(() => setRatingsList([]))
           .finally(() => setRatingsLoading(false));
 
-        // Загружаем похожие товары из той же категории
         if (response.data.category_slug) {
           getProducts({ category: response.data.category_slug })
             .then(res => {
               const data = Array.isArray(res.data) ? res.data : (res.data.results || []);
-              // Исключаем текущий товар
               const filtered = data.filter(p => p.id !== response.data.id).slice(0, 10);
               setRelatedProducts(filtered);
             })
