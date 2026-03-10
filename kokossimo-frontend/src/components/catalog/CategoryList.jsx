@@ -1,26 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { getCategories, getProducts } from '../../services/api';
+import { getProductSubcategoriesTree, getProducts } from '../../services/api';
 import { resolveMediaUrl } from '../../utils/media';
 
-// Блок "КАТАЛОГ" под верстку из main_page.html.
-// Берёт реальные категории с бэкенда и рендерит их
-// в сетку .catalog__grid с карточками .catalog-card.
+// Блок "КАТАЛОГ" на главной: актуальные категории из дерева подкатегорий (parent 1–6).
+// Ссылки ведут в каталог с фильтром ?parent=X.
 
 const CategoryList = () => {
   const [categories, setCategories] = useState([]);
   const [categoryImages, setCategoryImages] = useState({});
 
   useEffect(() => {
-    getCategories()
+    getProductSubcategoriesTree()
       .then((response) => {
         const data = Array.isArray(response.data)
           ? response.data
           : response.data?.results || [];
-        setCategories(data.slice(0, 6)); // как и раньше: до 6 категорий
+        setCategories(data.slice(0, 6));
       })
-      .catch((error) => {
-        console.error('Ошибка загрузки категорий:', error);
+      .catch(() => {
         setCategories([]);
       });
   }, []);
@@ -31,27 +29,30 @@ const CategoryList = () => {
 
     const loadCategoryImages = async () => {
       const entries = await Promise.all(
-        categories.map(async (category) => {
+        categories.map(async (item) => {
           try {
-            const response = await getProducts({ category: category.slug, page_size: 1 });
+            const response = await getProducts({
+              parent: [item.code],
+              page_size: 1,
+            });
             const data = Array.isArray(response.data)
               ? response.data
               : response.data?.results || [];
-            const productWithImage = data.find((item) => item.image);
+            const productWithImage = data.find((p) => p.image);
             const imageUrl = productWithImage?.image
               ? resolveMediaUrl(productWithImage.image)
               : '';
-            return [category.id, imageUrl];
+            return [item.code, imageUrl];
           } catch {
-            return [category.id, ''];
+            return [item.code, ''];
           }
         })
       );
 
       if (!isActive) return;
       const nextImages = {};
-      entries.forEach(([id, url]) => {
-        if (url) nextImages[id] = url;
+      entries.forEach(([code, url]) => {
+        if (url) nextImages[code] = url;
       });
       setCategoryImages(nextImages);
     };
@@ -111,25 +112,25 @@ const CategoryList = () => {
         </div>
 
         <div className="catalog__grid">
-          {categories.map((category) => {
-            const imageUrl = category.image
-              ? resolveMediaUrl(category.image)
-              : categoryImages[category.id] || `${import.meta.env.BASE_URL}assets/beauty_elements.png`;
+          {categories.map((item) => {
+            const imageUrl =
+              categoryImages[item.code] ||
+              `${import.meta.env.BASE_URL}assets/beauty_elements.png`;
 
             return (
               <Link
-                key={category.id}
-                to={`/catalog?filter=${category.slug}`}
+                key={item.code}
+                to={`/catalog?parent=${encodeURIComponent(item.code)}`}
                 className="catalog-card"
               >
                 <div className="catalog-card__thumb">
                   <img
                     src={imageUrl}
-                    alt={category.name}
+                    alt={item.name}
                     className="catalog-card__image"
                   />
                 </div>
-                <div className="catalog-card__name">{category.name}</div>
+                <div className="catalog-card__name">{item.name}</div>
               </Link>
             );
           })}

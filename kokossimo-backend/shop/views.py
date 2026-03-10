@@ -1,5 +1,5 @@
 from rest_framework import viewsets, status
-from rest_framework.decorators import api_view, permission_classes, authentication_classes
+from rest_framework.decorators import api_view, permission_classes, authentication_classes, action
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.authentication import TokenAuthentication
@@ -18,7 +18,7 @@ from django.http import JsonResponse, HttpResponse
 import base64
 import logging
 
-from .models import Product, Category, Profile, Order, EmailVerificationCode, ProductRating
+from .models import Product, Category, Profile, Order, EmailVerificationCode, ProductRating, ProductSubcategory
 
 logger = logging.getLogger(__name__)
 # Миниатюра 1×1 прозрачный GIF — чтобы при ошибках отдавать изображение, а не JSON,
@@ -49,6 +49,7 @@ from .moysklad_sync import _extract_image_url
 from .serializers import (
     ProductSerializer,
     CategorySerializer,
+    ProductSubcategorySerializer,
     RegisterSerializer,
     LoginSerializer,
     EmailCodeSendSerializer,
@@ -89,6 +90,36 @@ class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
         context['request'] = self.request
         return context
 
+
+class ProductSubcategoryViewSet(viewsets.ReadOnlyModelViewSet):
+    """Список подкатегорий и дерево категорий для фильтра каталога."""
+    queryset = ProductSubcategory.objects.all().order_by("code")
+    serializer_class = ProductSubcategorySerializer
+
+    @action(detail=False, methods=["get"], url_path="tree")
+    def tree(self, request):
+        """Дерево: большие категории (1–4) с вложенными подкатегориями (1.1, 1.2, …)."""
+        parents = ProductSubcategory.objects.filter(parent_code="").order_by("code")
+        children_map = {}
+        for sub in ProductSubcategory.objects.exclude(parent_code="").order_by("code"):
+            children_map.setdefault(sub.parent_code, []).append({
+                "id": sub.id,
+                "code": sub.code,
+                "name": sub.name,
+                "parent_code": sub.parent_code,
+            })
+        result = []
+        for p in parents:
+            result.append({
+                "id": p.id,
+                "code": p.code,
+                "name": p.name,
+                "parent_code": p.parent_code or "",
+                "children": children_map.get(p.code, []),
+            })
+        return Response(result)
+
+
 class ProductViewSet(viewsets.ReadOnlyModelViewSet):
     class CatalogPagination(PageNumberPagination):
         page_size = 30
@@ -103,26 +134,36 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
     pagination_class = CatalogPagination
 
     def get_queryset(self):
+        subcategory_codes = self.request.query_params.getlist('subcategory')
+        parent_codes = self.request.query_params.getlist('parent')
         if getattr(settings, "MOYSKLAD_SITE_SYNC_ENABLED", False):
-            return Product.objects.filter(
+            queryset = Product.objects.filter(
                 moysklad_id__isnull=False,
                 category__slug=getattr(settings, "MOYSKLAD_SITE_CATEGORY_SLUG", "site-kokossimo"),
-            ).annotate(
+            ).select_related('category', 'product_subcategory').annotate(
                 rating_avg=Avg('ratings__rating'),
                 rating_count=Count('ratings')
             ).order_by('-created_at', '-id')
+            if subcategory_codes or parent_codes:
+                q = Q(product_subcategory__isnull=False)
+                if parent_codes and subcategory_codes:
+                    q &= (Q(product_subcategory__parent_code__in=parent_codes) | Q(product_subcategory__code__in=subcategory_codes))
+                elif parent_codes:
+                    q &= Q(product_subcategory__parent_code__in=parent_codes)
+                elif subcategory_codes:
+                    q &= Q(product_subcategory__code__in=subcategory_codes)
+                queryset = queryset.filter(q)
+            return queryset
 
         # Фильтрация товаров через параметры URL
-        # Пример: /api/products/?is_new=true&category=face&category=body
-        # Поддерживает множественный выбор категорий
-        queryset = Product.objects.annotate(
+        # Пример: /api/products/?is_new=true&category=face&category=body&subcategory=1.1
+        queryset = Product.objects.select_related('category', 'product_subcategory').annotate(
             rating_avg=Avg('ratings__rating'),
             rating_count=Count('ratings')
         ).order_by('-created_at', '-id')
         
         is_new = self.request.query_params.get('is_new', None)
         is_bestseller = self.request.query_params.get('is_bestseller', None)
-        # Получаем все значения параметра category (может быть несколько)
         category_slugs = self.request.query_params.getlist('category')
 
         if is_new == 'true':
@@ -132,8 +173,17 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
             queryset = queryset.filter(is_bestseller=True)
 
         if category_slugs:
-            # Фильтруем по всем выбранным категориям (OR логика)
             queryset = queryset.filter(category__slug__in=category_slugs)
+
+        if subcategory_codes or parent_codes:
+            q = Q(product_subcategory__isnull=False)
+            if parent_codes and subcategory_codes:
+                q &= (Q(product_subcategory__parent_code__in=parent_codes) | Q(product_subcategory__code__in=subcategory_codes))
+            elif parent_codes:
+                q &= Q(product_subcategory__parent_code__in=parent_codes)
+            elif subcategory_codes:
+                q &= Q(product_subcategory__code__in=subcategory_codes)
+            queryset = queryset.filter(q)
 
         return queryset
 

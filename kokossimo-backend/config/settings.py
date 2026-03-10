@@ -226,3 +226,8 @@ MOYSKLAD_SYNC_PAGE_SIZE = int(os.getenv('MOYSKLAD_SYNC_PAGE_SIZE', '50'))
 MOYSKLAD_USE_SEARCH_FILTER = os.getenv('MOYSKLAD_USE_SEARCH_FILTER', 'true').lower() in ('1', 'true', 'yes')
 MOYSKLAD_SITE_SEARCH_QUERY = os.getenv('MOYSKLAD_SITE_SEARCH_QUERY', '')
 MOYSKLAD_SYNC_MAX_PAGES = int(os.getenv('MOYSKLAD_SYNC_MAX_PAGES', '500'))
+
+# OpenAI для категоризации товаров (подкатегория по названию/описанию)
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
+OPENAI_CATEGORIZE_ENABLED = os.getenv('OPENAI_CATEGORIZE_ENABLED', 'true').lower() in ('1', 'true', 'yes')
+OPENAI_CATEGORIZE_MODEL = os.getenv('OPENAI_CATEGORIZE_MODEL', 'gpt-4o-mini')
