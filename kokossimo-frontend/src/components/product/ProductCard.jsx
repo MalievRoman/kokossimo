@@ -169,36 +169,37 @@ const ProductCard = ({ product }) => {
             )}
           </div>
 
-          <button
-            type="button"
-            className={`product-card__btn ${showQtyControls ? 'is-hidden' : ''}`}
-            onClick={handleAddToCart}
-          >
-            В КОРЗИНУ
-          </button>
-
-          <div
-            className={`product-card__qty ${showQtyControls ? '' : 'is-hidden'}`}
-            data-qty-controls
-          >
+          <div className="product-card__action">
             <button
               type="button"
-              className="product-card__qty-btn"
-              onClick={handleDecrease}
+              className={`product-card__btn ${showQtyControls ? 'is-hidden' : ''}`}
+              onClick={handleAddToCart}
             >
-              −
+              В КОРЗИНУ
             </button>
-            <div className="product-card__qty-value" data-qty-value>
-              {showQtyControls ? quantity : 1}
+            <div
+              className={`product-card__qty ${showQtyControls ? '' : 'is-hidden'}`}
+              data-qty-controls
+            >
+              <button
+                type="button"
+                className="product-card__qty-btn"
+                onClick={handleDecrease}
+              >
+                −
+              </button>
+              <div className="product-card__qty-value" data-qty-value>
+                {showQtyControls ? quantity : 1}
+              </div>
+              <button
+                type="button"
+                className="product-card__qty-btn"
+                onClick={handleIncrease}
+                data-qty-plus
+              >
+                +
+              </button>
             </div>
-            <button
-              type="button"
-              className="product-card__qty-btn"
-              onClick={handleIncrease}
-              data-qty-plus
-            >
-              +
-            </button>
           </div>
         </div>
       </div>

@@ -1080,6 +1080,28 @@ body {
   overflow: hidden;
 }
 
+/* Обёртка, чтобы кнопка «В КОРЗИНУ» и блок +/- занимали одно и то же место */
+.product-card__action {
+  position: relative;
+  margin-top: 16px;
+  min-height: 42px;
+}
+
+.product-card__action .product-card__btn,
+.product-card__action .product-card__qty {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  margin: 0;
+}
+
+.product-card__action .product-card__btn.is-hidden,
+.product-card__action .product-card__qty.is-hidden {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .product-card__price {
   font-family: "Open Sans", sans-serif;
   font-size: 16px;

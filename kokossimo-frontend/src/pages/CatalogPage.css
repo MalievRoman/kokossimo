@@ -319,10 +319,7 @@
 
 .catalog-mobile-price-modal {
   position: fixed;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  width: min(280px, calc(100vw - 24px));
+  width: 280px;
   max-width: calc(100vw - 24px);
   min-height: 130px;
   background: #f5f2f1;
@@ -757,6 +754,10 @@
     font-size: 14px;
   }
 
+  .catalog-grid .product-card__action {
+    min-height: 30px;
+  }
+
   .catalog-grid .product-card__qty {
     height: 30px;
     min-height: 30px;
@@ -804,6 +805,10 @@
     padding: 0 10px;
     margin-left: 0;
     margin-right: 0;
+  }
+
+  .catalog-grid .product-card__action {
+    min-height: 30px;
   }
 
   /* Кнопки +/- той же высоты, что и «В КОРЗИНУ»; ширина сопоставима */

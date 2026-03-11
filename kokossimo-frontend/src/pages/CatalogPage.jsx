@@ -28,7 +28,9 @@ const CatalogPage = () => {
   const [loading, setLoading] = useState(true);
   const [isMobilePriceOpen, setIsMobilePriceOpen] = useState(false);
   const [isMobileCategoryOpen, setIsMobileCategoryOpen] = useState(false);
+  const [priceModalPosition, setPriceModalPosition] = useState(null);
   const mobileCategoryDetailsRef = useRef(null);
+  const priceFilterButtonRef = useRef(null);
   const productsRequestIdRef = useRef(0);
   const catalogFiltersContext = useCatalogFilters();
 
@@ -613,12 +615,19 @@ const CatalogPage = () => {
 
               <div className="catalog-mobile-filter catalog-mobile-filter--price">
                 <button
+                  ref={priceFilterButtonRef}
                   type="button"
                   className="catalog-mobile-filter__summary catalog-mobile-filter__button"
                   onClick={() => {
                     if (mobileCategoryDetailsRef.current?.open) {
                       mobileCategoryDetailsRef.current.open = false;
                       setIsMobileCategoryOpen(false);
+                    }
+                    const rect = priceFilterButtonRef.current?.getBoundingClientRect();
+                    if (rect) {
+                      setPriceModalPosition({ left: rect.left, top: rect.bottom + 4 });
+                    } else {
+                      setPriceModalPosition(null);
                     }
                     setIsMobilePriceOpen((prev) => !prev);
                   }}
@@ -627,71 +636,99 @@ const CatalogPage = () => {
                 </button>
 
                 {isMobilePriceOpen && createPortal(
-                  <div className="catalog-mobile-price-modal" role="dialog" aria-modal="true" aria-label="Фильтр по цене">
-                    <button
-                      type="button"
-                      className="catalog-mobile-price-modal__close"
-                      aria-label="Закрыть окно фильтра цены"
-                      onClick={() => setIsMobilePriceOpen(false)}
-                    >
-                      ×
-                    </button>
-
-                    <div className="catalog-mobile-price-modal__row">
-                      <label className="catalog-mobile-price-modal__field">
-                        <span>ОТ</span>
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          pattern="[0-9]*"
-                          placeholder={priceRange.min != null ? String(Math.floor(priceRange.min)) : '0'}
-                          value={priceFrom}
-                          onChange={handlePriceFromChange}
-                          onKeyDown={(event) => {
-                            if (!isPriceKeyAllowed(event)) event.preventDefault();
-                          }}
-                        />
-                      </label>
-
-                      <label className="catalog-mobile-price-modal__field">
-                        <span>ДО</span>
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          pattern="[0-9]*"
-                          placeholder={priceRange.max != null ? String(Math.ceil(priceRange.max)) : '0'}
-                          value={priceTo}
-                          onChange={handlePriceToChange}
-                          onKeyDown={(event) => {
-                            if (!isPriceKeyAllowed(event)) event.preventDefault();
-                          }}
-                        />
-                      </label>
-                    </div>
-
-                    {priceError && (
-                      <p className="catalog-filter-price-error" role="alert">
-                        {priceError}
-                      </p>
-                    )}
-
-                    <div className="catalog-mobile-price-modal__actions">
-                      <button
-                        type="button"
-                        className="catalog-mobile-price-modal__submit"
-                        onClick={handleMobilePriceApply}
+                  (() => {
+                    const pos = priceModalPosition || { left: 0, top: 0 };
+                    const pad = 12;
+                    const maxW = typeof window !== 'undefined'
+                      ? Math.min(280, window.innerWidth - pos.left - pad)
+                      : 280;
+                    const maxH = typeof window !== 'undefined'
+                      ? window.innerHeight - pos.top - pad
+                      : 400;
+                    const scaleX = maxW / 280;
+                    const scaleY = maxH / 200;
+                    const scale = Math.min(1, scaleX, scaleY);
+                    return (
+                      <div
+                        className="catalog-mobile-price-modal"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label="Фильтр по цене"
+                        style={{
+                          left: pos.left,
+                          top: pos.top,
+                          transformOrigin: 'top left',
+                          maxWidth: maxW,
+                          maxHeight: maxH,
+                          transform: scale < 1 ? `scale(${scale})` : undefined,
+                        }}
                       >
-                        ПОДТВЕРДИТЬ
-                      </button>
-                      <button
-                        type="button"
-                        className="catalog-mobile-price-modal__reset"
-                        onClick={handleMobilePriceReset}
-                      >
-                        СБРОСИТЬ
-                      </button>
-                    </div>
-                  </div>,
+                        <button
+                          type="button"
+                          className="catalog-mobile-price-modal__close"
+                          aria-label="Закрыть окно фильтра цены"
+                          onClick={() => setIsMobilePriceOpen(false)}
+                        >
+                          ×
+                        </button>
+
+                        <div className="catalog-mobile-price-modal__row">
+                          <label className="catalog-mobile-price-modal__field">
+                            <span>ОТ</span>
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
+                              placeholder={priceRange.min != null ? String(Math.floor(priceRange.min)) : '0'}
+                              value={priceFrom}
+                              onChange={handlePriceFromChange}
+                              onKeyDown={(event) => {
+                                if (!isPriceKeyAllowed(event)) event.preventDefault();
+                              }}
+                            />
+                          </label>
+
+                          <label className="catalog-mobile-price-modal__field">
+                            <span>ДО</span>
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
+                              placeholder={priceRange.max != null ? String(Math.ceil(priceRange.max)) : '0'}
+                              value={priceTo}
+                              onChange={handlePriceToChange}
+                              onKeyDown={(event) => {
+                                if (!isPriceKeyAllowed(event)) event.preventDefault();
+                              }}
+                            />
+                          </label>
+                        </div>
+
+                        {priceError && (
+                          <p className="catalog-filter-price-error" role="alert">
+                            {priceError}
+                          </p>
+                        )}
+
+                        <div className="catalog-mobile-price-modal__actions">
+                          <button
+                            type="button"
+                            className="catalog-mobile-price-modal__submit"
+                            onClick={handleMobilePriceApply}
+                          >
+                            ПОДТВЕРДИТЬ
+                          </button>
+                          <button
+                            type="button"
+                            className="catalog-mobile-price-modal__reset"
+                            onClick={handleMobilePriceReset}
+                          >
+                            СБРОСИТЬ
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })(),
                   document.body
                 )}
               </div>
