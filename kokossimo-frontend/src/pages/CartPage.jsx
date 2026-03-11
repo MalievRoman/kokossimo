@@ -47,18 +47,23 @@ const CartPage = () => {
           </div>
         ) : (
           <div className="cart-layout">
-            {/* Список товаров */}
-            <div className="cart-items">
-              <div className="cart-items__header">
-                <h2>Товары в корзине ({cartItems.length})</h2>
+            <div className="cart-layout__left">
+              <div className="cart-items__top">
+                <h2 className="cart-items__count">
+                  ТОВАРОВ В КОРЗИНЕ: {cartItems.reduce((sum, item) => sum + item.quantity, 0)}
+                </h2>
                 <button
-                  className="btn-secondary btn-secondary--outline"
+                  type="button"
+                  className="cart-items__clear"
                   onClick={clearCart}
                 >
-                  Очистить корзину
+                  ОЧИСТИТЬ
                 </button>
               </div>
 
+              {/* Список товаров */}
+              <div className="cart-items">
+                <div className="cart-items__list">
               {cartItems.map((item) => (
                 <div key={item.id} className="cart-item">
                   {(() => {
@@ -148,29 +153,28 @@ const CartPage = () => {
                   })()}
                 </div>
               ))}
+              </div>
+            </div>
             </div>
 
-            {/* Итого */}
+            {/* Сумма заказа */}
             <div className="cart-summary">
-              <h2>Итого</h2>
+              <h2 className="cart-summary__title">СУММА ЗАКАЗА</h2>
               <div className="cart-summary__row">
                 <span>Товаров:</span>
-                <span>{cartItems.reduce((sum, item) => sum + item.quantity, 0)} шт.</span>
+                <span>{cartItems.reduce((sum, item) => sum + item.quantity, 0)} шт</span>
               </div>
+              <div className="cart-summary__divider" />
               <div className="cart-summary__row cart-summary__total">
-                <span>К оплате:</span>
-                <span>{getTotalPrice().toLocaleString('ru-RU')} ₽</span>
+                <span>Итого:</span>
+                <span>{formatRub(getTotalPrice())}</span>
               </div>
-              
+
               <Link
                 to={isAuthenticated ? '/checkout' : '/auth'}
-                className="btn-primary btn-primary--full"
+                className="cart-summary__submit"
               >
-                Оформить заказ
-              </Link>
-              
-              <Link to="/catalog" className="btn-link btn-link--center">
-                Продолжить покупки
+                К ОФОРМЛЕНИЮ
               </Link>
             </div>
           </div>
