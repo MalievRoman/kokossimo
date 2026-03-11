@@ -85,35 +85,6 @@ const CatalogPage = () => {
       .replace(/\s+/g, ' ')
       .trim();
 
-  const levenshtein = (a, b) => {
-    if (a === b) return 0;
-    if (!a.length) return b.length;
-    if (!b.length) return a.length;
-
-    const matrix = Array.from({ length: a.length + 1 }, () => []);
-    for (let i = 0; i <= a.length; i += 1) matrix[i][0] = i;
-    for (let j = 0; j <= b.length; j += 1) matrix[0][j] = j;
-
-    for (let i = 1; i <= a.length; i += 1) {
-      for (let j = 1; j <= b.length; j += 1) {
-        const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-        matrix[i][j] = Math.min(
-          matrix[i - 1][j] + 1,
-          matrix[i][j - 1] + 1,
-          matrix[i - 1][j - 1] + cost
-        );
-      }
-    }
-    return matrix[a.length][b.length];
-  };
-
-  const getSimilarity = (query, text) => {
-    if (!query || !text) return 0;
-    if (text.includes(query)) return 1;
-    const distance = levenshtein(query, text);
-    return 1 - distance / Math.max(query.length, text.length);
-  };
-
   const sanitizeNonNegativePrice = (rawValue) => {
     if (rawValue == null) return null;
     const value = String(rawValue).trim();
@@ -253,7 +224,7 @@ const CatalogPage = () => {
     const requestId = ++productsRequestIdRef.current;
     
     if (searchQuery) {
-      params.page = undefined;
+      params.q = searchParams.get('q').trim();
       if (parentsFinal.length > 0) params.parent = parentsFinal;
       if (subcategoriesToFilter.length > 0) params.subcategory = subcategoriesToFilter;
     } else if (categoryFilter === 'bestsellers') {
@@ -295,35 +266,9 @@ const CatalogPage = () => {
           Array.isArray(response.data.results);
         let data = Array.isArray(response.data) ? response.data : (response.data.results || []);
         const serverCount = isPaginatedResponse ? Number(response.data.count || 0) : data.length;
-
-        if (searchQuery) {
-          const scored = data
-            .map((item) => {
-              const text = normalizeText(`${item.name || ''} ${item.description || ''}`);
-              const score = getSimilarity(searchQuery, text);
-              return { item, score };
-            })
-            .filter(({ score, item }) => score >= 0.35 || normalizeText(item.name || '').includes(searchQuery));
-
-          data = scored
-            .sort((a, b) => b.score - a.score)
-            .map(({ item }) => item);
-          
-          // Применяем фильтр по категориям к результатам поиска
-          const parentSet = new Set(parentsFinal);
-          const subSet = new Set(subcategoriesToFilter);
-          if (parentSet.size > 0 || subSet.size > 0) {
-            data = data.filter(item => {
-              if (!item.product_subcategory_code) return false;
-              const code = item.product_subcategory_code;
-              if (subSet.has(code)) return true;
-              const p = code.split('.')[0];
-              return parentSet.has(p);
-            });
-          }
-        }
+        // Поиск выполняется на сервере по названию и описанию (params.q).
         
-        // Сортировка и price_min/price_max применяются на сервере (чтобы работало на всю выборку).
+        // Сортировка и price_min/price_max применяются на сервере.
 
         setCatalogProducts((prevProducts) => {
           if (currentPage === 1) return data;

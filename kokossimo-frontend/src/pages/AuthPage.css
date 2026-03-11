@@ -356,8 +356,10 @@
   text-align: center;
 }
 
-.auth-btn--primary:hover:not(:disabled) {
-  opacity: 0.9;
+@media (hover: hover) {
+  .auth-btn--primary:hover:not(:disabled) {
+    opacity: 0.9;
+  }
 }
 
 .auth-btn--ghost {
@@ -417,8 +419,10 @@
   text-align: center;
 }
 
-.auth-link:hover:not(:disabled) {
-  color: #740400;
+@media (hover: hover) {
+  .auth-link:hover:not(:disabled) {
+    color: #740400;
+  }
 }
 
 .auth-link:disabled {
@@ -442,8 +446,10 @@
   margin-top: 64px;
 }
 
-.auth-back-link:hover {
-  color: #740400;
+@media (hover: hover) {
+  .auth-back-link:hover {
+    color: #740400;
+  }
 }
 
 .auth-congrats-image {

@@ -35,9 +35,11 @@
   transition: color 0.2s;
 }
 
-.footer__list a:hover {
-  color: #8B4513;
-  text-decoration: underline;
+@media (hover: hover) {
+  .footer__list a:hover {
+    color: #8B4513;
+    text-decoration: underline;
+  }
 }
 
 .sale-link {
@@ -63,8 +65,10 @@
   transition: opacity 0.2s;
 }
 
-.social-icon:hover {
-  opacity: 0.9;
+@media (hover: hover) {
+  .social-icon:hover {
+    opacity: 0.9;
+  }
 }
 
 .footer__meta-text {

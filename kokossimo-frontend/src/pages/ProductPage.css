@@ -182,8 +182,10 @@
   color: #8B4513;
 }
 
-.star-button:hover {
-  color: #6d360f;
+@media (hover: hover) {
+  .star-button:hover {
+    color: #6d360f;
+  }
 }
 
 .star-button:disabled {
@@ -227,8 +229,10 @@
   transition: background 0.2s;
 }
 
-.review-submit:hover {
-  background: #6d360f;
+@media (hover: hover) {
+  .review-submit:hover {
+    background: #6d360f;
+  }
 }
 
 .review-submit:disabled {
@@ -348,8 +352,10 @@
   transition: background 0.2s;
 }
 
-.add-to-cart-btn-large:hover {
-  background-color: #6d360f;
+@media (hover: hover) {
+  .add-to-cart-btn-large:hover {
+    background-color: #6d360f;
+  }
 }
 
 .add-to-cart-btn-large.added {
@@ -357,8 +363,10 @@
   cursor: default;
 }
 
-.add-to-cart-btn-large.added:hover {
-  background-color: #4a9d4a;
+@media (hover: hover) {
+  .add-to-cart-btn-large.added:hover {
+    background-color: #4a9d4a;
+  }
 }
 
 .wishlist-btn {
@@ -374,20 +382,21 @@
   transition: all 0.2s ease;
 }
 
-.wishlist-btn:hover {
-  border-color: #c00;
-  color: #c00;
-  background: #fff5f5;
-}
-
 .wishlist-btn.active {
   color: #c00;
   border-color: #c00;
   background: #fff5f5;
 }
 
-.wishlist-btn.active:hover {
-  background: #fff;
+@media (hover: hover) {
+  .wishlist-btn:hover {
+    border-color: #c00;
+    color: #c00;
+    background: #fff5f5;
+  }
+  .wishlist-btn.active:hover {
+    background: #fff;
+  }
 }
 
 .share-btn {

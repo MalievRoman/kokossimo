@@ -7,8 +7,10 @@
   transition: transform 0.2s ease;
 }
 
-.category-card:hover {
-  transform: translateY(-5px);
+@media (hover: hover) {
+  .category-card:hover {
+    transform: translateY(-5px);
+  }
 }
 
 .category-card__image-wrapper {

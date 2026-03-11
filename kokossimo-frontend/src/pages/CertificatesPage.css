@@ -258,7 +258,12 @@
   margin-top: 40px;
 }
 
-.certificate-form__purchase:hover,
+@media (hover: hover) {
+  .certificate-form__purchase:hover {
+    background-color: #330200;
+  }
+}
+
 .certificate-form__purchase:focus-visible {
   background-color: #330200;
 }

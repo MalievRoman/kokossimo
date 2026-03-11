@@ -31,8 +31,10 @@
   text-decoration: none;
 }
 
-.contacts-list a:hover {
-  text-decoration: underline;
+@media (hover: hover) {
+  .contacts-list a:hover {
+    text-decoration: underline;
+  }
 }
 
 .contacts-hours {

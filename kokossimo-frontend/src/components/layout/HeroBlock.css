@@ -93,9 +93,11 @@
   border-radius: 4px;
 }
 
-.hero__btn:hover {
-  background-color: #330200;
-  color: #fcf8f7;
+@media (hover: hover) {
+  .hero__btn:hover {
+    background-color: #330200;
+    color: #fcf8f7;
+  }
 }
 
 /* Фон слайдов теперь на секции */
@@ -128,9 +130,11 @@
   position: static; 
 }
 
-.slider-btn:hover {
-  background: white;
-  color: #8B4513;
+@media (hover: hover) {
+  .slider-btn:hover {
+    background: white;
+    color: #8B4513;
+  }
 }
 
 .slider-btn {
@@ -259,9 +263,11 @@
   transition: all 0.2s;
 }
 
-.slider-btn:hover {
-  background: #460200;
-  color: #fcf8f7; /* Цвет стрелки при наведении */
+@media (hover: hover) {
+  .slider-btn:hover {
+    background: #460200;
+    color: #fcf8f7; /* Цвет стрелки при наведении */
+  }
 }
 
 .dot {
@@ -269,6 +275,8 @@
   transition: all 0.3s;
 }
 
-.dot:hover {
-  transform: scale(1.2); /* Увеличение при наведении */
+@media (hover: hover) {
+  .dot:hover {
+    transform: scale(1.2); /* Увеличение при наведении */
+  }
 }

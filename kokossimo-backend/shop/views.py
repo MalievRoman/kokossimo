@@ -139,6 +139,7 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
         parent_codes = self.request.query_params.getlist('parent')
         price_min = self.request.query_params.get("price_min")
         price_max = self.request.query_params.get("price_max")
+        search_q = (self.request.query_params.get("q") or "").strip()
         ordering = (self.request.query_params.get("ordering") or "").strip()
         is_new = self.request.query_params.get('is_new', None)
         is_bestseller = self.request.query_params.get('is_bestseller', None)
@@ -198,6 +199,10 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
                 queryset = queryset.filter(product_subcategory__isnull=False, product_subcategory__code__in=subcategory_codes)
             elif parent_codes:
                 queryset = queryset.filter(product_subcategory__isnull=False, product_subcategory__parent_code__in=parent_codes)
+            if search_q:
+                queryset = queryset.filter(
+                    Q(name__icontains=search_q) | Q(description__icontains=search_q)
+                )
             queryset = _apply_price_filters(queryset)
             queryset = _apply_ordering(queryset)
             return queryset
@@ -225,6 +230,11 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
             queryset = queryset.filter(product_subcategory__isnull=False, product_subcategory__code__in=subcategory_codes)
         elif parent_codes:
             queryset = queryset.filter(product_subcategory__isnull=False, product_subcategory__parent_code__in=parent_codes)
+
+        if search_q:
+            queryset = queryset.filter(
+                Q(name__icontains=search_q) | Q(description__icontains=search_q)
+            )
 
         queryset = _apply_price_filters(queryset)
         queryset = _apply_ordering(queryset)

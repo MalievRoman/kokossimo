@@ -76,9 +76,11 @@
   right: -20px;
 }
 
-.slider-control:hover {
-  background-color: #f5f5f5;
-  border-color: #8B4513;
+@media (hover: hover) {
+  .slider-control:hover {
+    background-color: #f5f5f5;
+    border-color: #8B4513;
+  }
 }
 
 /* Адаптивность: 640-1200 */

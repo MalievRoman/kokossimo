@@ -28,8 +28,10 @@
   font-weight: 500;
 }
 
-.section-link:hover {
-  text-decoration: underline;
+@media (hover: hover) {
+  .section-link:hover {
+    text-decoration: underline;
+  }
 }
 
 .category-grid {

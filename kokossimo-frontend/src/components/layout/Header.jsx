@@ -41,6 +41,11 @@ const Header = () => {
     setSearchValue(params.get('q') || '');
     setSuggestions([]);
     setIsSuggestionsOpen(false);
+    // Убираем фокус с полей поиска, чтобы не оставалось выделения после перехода по подсказке или отправки формы
+    const blurSearchInputs = () => {
+      document.querySelectorAll('.header__search-input, .mobile-search__input').forEach((el) => el.blur());
+    };
+    blurSearchInputs();
   }, [location.search]);
 
   const normalizeText = (value) =>
@@ -78,7 +83,11 @@ const Header = () => {
         const query = normalizeText(rawQuery);
         const products = await loadAllProducts();
         const results = products
-          .filter((item) => normalizeText(item.name || '').includes(query))
+          .filter(
+            (item) =>
+              normalizeText(item.name || '').includes(query) ||
+              normalizeText(item.description || '').includes(query)
+          )
           .slice(0, 6);
         setSuggestions(results);
         setIsSuggestionsOpen(true);
@@ -157,6 +166,8 @@ const Header = () => {
   };
 
   const handleSuggestionClick = () => {
+    const el = document.activeElement;
+    if (el && typeof el.blur === 'function') el.blur();
     setIsSuggestionsOpen(false);
     setIsMobileSearchOpen(false);
     setIsMobileMenuOpen(false);

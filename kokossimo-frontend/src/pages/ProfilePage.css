@@ -29,8 +29,13 @@
   transition: color 0.2s ease;
 }
 
-.profile-tab.is-active,
-.profile-tab:hover {
+@media (hover: hover) {
+  .profile-tab:hover {
+    color: #8b1313;
+  }
+}
+
+.profile-tab.is-active {
   color: #8b1313;
 }
 
@@ -162,9 +167,11 @@
   transition: color 0.2s ease, border-color 0.2s ease;
 }
 
-.profile-shortcut:hover {
-  color: #740400;
-  border-color: #d8c7c3;
+@media (hover: hover) {
+  .profile-shortcut:hover {
+    color: #740400;
+    border-color: #d8c7c3;
+  }
 }
 
 .profile-shortcut-icon {
@@ -517,8 +524,10 @@
   text-decoration: none;
 }
 
-.profile-support:hover {
-  text-decoration: underline;
+@media (hover: hover) {
+  .profile-support:hover {
+    text-decoration: underline;
+  }
 }
 
 .profile-toast {

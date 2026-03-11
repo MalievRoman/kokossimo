@@ -58,9 +58,11 @@
   transition: all 0.3s ease;
 }
 
-.newsletter__btn:hover {
-  background-color: #4a2c2a;
-  color: white;
+@media (hover: hover) {
+  .newsletter__btn:hover {
+    background-color: #4a2c2a;
+    color: white;
+  }
 }
 
 .newsletter__disclaimer {

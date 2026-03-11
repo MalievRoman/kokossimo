@@ -151,8 +151,10 @@
   transition: background 0.2s;
 }
 
-.cart-item__quantity .quantity-btn:hover {
-  background: #f5f5f5;
+@media (hover: hover) {
+  .cart-item__quantity .quantity-btn:hover {
+    background: #f5f5f5;
+  }
 }
 
 .cart-item__quantity .quantity-btn:disabled {
@@ -202,9 +204,11 @@
   justify-content: center;
 }
 
-.cart-item__remove:hover {
-  background: #fee;
-  color: #c00;
+@media (hover: hover) {
+  .cart-item__remove:hover {
+    background: #fee;
+    color: #c00;
+  }
 }
 
 .cart-summary {
@@ -256,8 +260,10 @@
   margin-bottom: 1rem;
 }
 
-.btn-primary:hover {
-  background: #6b3410;
+@media (hover: hover) {
+  .btn-primary:hover {
+    background: #6b3410;
+  }
 }
 
 .btn-primary--full {
@@ -281,9 +287,11 @@
   color: #8B4513;
 }
 
-.btn-secondary--outline:hover {
-  background: #8B4513;
-  color: white;
+@media (hover: hover) {
+  .btn-secondary--outline:hover {
+    background: #8B4513;
+    color: white;
+  }
 }
 
 .btn-link {
@@ -293,9 +301,11 @@
   transition: color 0.2s;
 }
 
-.btn-link:hover {
-  color: #6b3410;
-  text-decoration: underline;
+@media (hover: hover) {
+  .btn-link:hover {
+    color: #6b3410;
+    text-decoration: underline;
+  }
 }
 
 .btn-link--center {
