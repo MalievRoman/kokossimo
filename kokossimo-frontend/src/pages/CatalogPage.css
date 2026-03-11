@@ -318,9 +318,10 @@
 }
 
 .catalog-mobile-price-modal {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   width: min(280px, calc(100vw - 24px));
   max-width: calc(100vw - 24px);
   min-height: 130px;
@@ -330,7 +331,7 @@
   padding-right: 28px;
   box-sizing: border-box;
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
-  z-index: 30;
+  z-index: 10000;
 }
 
 .catalog-mobile-price-modal__close {
@@ -416,18 +417,6 @@
   letter-spacing: 0;
   text-transform: uppercase;
   cursor: pointer;
-}
-
-/* На мобильных — модалка по центру экрана, не выезжает за границы */
-@media (max-width: 768px) {
-  .catalog-mobile-price-modal {
-    position: fixed;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    width: min(280px, calc(100vw - 24px));
-    max-width: calc(100vw - 24px);
-  }
 }
 
 .catalog-controls {
@@ -767,6 +756,18 @@
     padding: 0 10px;
     font-size: 14px;
   }
+
+  .catalog-grid .product-card__qty {
+    height: 30px;
+    min-height: 30px;
+  }
+  .catalog-grid .product-card__qty-btn {
+    width: 30px;
+    min-width: 30px;
+    height: 30px;
+    min-height: 30px;
+    font-size: 18px;
+  }
 }
 
 /* < 720px */
@@ -803,6 +804,24 @@
     padding: 0 10px;
     margin-left: 0;
     margin-right: 0;
+  }
+
+  /* Кнопки +/- той же высоты, что и «В КОРЗИНУ»; ширина сопоставима */
+  .catalog-grid .product-card__qty {
+    height: 30px;
+    min-height: 30px;
+    margin-top: 16px;
+  }
+  .catalog-grid .product-card__qty-btn {
+    width: 30px;
+    min-width: 30px;
+    height: 30px;
+    min-height: 30px;
+    font-size: 18px;
+  }
+  .catalog-grid .product-card__qty-value {
+    min-width: 24px;
+    font-size: 14px;
   }
 }
 

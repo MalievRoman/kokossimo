@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useSearchParams } from 'react-router-dom';
 import ProductCard from '../components/product/ProductCard';
 import { getProducts, getProductsPriceRange, getProductSubcategoriesTree } from '../services/api';
@@ -625,8 +626,8 @@ const CatalogPage = () => {
                   СТОИМОСТЬ
                 </button>
 
-                {isMobilePriceOpen && (
-                  <div className="catalog-mobile-price-modal" role="dialog" aria-modal="false">
+                {isMobilePriceOpen && createPortal(
+                  <div className="catalog-mobile-price-modal" role="dialog" aria-modal="true" aria-label="Фильтр по цене">
                     <button
                       type="button"
                       className="catalog-mobile-price-modal__close"
@@ -690,7 +691,8 @@ const CatalogPage = () => {
                         СБРОСИТЬ
                       </button>
                     </div>
-                  </div>
+                  </div>,
+                  document.body
                 )}
               </div>
 
