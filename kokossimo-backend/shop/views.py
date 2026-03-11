@@ -192,15 +192,12 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
             if is_bestseller == 'true':
                 queryset = queryset.filter(is_bestseller=True)
 
-            if subcategory_codes or parent_codes:
-                q = Q(product_subcategory__isnull=False)
-                if parent_codes and subcategory_codes:
-                    q &= (Q(product_subcategory__parent_code__in=parent_codes) | Q(product_subcategory__code__in=subcategory_codes))
-                elif parent_codes:
-                    q &= Q(product_subcategory__parent_code__in=parent_codes)
-                elif subcategory_codes:
-                    q &= Q(product_subcategory__code__in=subcategory_codes)
-                queryset = queryset.filter(q)
+            # Важно: если выбраны подкатегории, они должны быть приоритетнее родителя.
+            # Иначе при одновременной передаче parent+subcategory (как в UI) получаем весь parent.
+            if subcategory_codes:
+                queryset = queryset.filter(product_subcategory__isnull=False, product_subcategory__code__in=subcategory_codes)
+            elif parent_codes:
+                queryset = queryset.filter(product_subcategory__isnull=False, product_subcategory__parent_code__in=parent_codes)
             queryset = _apply_price_filters(queryset)
             queryset = _apply_ordering(queryset)
             return queryset
@@ -223,15 +220,11 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
         if category_slugs:
             queryset = queryset.filter(category__slug__in=category_slugs)
 
-        if subcategory_codes or parent_codes:
-            q = Q(product_subcategory__isnull=False)
-            if parent_codes and subcategory_codes:
-                q &= (Q(product_subcategory__parent_code__in=parent_codes) | Q(product_subcategory__code__in=subcategory_codes))
-            elif parent_codes:
-                q &= Q(product_subcategory__parent_code__in=parent_codes)
-            elif subcategory_codes:
-                q &= Q(product_subcategory__code__in=subcategory_codes)
-            queryset = queryset.filter(q)
+        # Важно: если выбраны подкатегории, они должны быть приоритетнее родителя.
+        if subcategory_codes:
+            queryset = queryset.filter(product_subcategory__isnull=False, product_subcategory__code__in=subcategory_codes)
+        elif parent_codes:
+            queryset = queryset.filter(product_subcategory__isnull=False, product_subcategory__parent_code__in=parent_codes)
 
         queryset = _apply_price_filters(queryset)
         queryset = _apply_ordering(queryset)
