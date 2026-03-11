@@ -92,6 +92,17 @@
   overflow-wrap: anywhere;
 }
 
+/* Длинные имена: уменьшаем шрифт и уплотняем строки, чтобы не выходило за границы карточки (overflow:hidden) */
+.certificate-recipient__name--long {
+  font-size: clamp(14px, 2.2vw, 22px);
+  line-height: 1.12;
+}
+
+.certificate-recipient__name--xlong {
+  font-size: clamp(12px, 1.9vw, 18px);
+  line-height: 1.08;
+}
+
 .certificate-form {
   display: flex;
   flex-direction: column;
@@ -247,7 +258,12 @@
   margin-top: 40px;
 }
 
-.certificate-form__purchase:hover,
+@media (hover: hover) {
+  .certificate-form__purchase:hover {
+    background-color: #330200;
+  }
+}
+
 .certificate-form__purchase:focus-visible {
   background-color: #330200;
 }

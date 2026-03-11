@@ -1,14 +1,17 @@
 .auth-page {
   background: #8b0000;
-  height: calc(100vh - var(--header-h));
-  min-height: calc(100vh - var(--header-h));
+  /* Фон должен "заходить" под хедер, но контент начинаться под ним */
+  margin-top: calc(-1 * var(--header-h));
+  padding-top: var(--header-h);
+  height: 100vh;
+  min-height: 100vh;
   overflow: hidden;
 }
 
 .auth-layout {
   height: 100%;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(525px, 1fr);
+  grid-template-columns: minmax(0, 1fr) 525px;
   padding-right: 72px;
 }
 
@@ -38,7 +41,7 @@
   width: 100%;
   height: 100%;
   background: #fcf8f7;
-  border-radius: 0;
+  border-radius: 4px;
   margin: 0;
   display: flex;
   justify-content: center;
@@ -353,14 +356,27 @@
   text-align: center;
 }
 
-.auth-btn--primary:hover:not(:disabled) {
-  opacity: 0.9;
+@media (hover: hover) {
+  .auth-btn--primary:hover:not(:disabled) {
+    opacity: 0.9;
+  }
 }
 
 .auth-btn--ghost {
   background: transparent;
   color: #740400;
   border-color: #be8f8e;
+  transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease;
+}
+
+/* Hover как у кнопки "В КОРЗИНУ" в карточке товара */
+@media (hover: hover) and (pointer: fine) {
+  .auth-btn--ghost:hover:not(:disabled) {
+    background: #740400;
+    border-color: #740400;
+    color: #fcf8f7;
+    opacity: 1;
+  }
 }
 
 .auth-link {
@@ -373,6 +389,7 @@
   cursor: pointer;
   justify-self: center;
   text-transform: uppercase;
+  transition: color 180ms ease;
 }
 
 .auth-link--forgot {
@@ -402,8 +419,10 @@
   text-align: center;
 }
 
-.auth-link:hover:not(:disabled) {
-  color: #740400;
+@media (hover: hover) {
+  .auth-link:hover:not(:disabled) {
+    color: #740400;
+  }
 }
 
 .auth-link:disabled {
@@ -420,14 +439,17 @@
   padding: 8px 0 0;
   cursor: pointer;
   justify-self: center;
+  transition: color 180ms ease;
 }
 
 .auth-back-link--site {
   margin-top: 64px;
 }
 
-.auth-back-link:hover {
-  color: #740400;
+@media (hover: hover) {
+  .auth-back-link:hover {
+    color: #740400;
+  }
 }
 
 .auth-congrats-image {
@@ -472,7 +494,7 @@
   .auth-panel {
     width: 100%;
     height: 100%;
-    border-radius: 24px 24px 0 0;
+    border-radius: 4px;
   }
 }
 

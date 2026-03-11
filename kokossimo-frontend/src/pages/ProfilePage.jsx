@@ -260,7 +260,7 @@ const ProfilePage = () => {
   };
 
   return (
-    <div className="profile-page">
+    <div className="profile-page page-animation">
       <div className="container profile-container">
         <div className="breadcrumbs">
           <Link to="/">ГЛАВНАЯ</Link> <span>— ПРОФИЛЬ</span>
@@ -279,16 +279,17 @@ const ProfilePage = () => {
           ))}
         </div>
 
-        {!isAuthenticated ? (
-          <section className="profile-panel profile-panel--guest">
-            <h1 className="profile-empty-title">Личный кабинет</h1>
-            <p className="profile-empty-text">Войдите в аккаунт, чтобы видеть заказы, избранное и настройки.</p>
-            <Link to="/auth" className="profile-btn profile-btn--primary profile-btn--fit">
-              Вход / Регистрация
-            </Link>
-          </section>
-        ) : (
-          <>
+        <div className="page-animation" key={isAuthenticated ? activeTab : 'guest'}>
+          {!isAuthenticated ? (
+            <section className="profile-panel profile-panel--guest">
+              <h1 className="profile-empty-title">Личный кабинет</h1>
+              <p className="profile-empty-text">Войдите в аккаунт, чтобы видеть заказы, избранное и настройки.</p>
+              <Link to="/auth" className="profile-btn profile-btn--primary profile-btn--fit">
+                Вход / Регистрация
+              </Link>
+            </section>
+          ) : (
+            <>
             {activeTab === 'main' && (
               <div className="profile-main-grid">
                 <section className="profile-panel profile-user-panel">
@@ -617,7 +618,8 @@ const ProfilePage = () => {
               </div>
             )}
           </>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );

@@ -9,7 +9,6 @@
   transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }
 
-
 .container {
   max-width: 1200px;
   margin: 0 auto;
@@ -132,8 +131,10 @@
   letter-spacing: 0.04em;
 }
 
-.header__dropdown-item:hover {
-  background: #f6f0ee;
+@media (hover: hover) {
+  .header__dropdown-item:hover {
+    background: #f6f0ee;
+  }
 }
 
 .header__search {
@@ -192,8 +193,10 @@
   transition: background 0.2s ease;
 }
 
-.header__search-item:hover {
-  background: #fcf8f7;
+@media (hover: hover) {
+  .header__search-item:hover {
+    background: #fcf8f7;
+  }
 }
 
 .header__search-all {

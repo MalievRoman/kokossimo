@@ -31,6 +31,7 @@ const api = axios.create({
 });
 
 export const getProducts = (params) => api.get('/products/', { params });
+export const getProductsPriceRange = (params) => api.get('/products/price-range/', { params });
 export const getProduct = (id) => api.get(`/products/${id}/`);
 export const getProductRatings = (productId) => api.get(`/products/${productId}/ratings/`);
 export const rateProduct = (productId, payload, token) =>

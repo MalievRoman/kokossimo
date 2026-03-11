@@ -65,6 +65,13 @@ const CertificatesPage = () => {
       .replace(/\s{2,}/g, ' ')
       .slice(0, RECIPIENT_NAME_MAX_LENGTH);
 
+  const getRecipientNameClassName = (value) => {
+    const len = String(value || '').trim().length;
+    if (len >= 38) return 'certificate-recipient__name certificate-recipient__name--xlong';
+    if (len >= 28) return 'certificate-recipient__name certificate-recipient__name--long';
+    return 'certificate-recipient__name';
+  };
+
   const handleRecipientNameChange = (event) => {
     setRecipientName(normalizeRecipientName(event.target.value));
     setStatus('');
@@ -109,7 +116,7 @@ const CertificatesPage = () => {
               <div className="certificate-recipient">
                 <span className="certificate-recipient__label">ПОЛУЧАТЕЛЬ:</span>
                 {recipientName && (
-                  <span className="certificate-recipient__name">{recipientName}</span>
+                  <span className={getRecipientNameClassName(recipientName)}>{recipientName}</span>
                 )}
               </div>
             </div>
@@ -203,7 +210,7 @@ const CertificatesPage = () => {
                 <div className="certificate-recipient">
                   <span className="certificate-recipient__label">ПОЛУЧАТЕЛЬ:</span>
                   {recipientName && (
-                    <span className="certificate-recipient__name">{recipientName}</span>
+                    <span className={getRecipientNameClassName(recipientName)}>{recipientName}</span>
                   )}
                 </div>
               </div>

@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useSearchParams } from 'react-router-dom';
 import ProductCard from '../components/product/ProductCard';
-import { getProducts, getProductSubcategoriesTree } from '../services/api';
+import { getProducts, getProductsPriceRange, getProductSubcategoriesTree } from '../services/api';
 import { useCatalogFilters } from '../context/CatalogFiltersContext';
 import './CatalogPage.css';
 
@@ -23,10 +24,13 @@ const CatalogPage = () => {
   const [priceFrom, setPriceFrom] = useState('');
   const [priceTo, setPriceTo] = useState('');
   const [priceError, setPriceError] = useState('');
+  const [priceRange, setPriceRange] = useState({ min: null, max: null });
   const [loading, setLoading] = useState(true);
   const [isMobilePriceOpen, setIsMobilePriceOpen] = useState(false);
   const [isMobileCategoryOpen, setIsMobileCategoryOpen] = useState(false);
+  const [priceModalPosition, setPriceModalPosition] = useState(null);
   const mobileCategoryDetailsRef = useRef(null);
+  const priceFilterButtonRef = useRef(null);
   const productsRequestIdRef = useRef(0);
   const catalogFiltersContext = useCatalogFilters();
 
@@ -84,35 +88,6 @@ const CatalogPage = () => {
       .replace(/\s+/g, ' ')
       .trim();
 
-  const levenshtein = (a, b) => {
-    if (a === b) return 0;
-    if (!a.length) return b.length;
-    if (!b.length) return a.length;
-
-    const matrix = Array.from({ length: a.length + 1 }, () => []);
-    for (let i = 0; i <= a.length; i += 1) matrix[i][0] = i;
-    for (let j = 0; j <= b.length; j += 1) matrix[0][j] = j;
-
-    for (let i = 1; i <= a.length; i += 1) {
-      for (let j = 1; j <= b.length; j += 1) {
-        const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-        matrix[i][j] = Math.min(
-          matrix[i - 1][j] + 1,
-          matrix[i][j - 1] + 1,
-          matrix[i - 1][j - 1] + cost
-        );
-      }
-    }
-    return matrix[a.length][b.length];
-  };
-
-  const getSimilarity = (query, text) => {
-    if (!query || !text) return 0;
-    if (text.includes(query)) return 1;
-    const distance = levenshtein(query, text);
-    return 1 - distance / Math.max(query.length, text.length);
-  };
-
   const sanitizeNonNegativePrice = (rawValue) => {
     if (rawValue == null) return null;
     const value = String(rawValue).trim();
@@ -122,6 +97,33 @@ const CatalogPage = () => {
       return null;
     }
     return String(numericValue);
+  };
+
+  const normalizePriceInput = (value) => {
+    const digits = String(value || '').replace(/[^\d]/g, '');
+    if (!digits) return '';
+    // Запрещаем начинать с нуля: "0", "01", "0005" → "", "1", "5"
+    const noLeadingZeros = digits.replace(/^0+(?=\d)/, '');
+    return noLeadingZeros === '0' ? '' : noLeadingZeros;
+  };
+
+  const isPriceKeyAllowed = (event) => {
+    const allowedKeys = [
+      'Backspace',
+      'Delete',
+      'Tab',
+      'Enter',
+      'Escape',
+      'ArrowLeft',
+      'ArrowRight',
+      'ArrowUp',
+      'ArrowDown',
+      'Home',
+      'End',
+    ];
+    if (allowedKeys.includes(event.key)) return true;
+    if (event.ctrlKey || event.metaKey) return true;
+    return /^\d$/.test(event.key);
   };
 
   // Синхронизация значений цены в UI с URL (при возврате на страницу/перезагрузке)
@@ -136,6 +138,60 @@ const CatalogPage = () => {
   useEffect(() => {
     setCurrentPage(1);
   }, [searchParams, selectedParents, selectedSubcategories, sortBy]);
+
+  // Реальный диапазон цен (для подсказок в полях "от/до")
+  useEffect(() => {
+    const params = {};
+    const categoryFilter = searchParams.get('filter');
+    const searchQuery = normalizeText(searchParams.get('q') || '');
+    const parentsFromUrl = searchParams.getAll('parent');
+    const subcategoriesFromUrl = searchParams.getAll('subcategory');
+    const legacyCategoryFromFilter =
+      categoryFilter && categoryFilter !== 'bestsellers' && categoryFilter !== 'new' && categoryFilter !== 'site-kokossimo'
+        ? [categoryFilter]
+        : [];
+    const subcategoriesToFilter =
+      subcategoriesFromUrl.length > 0
+        ? subcategoriesFromUrl
+        : selectedSubcategories.length > 0
+          ? selectedSubcategories
+          : legacyCategoryFromFilter.filter((c) => /^\d+\.\d+$/.test(c));
+    const legacyParents = legacyCategoryFromFilter.filter((c) => /^\d$/.test(c));
+    const parentsFinal =
+      parentsFromUrl.length > 0 ? parentsFromUrl : selectedParents.length > 0 ? selectedParents : legacyParents;
+
+    // Для поиска сортировка/результаты считаются локально, диапазон цен берём по тем же фильтрам категорий.
+    if (categoryFilter === 'bestsellers') {
+      params.is_bestseller = 'true';
+    } else if (categoryFilter === 'new') {
+      params.is_new = 'true';
+    } else if (parentsFinal.length > 0 || subcategoriesToFilter.length > 0) {
+      if (parentsFinal.length > 0) params.parent = parentsFinal;
+      if (subcategoriesToFilter.length > 0) params.subcategory = subcategoriesToFilter;
+    } else if (legacyCategoryFromFilter.length > 0) {
+      const p = legacyCategoryFromFilter.filter((c) => /^\d$/.test(c));
+      const s = legacyCategoryFromFilter.filter((c) => /^\d+\.\d+$/.test(c));
+      if (p.length) params.parent = p;
+      if (s.length) params.subcategory = s;
+    }
+
+    // Если пользователь в режиме поиска — всё равно покажем диапазон по выбранным категориям.
+    // searchQuery переменная используется только чтобы зависимость обновлялась вместе с остальной логикой.
+    void searchQuery;
+
+    getProductsPriceRange(params)
+      .then((resp) => {
+        const min = resp?.data?.min_price != null ? Number(resp.data.min_price) : null;
+        const max = resp?.data?.max_price != null ? Number(resp.data.max_price) : null;
+        setPriceRange({
+          min: Number.isFinite(min) ? min : null,
+          max: Number.isFinite(max) ? max : null,
+        });
+      })
+      .catch(() => {
+        setPriceRange({ min: null, max: null });
+      });
+  }, [searchParams, selectedParents, selectedSubcategories]);
 
   // Загрузка товаров
   useEffect(() => {
@@ -171,7 +227,7 @@ const CatalogPage = () => {
     const requestId = ++productsRequestIdRef.current;
     
     if (searchQuery) {
-      params.page = undefined;
+      params.q = searchParams.get('q').trim();
       if (parentsFinal.length > 0) params.parent = parentsFinal;
       if (subcategoriesToFilter.length > 0) params.subcategory = subcategoriesToFilter;
     } else if (categoryFilter === 'bestsellers') {
@@ -189,6 +245,18 @@ const CatalogPage = () => {
     }
     if (minPrice) params.price_min = minPrice;
     if (maxPrice) params.price_max = maxPrice;
+
+    // Сортировка должна применяться ко всем товарам (серверная).
+    // Для поиска оставляем релевантность (клиентский скоринг).
+    if (!searchQuery) {
+      if (sortBy === 'price_asc') {
+        params.ordering = 'price';
+      } else if (sortBy === 'price_desc') {
+        params.ordering = '-price';
+      } else if (sortBy === 'new') {
+        params.ordering = '-is_new,-created_at,-id';
+      }
+    }
     params.page = currentPage;
     params.page_size = CATALOG_PAGE_SIZE;
 
@@ -201,55 +269,9 @@ const CatalogPage = () => {
           Array.isArray(response.data.results);
         let data = Array.isArray(response.data) ? response.data : (response.data.results || []);
         const serverCount = isPaginatedResponse ? Number(response.data.count || 0) : data.length;
-
-        if (searchQuery) {
-          const scored = data
-            .map((item) => {
-              const text = normalizeText(`${item.name || ''} ${item.description || ''}`);
-              const score = getSimilarity(searchQuery, text);
-              return { item, score };
-            })
-            .filter(({ score, item }) => score >= 0.35 || normalizeText(item.name || '').includes(searchQuery));
-
-          data = scored
-            .sort((a, b) => b.score - a.score)
-            .map(({ item }) => item);
-          
-          // Применяем фильтр по категориям к результатам поиска
-          const parentSet = new Set(parentsFinal);
-          const subSet = new Set(subcategoriesToFilter);
-          if (parentSet.size > 0 || subSet.size > 0) {
-            data = data.filter(item => {
-              if (!item.product_subcategory_code) return false;
-              const code = item.product_subcategory_code;
-              if (subSet.has(code)) return true;
-              const p = code.split('.')[0];
-              return parentSet.has(p);
-            });
-          }
-        }
+        // Поиск выполняется на сервере по названию и описанию (params.q).
         
-        // Сортировка
-        if (sortBy === 'price_asc') {
-          data = [...data].sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
-        } else if (sortBy === 'price_desc') {
-          data = [...data].sort((a, b) => parseFloat(b.price) - parseFloat(a.price));
-        } else if (sortBy === 'new') {
-          data = [...data].filter(p => p.is_new).concat(data.filter(p => !p.is_new));
-        }
-        // 'popular' - оставляем как есть (можно добавить поле popularity в будущем)
-        
-        if (minPrice || maxPrice) {
-          const minVal = minPrice ? parseFloat(minPrice) : null;
-          const maxVal = maxPrice ? parseFloat(maxPrice) : null;
-          data = data.filter((item) => {
-            const value = parseFloat(item.price);
-            if (Number.isNaN(value)) return false;
-            if (minVal !== null && value < minVal) return false;
-            if (maxVal !== null && value > maxVal) return false;
-            return true;
-          });
-        }
+        // Сортировка и price_min/price_max применяются на сервере.
 
         setCatalogProducts((prevProducts) => {
           if (currentPage === 1) return data;
@@ -278,31 +300,45 @@ const CatalogPage = () => {
       });
   }, [searchParams, selectedSubcategories, sortBy, currentPage]);
 
+  const getParentCodeFromSubcategory = (code) => String(code || '').split('.')[0];
+
   const handleParentChange = (parentCode) => {
-    const next = selectedParents.includes(parentCode)
+    const isRemoving = selectedParents.includes(parentCode);
+    const nextParents = isRemoving
       ? selectedParents.filter((c) => c !== parentCode)
       : [...selectedParents, parentCode];
-    setSelectedParents(next);
+    const nextSubcategories = isRemoving
+      ? selectedSubcategories.filter((c) => getParentCodeFromSubcategory(c) !== parentCode)
+      : selectedSubcategories;
+
+    setSelectedParents(nextParents);
+    setSelectedSubcategories(nextSubcategories);
     const nextParams = new URLSearchParams(searchParams);
     nextParams.delete('filter');
     nextParams.delete('parent');
     nextParams.delete('subcategory');
-    next.forEach((c) => nextParams.append('parent', c));
-    selectedSubcategories.forEach((c) => nextParams.append('subcategory', c));
+    nextParents.forEach((c) => nextParams.append('parent', c));
+    nextSubcategories.forEach((c) => nextParams.append('subcategory', c));
     setSearchParams(nextParams, { replace: true });
   };
 
   const handleSubcategoryChange = (code) => {
-    const next = selectedSubcategories.includes(code)
+    const parentCode = getParentCodeFromSubcategory(code);
+    const nextSubcategories = selectedSubcategories.includes(code)
       ? selectedSubcategories.filter((c) => c !== code)
       : [...selectedSubcategories, code];
-    setSelectedSubcategories(next);
+    const nextParents = selectedParents.includes(parentCode)
+      ? selectedParents
+      : [...selectedParents, parentCode];
+
+    setSelectedSubcategories(nextSubcategories);
+    setSelectedParents(nextParents);
     const nextParams = new URLSearchParams(searchParams);
     nextParams.delete('filter');
     nextParams.delete('parent');
     nextParams.delete('subcategory');
-    selectedParents.forEach((c) => nextParams.append('parent', c));
-    next.forEach((c) => nextParams.append('subcategory', c));
+    nextParents.forEach((c) => nextParams.append('parent', c));
+    nextSubcategories.forEach((c) => nextParams.append('subcategory', c));
     setSearchParams(nextParams, { replace: true });
   };
 
@@ -361,34 +397,12 @@ const CatalogPage = () => {
 
   const handlePriceFromChange = (event) => {
     setPriceError('');
-    const value = event.target.value;
-    if (value === '' || value === '-') {
-      setPriceFrom(value);
-      return;
-    }
-    const num = Number(value);
-    if (!Number.isNaN(num) && num < 0) {
-      setPriceFrom('0');
-      setPriceError('Цена «от» не может быть отрицательной. Использовано значение 0.');
-      return;
-    }
-    setPriceFrom(value);
+    setPriceFrom(normalizePriceInput(event.target.value));
   };
 
   const handlePriceToChange = (event) => {
     setPriceError('');
-    const value = event.target.value;
-    if (value === '' || value === '-') {
-      setPriceTo(value);
-      return;
-    }
-    const num = Number(value);
-    if (!Number.isNaN(num) && num < 0) {
-      setPriceTo('0');
-      setPriceError('Цена «до» не может быть отрицательной. Использовано значение 0.');
-      return;
-    }
-    setPriceTo(value);
+    setPriceTo(normalizePriceInput(event.target.value));
   };
 
   const handleMobilePriceApply = () => {
@@ -494,18 +508,26 @@ const CatalogPage = () => {
               <h2 className="catalog-sidebar-title">СТОИМОСТЬ</h2>
               <div className="catalog-filter-price">
                 <input
-                  type="number"
-                  min={0}
-                  placeholder="от 159"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  placeholder={priceRange.min != null ? `от ${Math.floor(priceRange.min)}` : 'от'}
                   value={priceFrom}
                   onChange={handlePriceFromChange}
+                  onKeyDown={(event) => {
+                    if (!isPriceKeyAllowed(event)) event.preventDefault();
+                  }}
                 />
                 <input
-                  type="number"
-                  min={0}
-                  placeholder="до 35389"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  placeholder={priceRange.max != null ? `до ${Math.ceil(priceRange.max)}` : 'до'}
                   value={priceTo}
                   onChange={handlePriceToChange}
+                  onKeyDown={(event) => {
+                    if (!isPriceKeyAllowed(event)) event.preventDefault();
+                  }}
                 />
               </div>
               {priceError && (
@@ -593,6 +615,7 @@ const CatalogPage = () => {
 
               <div className="catalog-mobile-filter catalog-mobile-filter--price">
                 <button
+                  ref={priceFilterButtonRef}
                   type="button"
                   className="catalog-mobile-filter__summary catalog-mobile-filter__button"
                   onClick={() => {
@@ -600,70 +623,113 @@ const CatalogPage = () => {
                       mobileCategoryDetailsRef.current.open = false;
                       setIsMobileCategoryOpen(false);
                     }
+                    const rect = priceFilterButtonRef.current?.getBoundingClientRect();
+                    if (rect) {
+                      setPriceModalPosition({ left: rect.left, top: rect.bottom + 4 });
+                    } else {
+                      setPriceModalPosition(null);
+                    }
                     setIsMobilePriceOpen((prev) => !prev);
                   }}
                 >
                   СТОИМОСТЬ
                 </button>
 
-                {isMobilePriceOpen && (
-                  <div className="catalog-mobile-price-modal" role="dialog" aria-modal="false">
-                    <button
-                      type="button"
-                      className="catalog-mobile-price-modal__close"
-                      aria-label="Закрыть окно фильтра цены"
-                      onClick={() => setIsMobilePriceOpen(false)}
-                    >
-                      ×
-                    </button>
-
-                    <div className="catalog-mobile-price-modal__row">
-                      <label className="catalog-mobile-price-modal__field">
-                        <span>ОТ</span>
-                        <input
-                          type="number"
-                          min={0}
-                          placeholder="159"
-                          value={priceFrom}
-                          onChange={handlePriceFromChange}
-                        />
-                      </label>
-
-                      <label className="catalog-mobile-price-modal__field">
-                        <span>ДО</span>
-                        <input
-                          type="number"
-                          min={0}
-                          placeholder="3538327"
-                          value={priceTo}
-                          onChange={handlePriceToChange}
-                        />
-                      </label>
-                    </div>
-
-                    {priceError && (
-                      <p className="catalog-filter-price-error" role="alert">
-                        {priceError}
-                      </p>
-                    )}
-
-                    <div className="catalog-mobile-price-modal__actions">
-                      <button
-                        type="button"
-                        className="catalog-mobile-price-modal__submit"
-                        onClick={handleMobilePriceApply}
+                {isMobilePriceOpen && createPortal(
+                  (() => {
+                    const pos = priceModalPosition || { left: 0, top: 0 };
+                    const pad = 12;
+                    const maxW = typeof window !== 'undefined'
+                      ? Math.min(280, window.innerWidth - pos.left - pad)
+                      : 280;
+                    const maxH = typeof window !== 'undefined'
+                      ? window.innerHeight - pos.top - pad
+                      : 400;
+                    const scaleX = maxW / 280;
+                    const scaleY = maxH / 200;
+                    const scale = Math.min(1, scaleX, scaleY);
+                    return (
+                      <div
+                        className="catalog-mobile-price-modal"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label="Фильтр по цене"
+                        style={{
+                          left: pos.left,
+                          top: pos.top,
+                          transformOrigin: 'top left',
+                          maxWidth: maxW,
+                          maxHeight: maxH,
+                          transform: scale < 1 ? `scale(${scale})` : undefined,
+                        }}
                       >
-                        ПОДТВЕРДИТЬ
-                      </button>
-                      <button
-                        type="button"
-                        className="catalog-mobile-price-modal__reset"
-                        onClick={handleMobilePriceReset}
-                      >
-                        СБРОСИТЬ
-                      </button>
-                    </div>
-                  </div>
+                        <button
+                          type="button"
+                          className="catalog-mobile-price-modal__close"
+                          aria-label="Закрыть окно фильтра цены"
+                          onClick={() => setIsMobilePriceOpen(false)}
+                        >
+                          ×
+                        </button>
+
+                        <div className="catalog-mobile-price-modal__row">
+                          <label className="catalog-mobile-price-modal__field">
+                            <span>ОТ</span>
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
+                              placeholder={priceRange.min != null ? String(Math.floor(priceRange.min)) : '0'}
+                              value={priceFrom}
+                              onChange={handlePriceFromChange}
+                              onKeyDown={(event) => {
+                                if (!isPriceKeyAllowed(event)) event.preventDefault();
+                              }}
+                            />
+                          </label>
+
+                          <label className="catalog-mobile-price-modal__field">
+                            <span>ДО</span>
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
+                              placeholder={priceRange.max != null ? String(Math.ceil(priceRange.max)) : '0'}
+                              value={priceTo}
+                              onChange={handlePriceToChange}
+                              onKeyDown={(event) => {
+                                if (!isPriceKeyAllowed(event)) event.preventDefault();
+                              }}
+                            />
+                          </label>
+                        </div>
+
+                        {priceError && (
+                          <p className="catalog-filter-price-error" role="alert">
+                            {priceError}
+                          </p>
+                        )}
+
+                        <div className="catalog-mobile-price-modal__actions">
+                          <button
+                            type="button"
+                            className="catalog-mobile-price-modal__submit"
+                            onClick={handleMobilePriceApply}
+                          >
+                            ПОДТВЕРДИТЬ
+                          </button>
+                          <button
+                            type="button"
+                            className="catalog-mobile-price-modal__reset"
+                            onClick={handleMobilePriceReset}
+                          >
+                            СБРОСИТЬ
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })(),
+                  document.body
                 )}
               </div>
 

@@ -226,7 +226,7 @@ const AuthPage = () => {
   };
 
   return (
-    <div className="auth-page page-animation">
+    <div className="auth-page">
       <div className="auth-layout">
         <div className="auth-brand">
           <div className="auth-brand-logo-wrap">
@@ -234,7 +234,7 @@ const AuthPage = () => {
           </div>
         </div>
         <div className="auth-panel">
-          <div className="auth-panel-inner">
+          <div className="auth-panel-inner page-animation" key={screen}>
             {screen === 'intro' && (
               <div className="auth-content">
                 <h1 className="auth-title auth-title--cabinet">Личный кабинет</h1>
@@ -243,9 +243,6 @@ const AuthPage = () => {
                 </button>
                 <button type="button" className="auth-btn auth-btn--ghost auth-btn--intro-register" onClick={() => goToScreen('register')}>
                   Зарегистрироваться
-                </button>
-                <button type="button" className="auth-link auth-link--forgot" onClick={() => goToScreen('restoreRequest')}>
-                  Забыли пароль?
                 </button>
                 <button type="button" className="auth-back-link auth-back-link--site" onClick={() => navigate('/')}>
                   <span aria-hidden="true">‹</span> Обратно на сайт

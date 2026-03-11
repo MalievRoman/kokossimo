@@ -536,9 +536,8 @@ def sync_site_products(force=False, progress_callback=None):
                         existing.price = item["price"]
                         existing.external_image_url = item["external_image_url"] or None
                         existing.image = None
-                        existing.is_bestseller = False
-                        existing.is_new = False
-                        existing.discount = 0
+                        # Важно: эти поля редактируются вручную в админке.
+                        # Синк должен обновлять данные МойСклада, но не перетирать ручные пометки.
                         to_update.append(existing)
 
                 if to_create:
@@ -554,9 +553,6 @@ def sync_site_products(force=False, progress_callback=None):
                             "price",
                             "external_image_url",
                             "image",
-                            "is_bestseller",
-                            "is_new",
-                            "discount",
                         ],
                         batch_size=200,
                     )

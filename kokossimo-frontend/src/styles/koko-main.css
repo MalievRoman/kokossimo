@@ -203,6 +203,23 @@ body {
   color: var(--accent);
 }
 
+/* Одинаковый вид при ручном вводе и после выбора подсказки — без синей заливки выделения */
+.header__search-input::selection {
+  background: rgba(63, 27, 18, 0.12);
+  color: var(--accent);
+}
+.header__search-input::-moz-selection {
+  background: rgba(63, 27, 18, 0.12);
+  color: var(--accent);
+}
+.header__search-input:-webkit-autofill,
+.header__search-input:-webkit-autofill:hover,
+.header__search-input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--accent);
+  -webkit-box-shadow: 0 0 0 100px transparent inset;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
 .header__search-input::-webkit-search-cancel-button {
   -webkit-appearance: none;
   height: 18px;
@@ -239,9 +256,11 @@ body {
   font-size: 14px;
 }
 
-.header__search-suggestion:hover {
-  background: rgba(63, 27, 18, 0.05);
-  color: var(--hover);
+@media (hover: hover) {
+  .header__search-suggestion:hover {
+    background: rgba(63, 27, 18, 0.05);
+    color: var(--hover);
+  }
 }
 
 .header__nav {
@@ -273,11 +292,13 @@ body {
   gap: 20px;
 }
 
-.header__catalog:hover,
-.header__cert:hover,
-.header__dropdown-btn:hover,
-.header__icon-btn:hover {
-  color: var(--hover);
+@media (hover: hover) {
+  .header__catalog:hover,
+  .header__cert:hover,
+  .header__dropdown-btn:hover,
+  .header__icon-btn:hover {
+    color: var(--hover);
+  }
 }
 
 /* Mobile header spacing */
@@ -345,6 +366,22 @@ body {
   font: inherit;
   font-weight: 300;
   color: var(--accent);
+}
+
+.mobile-search__input::selection {
+  background: rgba(63, 27, 18, 0.12);
+  color: var(--accent);
+}
+.mobile-search__input::-moz-selection {
+  background: rgba(63, 27, 18, 0.12);
+  color: var(--accent);
+}
+.mobile-search__input:-webkit-autofill,
+.mobile-search__input:-webkit-autofill:hover,
+.mobile-search__input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--accent);
+  -webkit-box-shadow: 0 0 0 100px transparent inset;
+  transition: background-color 5000s ease-in-out 0s;
 }
 
 .mobile-search__input::-webkit-search-cancel-button {
@@ -601,11 +638,13 @@ body {
 .hero__arrow--next {
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='45' height='45' viewBox='0 0 45 45' fill='none'><circle cx='22.5' cy='22.5' r='21.85' fill='%23460200' stroke='%23460200' stroke-width='1.3'/><path d='M20.5 16.5L26.5 22.5L20.5 28.5' stroke='%23FFEDE8' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/></svg>");
 }
-.hero__arrow--prev:hover {
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='45' height='45' viewBox='0 0 45 45' fill='none'><circle cx='22.5' cy='22.5' r='21.85' fill='%23330200' stroke='%23330200' stroke-width='1.3'/><path d='M24.5 16.5L18.5 22.5L24.5 28.5' stroke='%23FFEDE8' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/></svg>");
-}
-.hero__arrow--next:hover {
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='45' height='45' viewBox='0 0 45 45' fill='none'><circle cx='22.5' cy='22.5' r='21.85' fill='%23330200' stroke='%23330200' stroke-width='1.3'/><path d='M20.5 16.5L26.5 22.5L20.5 28.5' stroke='%23FFEDE8' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+@media (hover: hover) {
+  .hero__arrow--prev:hover {
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='45' height='45' viewBox='0 0 45 45' fill='none'><circle cx='22.5' cy='22.5' r='21.85' fill='%23330200' stroke='%23330200' stroke-width='1.3'/><path d='M24.5 16.5L18.5 22.5L24.5 28.5' stroke='%23FFEDE8' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  }
+  .hero__arrow--next:hover {
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='45' height='45' viewBox='0 0 45 45' fill='none'><circle cx='22.5' cy='22.5' r='21.85' fill='%23330200' stroke='%23330200' stroke-width='1.3'/><path d='M20.5 16.5L26.5 22.5L20.5 28.5' stroke='%23FFEDE8' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  }
 }
 
 .hero__dots {
@@ -727,8 +766,10 @@ body {
   font-weight: 400;
   letter-spacing: 0.08em;
 }
-.catalog__all:hover {
-  color: var(--accent);
+@media (hover: hover) {
+  .catalog__all:hover {
+    color: var(--accent);
+  }
 }
 .catalog__all-icon {
   flex: 0 0 24px;
@@ -855,8 +896,10 @@ body {
   font-weight: 400;
   letter-spacing: 0.08em;
 }
-.bestsellers__all:hover {
-  color: var(--accent);
+@media (hover: hover) {
+  .bestsellers__all:hover {
+    color: var(--accent);
+  }
 }
 .bestsellers__all-icon {
   flex: 0 0 24px;
@@ -1037,6 +1080,28 @@ body {
   overflow: hidden;
 }
 
+/* Обёртка, чтобы кнопка «В КОРЗИНУ» и блок +/- занимали одно и то же место */
+.product-card__action {
+  position: relative;
+  margin-top: 16px;
+  min-height: 42px;
+}
+
+.product-card__action .product-card__btn,
+.product-card__action .product-card__qty {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  margin: 0;
+}
+
+.product-card__action .product-card__btn.is-hidden,
+.product-card__action .product-card__qty.is-hidden {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .product-card__price {
   font-family: "Open Sans", sans-serif;
   font-size: 16px;
@@ -1091,12 +1156,12 @@ body {
     color 180ms ease;
 }
 
-.product-card__btn:hover {
-  background: var(--accent);
-  color: var(--bg);
+@media (hover: hover) {
+  .product-card__btn:hover {
+    background: var(--accent);
+    color: var(--bg);
+  }
 }
-
-
 
 .product-card__qty {
   margin-top: 16px;
@@ -1121,9 +1186,11 @@ body {
   cursor: pointer;
 }
 
-.product-card__qty-btn:hover {
-  background: var(--accent);
-  color: var(--bg);
+@media (hover: hover) {
+  .product-card__qty-btn:hover {
+    background: var(--accent);
+    color: var(--bg);
+  }
 }
 
 .product-card__qty-value {
@@ -1214,12 +1281,13 @@ body {
   background-image: url("/static/assets/arrow_scroll-right.svg");
 }
 
-.bestsellers__arrow--prev:hover {
-  background-image: url("/static/assets/arrow_scroll-left=hover.svg");
-}
-
-.bestsellers__arrow--next:hover {
-  background-image: url("/static/assets/arrow_scroll-right=hover.svg");
+@media (hover: hover) {
+  .bestsellers__arrow--prev:hover {
+    background-image: url("/static/assets/arrow_scroll-left=hover.svg");
+  }
+  .bestsellers__arrow--next:hover {
+    background-image: url("/static/assets/arrow_scroll-right=hover.svg");
+  }
 }
 
 /* На мобилке оставляем свайп, стрелки прячем */
@@ -1242,12 +1310,13 @@ body {
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='45' height='45' viewBox='0 0 45 45' fill='none'><circle cx='22.5' cy='22.5' r='21.85' fill='%23460200' stroke='%23460200' stroke-width='1.3'/><path d='M20.5 16.5L26.5 22.5L20.5 28.5' stroke='%23FFEDE8' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/></svg>");
 }
 
-.bestsellers__arrow--prev:hover {
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='45' height='45' viewBox='0 0 45 45' fill='none'><circle cx='22.5' cy='22.5' r='21.85' fill='%23330200' stroke='%23330200' stroke-width='1.3'/><path d='M24.5 16.5L18.5 22.5L24.5 28.5' stroke='%23FFEDE8' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/></svg>");
-}
-
-.bestsellers__arrow--next:hover {
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='45' height='45' viewBox='0 0 45 45' fill='none'><circle cx='22.5' cy='22.5' r='21.85' fill='%23330200' stroke='%23330200' stroke-width='1.3'/><path d='M20.5 16.5L26.5 22.5L20.5 28.5' stroke='%23FFEDE8' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+@media (hover: hover) {
+  .bestsellers__arrow--prev:hover {
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='45' height='45' viewBox='0 0 45 45' fill='none'><circle cx='22.5' cy='22.5' r='21.85' fill='%23330200' stroke='%23330200' stroke-width='1.3'/><path d='M24.5 16.5L18.5 22.5L24.5 28.5' stroke='%23FFEDE8' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  }
+  .bestsellers__arrow--next:hover {
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='45' height='45' viewBox='0 0 45 45' fill='none'><circle cx='22.5' cy='22.5' r='21.85' fill='%23330200' stroke='%23330200' stroke-width='1.3'/><path d='M20.5 16.5L26.5 22.5L20.5 28.5' stroke='%23FFEDE8' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  }
 }
 
 /* Header: always fixed */
@@ -1412,9 +1481,11 @@ body {
     color 180ms ease;
 }
 
-.subscribebtn:hover {
-  background: var(--accent);
-  color: var(--bg);
+@media (hover: hover) {
+  .subscribebtn:hover {
+    background: var(--accent);
+    color: var(--bg);
+  }
 }
 
 .subscribenote {
@@ -1536,8 +1607,10 @@ body {
   line-height: 1.35;
 }
 
-.footer__link:hover {
-  color: var(--accent);
+@media (hover: hover) {
+  .footer__link:hover {
+    color: var(--accent);
+  }
 }
 
 .footer__social {
@@ -1783,24 +1856,25 @@ body {
   text-transform: uppercase;
 }
 
-.header__dropdown-link:hover {
-  color: var(--hover);
-  background: rgba(63, 27, 18, 0.04);
-}
+@media (hover: hover) {
+  .header__dropdown-link:hover {
+    color: var(--hover);
+    background: rgba(63, 27, 18, 0.04);
+  }
 
-/* Показ списка и поворот стрелки при наведении (desktop) */
-.header__dropdown:hover .header__dropdown-menu {
-  opacity: 1;
-  pointer-events: auto;
-  transform: translateY(0);
+  .header__dropdown:hover .header__dropdown-menu {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
+
+  .header__dropdown:hover .header__dropdown-chevron {
+    transform: rotate(180deg);
+  }
 }
 
 .header__dropdown-chevron {
   transition: transform 160ms ease-out;
-}
-
-.header__dropdown:hover .header__dropdown-chevron {
-  transform: rotate(180deg);
 }
 
 /* На мобильных десктопное меню скрыто, поэтому этих hover-эффектов не будет видно */
