@@ -3,6 +3,7 @@
 Русский интерфейс задаётся в config/urls.py.
 """
 from django.contrib import admin
+from django.conf import settings
 from .models import Category, Product, ProductSubcategory, Profile, Order, OrderItem, ProductRating, Feedback
 
 
@@ -16,6 +17,14 @@ class CategoryAdmin(admin.ModelAdmin):
         (None, {"fields": ("name", "slug")}),
         ("Изображение", {"fields": ("image",)}),
     )
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        # В режиме синка МойСклад на сайте используется одна категория (site-kokossimo),
+        # остальные категории в админке не актуальны для витрины.
+        if getattr(settings, "MOYSKLAD_SITE_SYNC_ENABLED", False):
+            qs = qs.filter(slug=getattr(settings, "MOYSKLAD_SITE_CATEGORY_SLUG", "site-kokossimo"))
+        return qs
 
 
 @admin.register(ProductSubcategory)
@@ -39,6 +48,13 @@ class ProductAdmin(admin.ModelAdmin):
         (None, {"fields": ("name", "category", "product_subcategory", "description", "price", "image")}),
         ("Главная страница", {"fields": ("is_bestseller", "is_new", "discount")}),
     )
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "category" and getattr(settings, "MOYSKLAD_SITE_SYNC_ENABLED", False):
+            kwargs["queryset"] = Category.objects.filter(
+                slug=getattr(settings, "MOYSKLAD_SITE_CATEGORY_SLUG", "site-kokossimo")
+            )
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
 @admin.register(Profile)

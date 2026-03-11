@@ -140,6 +140,8 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
         price_min = self.request.query_params.get("price_min")
         price_max = self.request.query_params.get("price_max")
         ordering = (self.request.query_params.get("ordering") or "").strip()
+        is_new = self.request.query_params.get('is_new', None)
+        is_bestseller = self.request.query_params.get('is_bestseller', None)
 
         def _parse_decimal(value):
             if value is None:
@@ -183,6 +185,13 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
                 rating_avg=Avg('ratings__rating'),
                 rating_count=Count('ratings')
             ).order_by('-created_at', '-id')
+
+            # В режиме МойСклад также должны работать фильтры "новинки/бестселлеры"
+            if is_new == 'true':
+                queryset = queryset.filter(is_new=True)
+            if is_bestseller == 'true':
+                queryset = queryset.filter(is_bestseller=True)
+
             if subcategory_codes or parent_codes:
                 q = Q(product_subcategory__isnull=False)
                 if parent_codes and subcategory_codes:
@@ -203,8 +212,6 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
             rating_count=Count('ratings')
         ).order_by('-created_at', '-id')
         
-        is_new = self.request.query_params.get('is_new', None)
-        is_bestseller = self.request.query_params.get('is_bestseller', None)
         category_slugs = self.request.query_params.getlist('category')
 
         if is_new == 'true':
