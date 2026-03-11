@@ -33,7 +33,7 @@ const ScrollToTop = () => {
 
 function App() {
   const { pathname } = useLocation();
-  const isAuthRoute = pathname === '/auth';
+  const isAuthRoute = pathname === '/auth' || pathname.startsWith('/auth/');
 
   return (
     <div className="app">
@@ -41,27 +41,29 @@ function App() {
       <Header />
       
       <main>
-        <Routes>
-          {/* 1. Сначала самые важные и конкретные страницы */}
-          <Route path="/" element={<HomePage />} />
-          <Route path="/catalog" element={<CatalogPage />} />
-          <Route path="/certificates" element={<CertificatesPage />} />
-          
-          {/* 2. Потом страницы "В разработке" */}
-          <Route path="/about" element={<AboutPage />} />
-          <Route path="/contacts" element={<ContactsPage />} />
-          <Route path="/delivery" element={<UnderConstructionPage />} />
-          <Route path="/favorites" element={<FavoritesPage />} />
-          <Route path="/cart" element={<CartPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/auth" element={<AuthPage />} />
-          <Route path="/checkout" element={<PaymentPage />} />
-          <Route path="/checkout/success" element={<CheckoutSuccessPage />} />
-          <Route path="/product/:id" element={<ProductPage />} />
-          
-          {/* 3. И ТОЛЬКО В САМОМ КОНЦЕ - заглушка для всего остального */}
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
+        <div className="page-animation" key={pathname}>
+          <Routes>
+            {/* 1. Сначала самые важные и конкретные страницы */}
+            <Route path="/" element={<HomePage />} />
+            <Route path="/catalog" element={<CatalogPage />} />
+            <Route path="/certificates" element={<CertificatesPage />} />
+            
+            {/* 2. Потом страницы "В разработке" */}
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/contacts" element={<ContactsPage />} />
+            <Route path="/delivery" element={<UnderConstructionPage />} />
+            <Route path="/favorites" element={<FavoritesPage />} />
+            <Route path="/cart" element={<CartPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/auth" element={<AuthPage />} />
+            <Route path="/checkout" element={<PaymentPage />} />
+            <Route path="/checkout/success" element={<CheckoutSuccessPage />} />
+            <Route path="/product/:id" element={<ProductPage />} />
+            
+            {/* 3. И ТОЛЬКО В САМОМ КОНЦЕ - заглушка для всего остального */}
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </div>
       </main>
       
       {!isAuthRoute && <Footer />}

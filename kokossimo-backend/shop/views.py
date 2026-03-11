@@ -12,7 +12,8 @@ from django.utils import timezone
 from datetime import timedelta
 import secrets
 import time
-from django.db.models import Q, Avg, Count
+from django.db.models import Q, Avg, Count, Min, Max
+from decimal import Decimal, InvalidOperation
 from django.shortcuts import get_object_or_404
 from django.http import JsonResponse, HttpResponse
 import base64
@@ -136,6 +137,44 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         subcategory_codes = self.request.query_params.getlist('subcategory')
         parent_codes = self.request.query_params.getlist('parent')
+        price_min = self.request.query_params.get("price_min")
+        price_max = self.request.query_params.get("price_max")
+        ordering = (self.request.query_params.get("ordering") or "").strip()
+
+        def _parse_decimal(value):
+            if value is None:
+                return None
+            s = str(value).strip()
+            if not s:
+                return None
+            try:
+                return Decimal(s)
+            except (InvalidOperation, ValueError):
+                return None
+
+        def _apply_price_filters(qs):
+            min_val = _parse_decimal(price_min)
+            max_val = _parse_decimal(price_max)
+            if min_val is not None:
+                qs = qs.filter(price__gte=min_val)
+            if max_val is not None:
+                qs = qs.filter(price__lte=max_val)
+            return qs
+
+        def _apply_ordering(qs):
+            if not ordering:
+                return qs
+            allowed = {"price", "created_at", "id", "is_new", "is_bestseller"}
+            parts = [p.strip() for p in ordering.split(",") if p.strip()]
+            fields = []
+            for part in parts:
+                desc = part.startswith("-")
+                name = part[1:] if desc else part
+                if name not in allowed:
+                    continue
+                fields.append(f"-{name}" if desc else name)
+            return qs.order_by(*fields) if fields else qs
+
         if getattr(settings, "MOYSKLAD_SITE_SYNC_ENABLED", False):
             queryset = Product.objects.filter(
                 moysklad_id__isnull=False,
@@ -153,6 +192,8 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
                 elif subcategory_codes:
                     q &= Q(product_subcategory__code__in=subcategory_codes)
                 queryset = queryset.filter(q)
+            queryset = _apply_price_filters(queryset)
+            queryset = _apply_ordering(queryset)
             return queryset
 
         # Фильтрация товаров через параметры URL
@@ -185,7 +226,27 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
                 q &= Q(product_subcategory__code__in=subcategory_codes)
             queryset = queryset.filter(q)
 
+        queryset = _apply_price_filters(queryset)
+        queryset = _apply_ordering(queryset)
         return queryset
+
+    @action(detail=False, methods=["get"], url_path="price-range")
+    def price_range(self, request):
+        """
+        Реальный диапазон цен для текущих фильтров.
+        ВАЖНО: фронт вызывает этот эндпоинт без price_min/price_max,
+        чтобы подсказки "от/до" всегда показывали минимальную/максимальную цену товаров в выборке.
+        """
+        qs = self.get_queryset()
+        agg = qs.aggregate(min_price=Min("price"), max_price=Max("price"))
+        min_price = agg.get("min_price")
+        max_price = agg.get("max_price")
+        return Response(
+            {
+                "min_price": str(min_price) if min_price is not None else None,
+                "max_price": str(max_price) if max_price is not None else None,
+            }
+        )
 
     def get_serializer_context(self):
         context = super().get_serializer_context()

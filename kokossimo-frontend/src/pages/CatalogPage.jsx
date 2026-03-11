@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import ProductCard from '../components/product/ProductCard';
-import { getProducts, getProductSubcategoriesTree } from '../services/api';
+import { getProducts, getProductsPriceRange, getProductSubcategoriesTree } from '../services/api';
 import { useCatalogFilters } from '../context/CatalogFiltersContext';
 import './CatalogPage.css';
 
@@ -23,6 +23,7 @@ const CatalogPage = () => {
   const [priceFrom, setPriceFrom] = useState('');
   const [priceTo, setPriceTo] = useState('');
   const [priceError, setPriceError] = useState('');
+  const [priceRange, setPriceRange] = useState({ min: null, max: null });
   const [loading, setLoading] = useState(true);
   const [isMobilePriceOpen, setIsMobilePriceOpen] = useState(false);
   const [isMobileCategoryOpen, setIsMobileCategoryOpen] = useState(false);
@@ -124,6 +125,33 @@ const CatalogPage = () => {
     return String(numericValue);
   };
 
+  const normalizePriceInput = (value) => {
+    const digits = String(value || '').replace(/[^\d]/g, '');
+    if (!digits) return '';
+    // Запрещаем начинать с нуля: "0", "01", "0005" → "", "1", "5"
+    const noLeadingZeros = digits.replace(/^0+(?=\d)/, '');
+    return noLeadingZeros === '0' ? '' : noLeadingZeros;
+  };
+
+  const isPriceKeyAllowed = (event) => {
+    const allowedKeys = [
+      'Backspace',
+      'Delete',
+      'Tab',
+      'Enter',
+      'Escape',
+      'ArrowLeft',
+      'ArrowRight',
+      'ArrowUp',
+      'ArrowDown',
+      'Home',
+      'End',
+    ];
+    if (allowedKeys.includes(event.key)) return true;
+    if (event.ctrlKey || event.metaKey) return true;
+    return /^\d$/.test(event.key);
+  };
+
   // Синхронизация значений цены в UI с URL (при возврате на страницу/перезагрузке)
   useEffect(() => {
     const minFromUrl = sanitizeNonNegativePrice(searchParams.get('price_min'));
@@ -136,6 +164,60 @@ const CatalogPage = () => {
   useEffect(() => {
     setCurrentPage(1);
   }, [searchParams, selectedParents, selectedSubcategories, sortBy]);
+
+  // Реальный диапазон цен (для подсказок в полях "от/до")
+  useEffect(() => {
+    const params = {};
+    const categoryFilter = searchParams.get('filter');
+    const searchQuery = normalizeText(searchParams.get('q') || '');
+    const parentsFromUrl = searchParams.getAll('parent');
+    const subcategoriesFromUrl = searchParams.getAll('subcategory');
+    const legacyCategoryFromFilter =
+      categoryFilter && categoryFilter !== 'bestsellers' && categoryFilter !== 'new' && categoryFilter !== 'site-kokossimo'
+        ? [categoryFilter]
+        : [];
+    const subcategoriesToFilter =
+      subcategoriesFromUrl.length > 0
+        ? subcategoriesFromUrl
+        : selectedSubcategories.length > 0
+          ? selectedSubcategories
+          : legacyCategoryFromFilter.filter((c) => /^\d+\.\d+$/.test(c));
+    const legacyParents = legacyCategoryFromFilter.filter((c) => /^\d$/.test(c));
+    const parentsFinal =
+      parentsFromUrl.length > 0 ? parentsFromUrl : selectedParents.length > 0 ? selectedParents : legacyParents;
+
+    // Для поиска сортировка/результаты считаются локально, диапазон цен берём по тем же фильтрам категорий.
+    if (categoryFilter === 'bestsellers') {
+      params.is_bestseller = 'true';
+    } else if (categoryFilter === 'new') {
+      params.is_new = 'true';
+    } else if (parentsFinal.length > 0 || subcategoriesToFilter.length > 0) {
+      if (parentsFinal.length > 0) params.parent = parentsFinal;
+      if (subcategoriesToFilter.length > 0) params.subcategory = subcategoriesToFilter;
+    } else if (legacyCategoryFromFilter.length > 0) {
+      const p = legacyCategoryFromFilter.filter((c) => /^\d$/.test(c));
+      const s = legacyCategoryFromFilter.filter((c) => /^\d+\.\d+$/.test(c));
+      if (p.length) params.parent = p;
+      if (s.length) params.subcategory = s;
+    }
+
+    // Если пользователь в режиме поиска — всё равно покажем диапазон по выбранным категориям.
+    // searchQuery переменная используется только чтобы зависимость обновлялась вместе с остальной логикой.
+    void searchQuery;
+
+    getProductsPriceRange(params)
+      .then((resp) => {
+        const min = resp?.data?.min_price != null ? Number(resp.data.min_price) : null;
+        const max = resp?.data?.max_price != null ? Number(resp.data.max_price) : null;
+        setPriceRange({
+          min: Number.isFinite(min) ? min : null,
+          max: Number.isFinite(max) ? max : null,
+        });
+      })
+      .catch(() => {
+        setPriceRange({ min: null, max: null });
+      });
+  }, [searchParams, selectedParents, selectedSubcategories]);
 
   // Загрузка товаров
   useEffect(() => {
@@ -189,6 +271,18 @@ const CatalogPage = () => {
     }
     if (minPrice) params.price_min = minPrice;
     if (maxPrice) params.price_max = maxPrice;
+
+    // Сортировка должна применяться ко всем товарам (серверная).
+    // Для поиска оставляем релевантность (клиентский скоринг).
+    if (!searchQuery) {
+      if (sortBy === 'price_asc') {
+        params.ordering = 'price';
+      } else if (sortBy === 'price_desc') {
+        params.ordering = '-price';
+      } else if (sortBy === 'new') {
+        params.ordering = '-is_new,-created_at,-id';
+      }
+    }
     params.page = currentPage;
     params.page_size = CATALOG_PAGE_SIZE;
 
@@ -229,27 +323,7 @@ const CatalogPage = () => {
           }
         }
         
-        // Сортировка
-        if (sortBy === 'price_asc') {
-          data = [...data].sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
-        } else if (sortBy === 'price_desc') {
-          data = [...data].sort((a, b) => parseFloat(b.price) - parseFloat(a.price));
-        } else if (sortBy === 'new') {
-          data = [...data].filter(p => p.is_new).concat(data.filter(p => !p.is_new));
-        }
-        // 'popular' - оставляем как есть (можно добавить поле popularity в будущем)
-        
-        if (minPrice || maxPrice) {
-          const minVal = minPrice ? parseFloat(minPrice) : null;
-          const maxVal = maxPrice ? parseFloat(maxPrice) : null;
-          data = data.filter((item) => {
-            const value = parseFloat(item.price);
-            if (Number.isNaN(value)) return false;
-            if (minVal !== null && value < minVal) return false;
-            if (maxVal !== null && value > maxVal) return false;
-            return true;
-          });
-        }
+        // Сортировка и price_min/price_max применяются на сервере (чтобы работало на всю выборку).
 
         setCatalogProducts((prevProducts) => {
           if (currentPage === 1) return data;
@@ -278,31 +352,45 @@ const CatalogPage = () => {
       });
   }, [searchParams, selectedSubcategories, sortBy, currentPage]);
 
+  const getParentCodeFromSubcategory = (code) => String(code || '').split('.')[0];
+
   const handleParentChange = (parentCode) => {
-    const next = selectedParents.includes(parentCode)
+    const isRemoving = selectedParents.includes(parentCode);
+    const nextParents = isRemoving
       ? selectedParents.filter((c) => c !== parentCode)
       : [...selectedParents, parentCode];
-    setSelectedParents(next);
+    const nextSubcategories = isRemoving
+      ? selectedSubcategories.filter((c) => getParentCodeFromSubcategory(c) !== parentCode)
+      : selectedSubcategories;
+
+    setSelectedParents(nextParents);
+    setSelectedSubcategories(nextSubcategories);
     const nextParams = new URLSearchParams(searchParams);
     nextParams.delete('filter');
     nextParams.delete('parent');
     nextParams.delete('subcategory');
-    next.forEach((c) => nextParams.append('parent', c));
-    selectedSubcategories.forEach((c) => nextParams.append('subcategory', c));
+    nextParents.forEach((c) => nextParams.append('parent', c));
+    nextSubcategories.forEach((c) => nextParams.append('subcategory', c));
     setSearchParams(nextParams, { replace: true });
   };
 
   const handleSubcategoryChange = (code) => {
-    const next = selectedSubcategories.includes(code)
+    const parentCode = getParentCodeFromSubcategory(code);
+    const nextSubcategories = selectedSubcategories.includes(code)
       ? selectedSubcategories.filter((c) => c !== code)
       : [...selectedSubcategories, code];
-    setSelectedSubcategories(next);
+    const nextParents = selectedParents.includes(parentCode)
+      ? selectedParents
+      : [...selectedParents, parentCode];
+
+    setSelectedSubcategories(nextSubcategories);
+    setSelectedParents(nextParents);
     const nextParams = new URLSearchParams(searchParams);
     nextParams.delete('filter');
     nextParams.delete('parent');
     nextParams.delete('subcategory');
-    selectedParents.forEach((c) => nextParams.append('parent', c));
-    next.forEach((c) => nextParams.append('subcategory', c));
+    nextParents.forEach((c) => nextParams.append('parent', c));
+    nextSubcategories.forEach((c) => nextParams.append('subcategory', c));
     setSearchParams(nextParams, { replace: true });
   };
 
@@ -361,34 +449,12 @@ const CatalogPage = () => {
 
   const handlePriceFromChange = (event) => {
     setPriceError('');
-    const value = event.target.value;
-    if (value === '' || value === '-') {
-      setPriceFrom(value);
-      return;
-    }
-    const num = Number(value);
-    if (!Number.isNaN(num) && num < 0) {
-      setPriceFrom('0');
-      setPriceError('Цена «от» не может быть отрицательной. Использовано значение 0.');
-      return;
-    }
-    setPriceFrom(value);
+    setPriceFrom(normalizePriceInput(event.target.value));
   };
 
   const handlePriceToChange = (event) => {
     setPriceError('');
-    const value = event.target.value;
-    if (value === '' || value === '-') {
-      setPriceTo(value);
-      return;
-    }
-    const num = Number(value);
-    if (!Number.isNaN(num) && num < 0) {
-      setPriceTo('0');
-      setPriceError('Цена «до» не может быть отрицательной. Использовано значение 0.');
-      return;
-    }
-    setPriceTo(value);
+    setPriceTo(normalizePriceInput(event.target.value));
   };
 
   const handleMobilePriceApply = () => {
@@ -494,18 +560,26 @@ const CatalogPage = () => {
               <h2 className="catalog-sidebar-title">СТОИМОСТЬ</h2>
               <div className="catalog-filter-price">
                 <input
-                  type="number"
-                  min={0}
-                  placeholder="от 159"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  placeholder={priceRange.min != null ? `от ${Math.floor(priceRange.min)}` : 'от'}
                   value={priceFrom}
                   onChange={handlePriceFromChange}
+                  onKeyDown={(event) => {
+                    if (!isPriceKeyAllowed(event)) event.preventDefault();
+                  }}
                 />
                 <input
-                  type="number"
-                  min={0}
-                  placeholder="до 35389"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  placeholder={priceRange.max != null ? `до ${Math.ceil(priceRange.max)}` : 'до'}
                   value={priceTo}
                   onChange={handlePriceToChange}
+                  onKeyDown={(event) => {
+                    if (!isPriceKeyAllowed(event)) event.preventDefault();
+                  }}
                 />
               </div>
               {priceError && (
@@ -621,22 +695,30 @@ const CatalogPage = () => {
                       <label className="catalog-mobile-price-modal__field">
                         <span>ОТ</span>
                         <input
-                          type="number"
-                          min={0}
-                          placeholder="159"
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          placeholder={priceRange.min != null ? String(Math.floor(priceRange.min)) : '0'}
                           value={priceFrom}
                           onChange={handlePriceFromChange}
+                          onKeyDown={(event) => {
+                            if (!isPriceKeyAllowed(event)) event.preventDefault();
+                          }}
                         />
                       </label>
 
                       <label className="catalog-mobile-price-modal__field">
                         <span>ДО</span>
                         <input
-                          type="number"
-                          min={0}
-                          placeholder="3538327"
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          placeholder={priceRange.max != null ? String(Math.ceil(priceRange.max)) : '0'}
                           value={priceTo}
                           onChange={handlePriceToChange}
+                          onKeyDown={(event) => {
+                            if (!isPriceKeyAllowed(event)) event.preventDefault();
+                          }}
                         />
                       </label>
                     </div>

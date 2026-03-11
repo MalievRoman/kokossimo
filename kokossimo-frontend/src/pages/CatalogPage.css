@@ -175,6 +175,18 @@
   color: #240100;
 }
 
+/* Убираем стрелочки у number-инпутов (fallback) */
+.catalog-filter-price input::-webkit-outer-spin-button,
+.catalog-filter-price input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.catalog-filter-price input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
 .catalog-filter-price input::placeholder {
   color: #9f9796;
 }
