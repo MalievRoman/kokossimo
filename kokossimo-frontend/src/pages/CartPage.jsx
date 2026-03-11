@@ -95,7 +95,8 @@ const CartPage = () => {
                     </div>
                   )}
                   
-                  <div className="cart-item__info">
+                  <div className="cart-item__info-row">
+                    <div className="cart-item__info">
                     {getProductLink(item) ? (
                       <Link to={getProductLink(item)} className="cart-item__name">
                         {item.name}
@@ -114,6 +115,15 @@ const CartPage = () => {
                         <span className="cart-item__price-current">{formatRub(item.price)} за шт.</span>
                       )}
                     </div>
+                  </div>
+
+                  <button
+                    className="cart-item__remove"
+                    onClick={() => removeFromCart(item.id)}
+                    aria-label="Удалить товар"
+                  >
+                    <Trash2 size={18} />
+                  </button>
                   </div>
 
                   <div className="cart-item__quantity">
@@ -141,13 +151,6 @@ const CartPage = () => {
                     ) : null}
                   </div>
 
-                  <button
-                    className="cart-item__remove"
-                    onClick={() => removeFromCart(item.id)}
-                    aria-label="Удалить товар"
-                  >
-                    <Trash2 size={18} />
-                  </button>
                       </>
                     );
                   })()}
