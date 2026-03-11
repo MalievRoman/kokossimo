@@ -280,24 +280,41 @@
 }
 
 .certificates-info__section {
-  padding: 2rem;
-  border: 1px solid #e7dcd8;
-  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 32px;
+  border: 1px solid #D2C1C1;
+  border-radius: 4px;
   background: #fcf8f7;
 }
 
-.certificates-info__section p {
-  color: #6b5a58;
-  line-height: 1.6;
-  margin-top: 0.8rem;
+.certificates-info .section-title {
+  font-family: "Open Sans", sans-serif;
+  font-weight: 600;
+  font-size: 16px;
+  line-height: 24px;
+  letter-spacing: 0;
+  color: #240100;
+  margin: 0;
+}
+
+.certificates-info__section p,
+.certificates-info__section ul,
+.certificates-info__section ol {
+  font-family: "Open Sans", sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 24px;
+  letter-spacing: 0;
+  color: #240100;
+  margin: 0;
 }
 
 .certificates-info__section ul,
 .certificates-info__section ol {
-  margin-top: 1rem;
+  margin-top: 0;
   padding-left: 1.2rem;
-  color: #6b5a58;
-  line-height: 1.6;
   display: grid;
   gap: 0.5rem;
 }
