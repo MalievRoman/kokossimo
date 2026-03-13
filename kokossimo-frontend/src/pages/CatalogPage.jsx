@@ -392,7 +392,14 @@ const CatalogPage = () => {
     setPriceFrom('');
     setPriceTo('');
     setPriceError('');
-    setSearchParams({});
+    const nextParams = new URLSearchParams(searchParams);
+    // Сбрасываем только фильтры, не трогаем поисковый запрос `q`
+    nextParams.delete('filter');
+    nextParams.delete('parent');
+    nextParams.delete('subcategory');
+    nextParams.delete('price_min');
+    nextParams.delete('price_max');
+    setSearchParams(nextParams, { replace: true });
   };
 
   const handlePriceFromChange = (event) => {
