@@ -23,7 +23,7 @@
 
 .catalog-layout {
   display: grid;
-  grid-template-columns: 188px minmax(0, 1fr);
+  grid-template-columns: 220px minmax(0, 1fr);
   gap: 40px;
   align-items: start;
 }
@@ -592,7 +592,7 @@
 /* 960px */
 @media (max-width: 1279px) {
   .catalog-layout {
-    grid-template-columns: 188px minmax(0, 1fr);
+    grid-template-columns: 220px minmax(0, 1fr);
     gap: 20px;
   }
 

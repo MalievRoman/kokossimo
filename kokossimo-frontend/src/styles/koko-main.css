@@ -229,6 +229,29 @@ body {
     url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 18 18' fill='none'><path d='M5 5l8 8M13 5l-8 8' stroke='%23740400' stroke-width='2' stroke-linecap='round'/></svg>");
 }
 
+/* Кнопка сброса поля поиска (видна при непустом значении, работает во всех браузерах) */
+.header__search-clear {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  margin-right: 8px;
+  padding: 0;
+  border: 0;
+  background: no-repeat center/14px
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 18 18' fill='none'><path d='M5 5l8 8M13 5l-8 8' stroke='%23740400' stroke-width='2' stroke-linecap='round'/></svg>");
+  cursor: pointer;
+  color: #740400;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+.header__search-clear:hover {
+  background-color: rgba(116, 4, 0, 0.08);
+}
+.header__search-clear:focus-visible {
+  outline: 2px solid #740400;
+  outline-offset: 2px;
+}
+
 .header__search-suggestions {
   position: absolute;
   top: calc(100% + 6px);
@@ -391,6 +414,30 @@ body {
   cursor: pointer;
   background: no-repeat center/18px
     url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 18 18' fill='none'><path d='M5 5l8 8M13 5l-8 8' stroke='%23740400' stroke-width='2' stroke-linecap='round'/></svg>");
+}
+
+.mobile-search__clear {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  margin-right: 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #740400;
+  cursor: pointer;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+}
+.mobile-search__clear:hover {
+  background-color: rgba(116, 4, 0, 0.08);
+}
+.mobile-search__clear:focus-visible {
+  outline: 2px solid #740400;
+  outline-offset: 2px;
 }
 
 .mobile-search__close {

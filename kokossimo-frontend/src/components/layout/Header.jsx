@@ -12,6 +12,9 @@ const Header = () => {
   const [mobileDropdown, setMobileDropdown] = useState(null);
   const [suggestions, setSuggestions] = useState([]);
   const [isSuggestionsOpen, setIsSuggestionsOpen] = useState(false);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const desktopSearchRef = useRef(null);
+  const mobileSearchRef = useRef(null);
   const allProductsRef = useRef([]);
   const suggestionsTimerRef = useRef(null);
   const navigate = useNavigate();
@@ -38,15 +41,45 @@ const Header = () => {
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    setSearchValue(params.get('q') || '');
+    const qFromUrl = params.get('q');
+
+    // Не очищаем поле поиска при переходах на страницы без ?q= (например, карточка товара).
+    // Обновляем значение только когда параметр `q` явно присутствует в URL.
+    if (qFromUrl !== null) {
+      setSearchValue(qFromUrl);
+    }
+
     setSuggestions([]);
     setIsSuggestionsOpen(false);
+    setIsSearchFocused(false);
+
     // Убираем фокус с полей поиска, чтобы не оставалось выделения после перехода по подсказке или отправки формы
     const blurSearchInputs = () => {
       document.querySelectorAll('.header__search-input, .mobile-search__input').forEach((el) => el.blur());
     };
     blurSearchInputs();
   }, [location.search]);
+
+  useEffect(() => {
+    if (!isSuggestionsOpen) return undefined;
+
+    const handlePointerDown = (event) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      const isInsideDesktop = desktopSearchRef.current?.contains(target);
+      const isInsideMobile = mobileSearchRef.current?.contains(target);
+      if (!isInsideDesktop && !isInsideMobile) {
+        setIsSuggestionsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('touchstart', handlePointerDown);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('touchstart', handlePointerDown);
+    };
+  }, [isSuggestionsOpen]);
 
   const normalizeText = (value) =>
     value
@@ -90,7 +123,7 @@ const Header = () => {
           )
           .slice(0, 6);
         setSuggestions(results);
-        setIsSuggestionsOpen(true);
+        setIsSuggestionsOpen(isSearchFocused && results.length > 0);
       } catch {
         setSuggestions([]);
         setIsSuggestionsOpen(false);
@@ -102,7 +135,7 @@ const Header = () => {
         clearTimeout(suggestionsTimerRef.current);
       }
     };
-  }, [searchValue]);
+  }, [searchValue, isSearchFocused]);
 
   const handleSearchSubmit = (event) => {
     event.preventDefault();
@@ -235,7 +268,12 @@ const Header = () => {
 
               <Link className="header__cert" to="/certificates">СЕРТИФИКАТЫ</Link>
 
-              <form className="header__search" role="search" onSubmit={handleSearchSubmit}>
+              <form
+                className="header__search"
+                role="search"
+                onSubmit={handleSearchSubmit}
+                ref={desktopSearchRef}
+              >
                 <button className="header__search-btn" type="submit" aria-label="Поиск">
                   <span className="header__search-icon icon icon--search" aria-hidden="true"></span>
                 </button>
@@ -247,9 +285,32 @@ const Header = () => {
                   value={searchValue}
                   onChange={handleSearchChange}
                   onReset={handleSearchClear}
-                  onFocus={() => searchValue.trim() && setIsSuggestionsOpen(true)}
-                  onBlur={() => setTimeout(() => setIsSuggestionsOpen(false), 150)}
+                  onFocus={() => {
+                    setIsSearchFocused(true);
+                    if (searchValue.trim() && suggestions.length > 0) setIsSuggestionsOpen(true);
+                  }}
+                  onBlur={() => {
+                    setTimeout(() => {
+                      setIsSearchFocused(false);
+                      setIsSuggestionsOpen(false);
+                    }, 150);
+                  }}
                 />
+                {searchValue.trim() !== '' && (
+                  <button
+                    type="button"
+                    className="header__search-clear"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleSearchClear();
+                    }}
+                    aria-label="Очистить поиск"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+                      <path d="M5 5l8 8M13 5l-8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    </svg>
+                  </button>
+                )}
                 {!isMobileSearchOpen && isSuggestionsOpen && suggestions.length > 0 && (
                   <div className="header__search-suggestions" role="listbox">
                     {suggestions.map((item) => (
@@ -374,7 +435,12 @@ const Header = () => {
       aria-hidden={isMobileSearchOpen ? 'false' : 'true'}
     >
         <div className="container">
-          <form className="mobile-search__form" role="search" onSubmit={handleSearchSubmit}>
+          <form
+            className="mobile-search__form"
+            role="search"
+            onSubmit={handleSearchSubmit}
+            ref={mobileSearchRef}
+          >
             <button className="header__search-btn" type="submit" aria-label="Поиск">
               <span className="icon icon--search" aria-hidden="true"></span>
             </button>
@@ -386,9 +452,32 @@ const Header = () => {
               value={searchValue}
               onChange={handleSearchChange}
               onReset={handleSearchClear}
-              onFocus={() => searchValue.trim() && setIsSuggestionsOpen(true)}
-              onBlur={() => setTimeout(() => setIsSuggestionsOpen(false), 150)}
+              onFocus={() => {
+                setIsSearchFocused(true);
+                if (searchValue.trim() && suggestions.length > 0) setIsSuggestionsOpen(true);
+              }}
+              onBlur={() => {
+                setTimeout(() => {
+                  setIsSearchFocused(false);
+                  setIsSuggestionsOpen(false);
+                }, 150);
+              }}
             />
+            {searchValue.trim() !== '' && (
+              <button
+                type="button"
+                className="mobile-search__clear"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleSearchClear();
+                }}
+                aria-label="Очистить поиск"
+              >
+                <svg width="14" height="14" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+                  <path d="M5 5l8 8M13 5l-8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+              </button>
+            )}
             <button
               className="mobile-search__close"
               type="button"
