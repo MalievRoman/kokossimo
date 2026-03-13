@@ -75,18 +75,16 @@ const CartPage = () => {
                   : null;
                 const oldTotalPrice = oldUnitPrice ? oldUnitPrice * item.quantity : null;
 
+                const productUrl = getProductLink(item);
+                const ItemWrapper = productUrl ? Link : 'div';
+                const itemWrapperProps = productUrl ? { to: productUrl, className: 'cart-item cart-item--clickable' } : { className: 'cart-item' };
+
                 return (
-                  <div key={item.id} className="cart-item">
+                  <ItemWrapper key={item.id} {...itemWrapperProps}>
                     {item.image ? (
-                      getProductLink(item) ? (
-                        <Link to={getProductLink(item)} className="cart-item__image">
-                          <img src={getImageUrl(item.image)} alt={item.name} />
-                        </Link>
-                      ) : (
-                        <div className="cart-item__image">
-                          <img src={getImageUrl(item.image)} alt={item.name} />
-                        </div>
-                      )
+                      <div className="cart-item__image">
+                        <img src={getImageUrl(item.image)} alt={item.name} />
+                      </div>
                     ) : (
                       <div className="cart-item__image cart-item__image--gift">
                         <span>Подарочный сертификат</span>
@@ -94,13 +92,7 @@ const CartPage = () => {
                     )}
 
                     <div className="cart-item__info">
-                      {getProductLink(item) ? (
-                        <Link to={getProductLink(item)} className="cart-item__name">
-                          {item.name}
-                        </Link>
-                      ) : (
-                        <h3 className="cart-item__name">{item.name}</h3>
-                      )}
+                      <h3 className="cart-item__name">{item.name}</h3>
                       <div className="cart-item__price">
                         {hasDiscount && oldUnitPrice ? (
                           <>
@@ -114,11 +106,24 @@ const CartPage = () => {
                       </div>
                     </div>
 
-                    <div className="cart-item__quantity">
+                    <div
+                      className="cart-item__quantity"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }}
+                      onKeyDown={(e) => e.stopPropagation()}
+                      role="group"
+                      aria-label="Изменить количество"
+                    >
                       <button
                         type="button"
                         className="quantity-btn"
-                        onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleQuantityChange(item.id, item.quantity - 1);
+                        }}
                       >
                         <Minus size={16} />
                       </button>
@@ -126,7 +131,11 @@ const CartPage = () => {
                       <button
                         type="button"
                         className="quantity-btn"
-                        onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleQuantityChange(item.id, item.quantity + 1);
+                        }}
                       >
                         <Plus size={16} />
                       </button>
@@ -142,12 +151,16 @@ const CartPage = () => {
                     <button
                       type="button"
                       className="cart-item__remove"
-                      onClick={() => removeFromCart(item.id)}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        removeFromCart(item.id);
+                      }}
                       aria-label="Удалить товар"
                     >
                       <Trash2 size={18} />
                     </button>
-                  </div>
+                  </ItemWrapper>
                 );
               })}
               </div>

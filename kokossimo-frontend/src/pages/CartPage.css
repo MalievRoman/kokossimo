@@ -167,6 +167,12 @@
   align-items: center;
 }
 
+.cart-item--clickable {
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+}
+
 .cart-item__image {
   width: 100px;
   height: 120px;
