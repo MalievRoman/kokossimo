@@ -291,8 +291,8 @@ const Header = () => {
                     </span>
                   </button>
                   <div className="header__dropdown-menu">
-                    <Link className="header__dropdown-link" to="/delivery">
-                      Доставка и оплата
+                    <Link className="header__dropdown-link" to="/documents">
+                      Документы
                     </Link>
                     <Link className="header__dropdown-link" to="/about">
                       О компании
@@ -489,7 +489,7 @@ const Header = () => {
                 </span>
               </button>
               <div className={`mobile-menu__submenu ${mobileDropdown === 'clients' ? 'is-open' : ''}`}>
-                <Link to="/delivery" onClick={closeMobileMenu}>ДОСТАВКА</Link>
+                <Link to="/documents" onClick={closeMobileMenu}>ДОКУМЕНТЫ</Link>
               </div>
             </div>
           </nav>

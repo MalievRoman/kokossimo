@@ -79,4 +79,7 @@ export const getOrderDetail = (token, orderId) =>
 export const getBestsellers = () => api.get('/products/', { params: { is_bestseller: 'true', page_size: 12 } });
 export const getNewProducts = () => api.get('/products/', { params: { is_new: 'true', page_size: 12 } });
 
+// Юридические документы (из backend/legal_info)
+export const getLegalDocument = (slug) => api.get(`/legal/${slug}/`);
+
 export default api;
