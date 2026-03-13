@@ -3,7 +3,7 @@ from django.urls import path, include, re_path
 from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import TemplateView
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.template.loader import render_to_string
 import os
 from rest_framework.routers import DefaultRouter
@@ -73,6 +73,33 @@ def react_app_view(request):
     # Иначе используем шаблон Django
     return TemplateView.as_view(template_name='index.html')(request)
 
+# Юридические документы из папки legal_info
+LEGAL_INFO_DIR = os.path.join(settings.BASE_DIR, 'legal_info')
+ALLOWED_LEGAL_SLUGS = ('privacy', 'offer', 'subscription')
+
+
+def legal_document_view(request, slug):
+    if request.method != 'GET':
+        return JsonResponse({"detail": "Method not allowed."}, status=405)
+    if slug not in ALLOWED_LEGAL_SLUGS:
+        return JsonResponse({"detail": "Not found."}, status=404)
+    for ext in ('.md', '.txt', '.html'):
+        path = os.path.join(LEGAL_INFO_DIR, f'{slug}{ext}')
+        if os.path.isfile(path):
+            try:
+                with open(path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+            except OSError:
+                return JsonResponse({"detail": "Error reading file."}, status=500)
+            titles = {
+                'privacy': 'Политика в отношении обработки персональных данных',
+                'offer': 'Публичная оферта о заключении договора купли-продажи',
+                'subscription': 'Согласие на использование персональных данных',
+            }
+            return JsonResponse({"title": titles.get(slug, slug), "content": content})
+    return JsonResponse({"detail": "Document not found."}, status=404)
+
+
 # Создаем роутер для API
 router = DefaultRouter()
 router.register(r'products', ProductViewSet)
@@ -98,6 +125,7 @@ urlpatterns = [
     path('api/products/<int:product_id>/rate/', rate_product),
     path('api/integrations/moysklad/status/', moysklad_status),
     path('api/integrations/moysklad/assortment/', moysklad_assortment),
+    path('api/legal/<str:slug>/', legal_document_view),
 ]
 
 # Отдача React приложения для всех остальных маршрутов (SPA)

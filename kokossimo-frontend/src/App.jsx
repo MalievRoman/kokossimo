@@ -9,7 +9,8 @@ import Footer from './components/layout/Footer';
 import HomePage from './pages/HomePage';
 import CatalogPage from './pages/CatalogPage';
 import CertificatesPage from './pages/CertificatesPage';
-import UnderConstructionPage from './pages/UnderConstructionPage';
+import DocumentsPage from './pages/DocumentsPage';
+import LegalDocumentPage from './pages/LegalDocumentPage';
 import AboutPage from './pages/AboutPage';
 import ContactsPage from './pages/ContactsPage';
 import NotFoundPage from './pages/NotFoundPage';
@@ -51,7 +52,8 @@ function App() {
             {/* 2. Потом страницы "В разработке" */}
             <Route path="/about" element={<AboutPage />} />
             <Route path="/contacts" element={<ContactsPage />} />
-            <Route path="/delivery" element={<UnderConstructionPage />} />
+            <Route path="/documents" element={<DocumentsPage />} />
+            <Route path="/documents/:slug" element={<LegalDocumentPage />} />
             <Route path="/favorites" element={<FavoritesPage />} />
             <Route path="/cart" element={<CartPage />} />
             <Route path="/profile" element={<ProfilePage />} />

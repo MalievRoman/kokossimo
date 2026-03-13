@@ -21,7 +21,7 @@ const Footer = () => (
         <div className="footer__col">
           <h3 className="footer__title">ПОКУПАТЕЛЯМ</h3>
           <ul className="footer__list">
-            <li><Link className="footer__link" to="/delivery">Доставка и оплата</Link></li>
+            <li><Link className="footer__link" to="/documents">Документы</Link></li>
             <li><Link className="footer__link" to="/certificates">Подарочные сертификаты</Link></li>
             <li><Link className="footer__link" to="/contacts">Контакты</Link></li>
             <li><Link className="footer__link" to="/about">О компании</Link></li>
@@ -53,9 +53,9 @@ const Footer = () => (
         <div className="footer__col">
           <h3 className="footer__title">ИНФОРМАЦИЯ</h3>
           <ul className="footer__list">
-            <li><Link className="footer__link" to="/privacy">Политика конфиденциальности</Link></li>
-            <li><Link className="footer__link" to="/offer">Договор оферты</Link></li>
-            <li><Link className="footer__link" to="/subscription">Согласие на получение рассылки<br /> рекламно-информационных материалов</Link></li>
+            <li><Link className="footer__link" to="/documents/privacy">Политика конфиденциальности</Link></li>
+            <li><Link className="footer__link" to="/documents/offer">Договор оферты</Link></li>
+            <li><Link className="footer__link" to="/documents/subscription">Согласие на получение рассылки<br /> рекламно-информационных материалов</Link></li>
           </ul>
 
           <p className="footer__note">
