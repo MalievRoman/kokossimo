@@ -64,98 +64,92 @@ const CartPage = () => {
               {/* Список товаров */}
               <div className="cart-items">
                 <div className="cart-items__list">
-              {cartItems.map((item) => (
-                <div key={item.id} className="cart-item">
-                  {(() => {
-                    const hasDiscount =
-                      Number.isFinite(Number(item.discount)) &&
-                      Number(item.discount) > 0 &&
-                      Number(item.discount) < 100;
-                    const discount = hasDiscount ? Number(item.discount) : 0;
-                    const oldUnitPrice = hasDiscount
-                      ? Math.round(item.price / (1 - discount / 100))
-                      : null;
-                    const oldTotalPrice = oldUnitPrice ? oldUnitPrice * item.quantity : null;
+              {cartItems.map((item) => {
+                const hasDiscount =
+                  Number.isFinite(Number(item.discount)) &&
+                  Number(item.discount) > 0 &&
+                  Number(item.discount) < 100;
+                const discount = hasDiscount ? Number(item.discount) : 0;
+                const oldUnitPrice = hasDiscount
+                  ? Math.round(item.price / (1 - discount / 100))
+                  : null;
+                const oldTotalPrice = oldUnitPrice ? oldUnitPrice * item.quantity : null;
 
-                    return (
-                      <>
-                  {item.image ? (
-                    getProductLink(item) ? (
-                      <Link to={getProductLink(item)} className="cart-item__image">
-                        <img src={getImageUrl(item.image)} alt={item.name} />
-                      </Link>
-                    ) : (
-                      <div className="cart-item__image">
-                        <img src={getImageUrl(item.image)} alt={item.name} />
-                      </div>
-                    )
-                  ) : (
-                    <div className="cart-item__image cart-item__image--gift">
-                      <span>Подарочный сертификат</span>
-                    </div>
-                  )}
-                  
-                  <div className="cart-item__info-row">
-                    <div className="cart-item__info">
-                    {getProductLink(item) ? (
-                      <Link to={getProductLink(item)} className="cart-item__name">
-                        {item.name}
-                      </Link>
-                    ) : (
-                      <h3 className="cart-item__name">{item.name}</h3>
-                    )}
-                    <div className="cart-item__price">
-                      {hasDiscount && oldUnitPrice ? (
-                        <>
-                          <span className="cart-item__price-current">{formatRub(item.price)} за шт.</span>
-                          <span className="cart-item__price-old">{formatRub(oldUnitPrice)}</span>
-                          <span className="cart-item__price-discount">−{discount}%</span>
-                        </>
+                return (
+                  <div key={item.id} className="cart-item">
+                    {item.image ? (
+                      getProductLink(item) ? (
+                        <Link to={getProductLink(item)} className="cart-item__image">
+                          <img src={getImageUrl(item.image)} alt={item.name} />
+                        </Link>
                       ) : (
-                        <span className="cart-item__price-current">{formatRub(item.price)} за шт.</span>
+                        <div className="cart-item__image">
+                          <img src={getImageUrl(item.image)} alt={item.name} />
+                        </div>
+                      )
+                    ) : (
+                      <div className="cart-item__image cart-item__image--gift">
+                        <span>Подарочный сертификат</span>
+                      </div>
+                    )}
+
+                    <div className="cart-item__info">
+                      {getProductLink(item) ? (
+                        <Link to={getProductLink(item)} className="cart-item__name">
+                          {item.name}
+                        </Link>
+                      ) : (
+                        <h3 className="cart-item__name">{item.name}</h3>
                       )}
+                      <div className="cart-item__price">
+                        {hasDiscount && oldUnitPrice ? (
+                          <>
+                            <span className="cart-item__price-current">{formatRub(item.price)} за шт.</span>
+                            <span className="cart-item__price-old">{formatRub(oldUnitPrice)}</span>
+                            <span className="cart-item__price-discount">−{discount}%</span>
+                          </>
+                        ) : (
+                          <span className="cart-item__price-current">{formatRub(item.price)} за шт.</span>
+                        )}
+                      </div>
                     </div>
-                  </div>
 
-                  <button
-                    className="cart-item__remove"
-                    onClick={() => removeFromCart(item.id)}
-                    aria-label="Удалить товар"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                  </div>
+                    <div className="cart-item__quantity">
+                      <button
+                        type="button"
+                        className="quantity-btn"
+                        onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
+                      >
+                        <Minus size={16} />
+                      </button>
+                      <span className="quantity-value">{item.quantity}</span>
+                      <button
+                        type="button"
+                        className="quantity-btn"
+                        onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
+                      >
+                        <Plus size={16} />
+                      </button>
+                    </div>
 
-                  <div className="cart-item__quantity">
-                    <button
-                      className="quantity-btn"
-                      onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
-                    >
-                      <Minus size={16} />
-                    </button>
-                    <span className="quantity-value">{item.quantity}</span>
-                    <button
-                      className="quantity-btn"
-                      onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
-                    >
-                      <Plus size={16} />
-                    </button>
-                  </div>
-
-                  <div className="cart-item__total">
-                    <div className="cart-item__total-current">{formatRub(item.price * item.quantity)}</div>
-                    {hasDiscount && oldTotalPrice ? (
-                      <>
+                    <div className="cart-item__total">
+                      <div className="cart-item__total-current">{formatRub(item.price * item.quantity)}</div>
+                      {hasDiscount && oldTotalPrice ? (
                         <div className="cart-item__total-old">{formatRub(oldTotalPrice)}</div>
-                      </>
-                    ) : null}
-                  </div>
+                      ) : null}
+                    </div>
 
-                      </>
-                    );
-                  })()}
-                </div>
-              ))}
+                    <button
+                      type="button"
+                      className="cart-item__remove"
+                      onClick={() => removeFromCart(item.id)}
+                      aria-label="Удалить товар"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                );
+              })}
               </div>
             </div>
             </div>

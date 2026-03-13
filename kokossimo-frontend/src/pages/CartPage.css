@@ -151,25 +151,20 @@
   gap: 1rem;
 }
 
-/* Карточка одного товара: фон как у страницы, рамка по скриншоту 2 */
+/* Карточка одного товара: всё содержимое (цена, кнопки) строго внутри блока */
 .cart-item {
   display: grid;
-  grid-template-columns: 100px 1fr auto auto auto;
+  grid-template-columns: 100px minmax(0, 1fr) auto auto auto;
   gap: 24px;
   padding: 16px 32px;
-  width: 848px;
-  max-width: 100%;
-  height: 152px;
+  width: 100%;
+  max-width: 848px;
+  min-height: 120px;
   box-sizing: border-box;
   background: #fcf8f7;
   border: 1px solid #D2C1C1;
   border-radius: 4px;
   align-items: center;
-}
-
-/* Обёртка названия и кнопки удаления (для мобильной сетки) */
-.cart-item__info-row {
-  display: contents;
 }
 
 .cart-item__image {
@@ -479,18 +474,16 @@
     min-height: 0;
   }
 
-  .cart-item__info-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 8px;
-    grid-column: 2 / -1;
+  .cart-item__info {
+    grid-column: 2;
     grid-row: 1;
+    min-width: 0;
   }
 
-  .cart-item__info-row .cart-item__info {
-    flex: 1;
-    min-width: 0;
+  .cart-item__remove {
+    grid-column: 3;
+    grid-row: 1;
+    justify-self: end;
   }
 
   .cart-item__image {
