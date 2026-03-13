@@ -2,6 +2,8 @@
   padding: 4rem 0;
   background-color: #fcf8f7;
   font-family: "Open Sans", sans-serif;
+  /* Чтобы фон блока тянулся до футера даже при мало контента */
+  min-height: calc(100vh - 220px);
 }
 
 .documents-intro {

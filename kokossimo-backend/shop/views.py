@@ -305,9 +305,15 @@ def rate_product(request, product_id):
     )
 
 
+@api_view(['POST'])
+@authentication_classes([])
+@permission_classes([AllowAny])
 def rate_product_missing_trailing_slash(request, product_id):
-    # Некорректный URL (без завершающего /) должен давать клиентскую ошибку, а не 500.
-    return JsonResponse({"detail": "Not found."}, status=404)
+    """
+    Некорректный URL без завершающего слэша.
+    Должен возвращать клиентскую ошибку (404), а не 500/403 от CSRF.
+    """
+    return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
 
 
 @api_view(['POST'])
