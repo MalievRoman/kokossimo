@@ -1,29 +1,51 @@
 .contacts-page {
   padding: 4rem 0;
-  background-color: #fff;
+  background-color: #fcf8f7;
 }
 
 .contacts-section {
   margin-top: 2.5rem;
 }
 
+.contacts-page .section-title {
+  font-family: "Open Sans", sans-serif;
+  font-weight: 600;
+  font-size: 16px;
+  line-height: 24px;
+  letter-spacing: 0;
+  color: #240100;
+  margin: 0;
+}
+
 .contacts-text {
-  color: #6b5a58;
-  line-height: 1.6;
-  margin-bottom: 1.5rem;
+  font-family: "Open Sans", sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 24px;
+  letter-spacing: 0;
+  color: #240100;
+  margin: 0 0 1.5rem;
 }
 
 .contacts-list {
   display: grid;
-  gap: 0.9rem;
+  gap: 0.5rem;
   margin-bottom: 1.5rem;
+  font-family: "Open Sans", sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 24px;
+  letter-spacing: 0;
+  color: #240100;
+  padding-left: 0;
+  list-style: none;
 }
 
 .contacts-list li {
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  color: #4b3a39;
+  color: #240100;
 }
 
 .contacts-list a {
@@ -38,14 +60,19 @@
 }
 
 .contacts-hours {
-  color: #7c2b2a;
+  font-family: "Open Sans", sans-serif;
   font-weight: 600;
+  font-size: 16px;
+  line-height: 24px;
+  letter-spacing: 0;
+  color: #7c2b2a;
+  margin: 0;
 }
 
 .contacts-support {
-  padding: 2rem;
-  border-radius: 10px;
-  border: 1px solid #e7dcd8;
+  padding: 16px 32px;
+  border: 1px solid #D2C1C1;
+  border-radius: 4px;
   background: #fcf8f7;
 }
 
