@@ -346,8 +346,12 @@
   }
 
   .current-price {
-    font-size: 40px;
-    line-height: 1.05;
+    color: #240100;
+    font-family: "Open Sans", sans-serif;
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 30px;
+    letter-spacing: 0;
   }
 
   .product-actions {
@@ -360,6 +364,13 @@
     width: 107px;
     order: initial;
     padding: 10px 14px;
+    color: #fcf8f7;
+    font-family: "Open Sans", sans-serif;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 18px;
+    letter-spacing: 0;
+    text-align: center;
   }
 
   .tabs-header {
