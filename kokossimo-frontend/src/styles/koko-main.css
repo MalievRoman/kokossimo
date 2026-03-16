@@ -41,6 +41,7 @@ body {
     sans-serif;
   color: var(--accent);
   overflow-x: hidden;
+  overflow-y: scroll;
 }
 
 .container {
