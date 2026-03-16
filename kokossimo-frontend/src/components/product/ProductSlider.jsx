@@ -6,7 +6,13 @@ import ProductCard from './ProductCard';
 // "БЕСТСЕЛЛЕРЫ" и "НОВИНКИ" из main_page.html.
 // Работает с реальными товарами из бэкенда через ProductCard.
 
-const ProductSlider = ({ title, products, linkTo = "/catalog" }) => {
+const ProductSlider = ({
+  title,
+  products,
+  linkTo = '/catalog',
+  showLinks = true,
+  withContainer = true,
+}) => {
   const scrollerRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -46,11 +52,11 @@ const ProductSlider = ({ title, products, linkTo = "/catalog" }) => {
 
   const hasProducts = Array.isArray(products) && products.length > 0;
 
-  return (
-    <section className="bestsellers block">
-      <div className="container">
-        <div className="bestsellers__top">
-          <h2 className="bestsellers__title">
+  const sliderContent = (
+    <>
+      <div className="bestsellers__top">
+        <h2 className="bestsellers__title">
+          {showLinks ? (
             <Link to={linkTo} className="bestsellers__title-link">
               <span>{title}</span>
               <svg
@@ -70,8 +76,12 @@ const ProductSlider = ({ title, products, linkTo = "/catalog" }) => {
                 />
               </svg>
             </Link>
-          </h2>
+          ) : (
+            <span>{title}</span>
+          )}
+        </h2>
 
+        {showLinks && (
           <Link to={linkTo} className="bestsellers__all">
             <span>БОЛЬШЕ</span>
             <svg
@@ -91,37 +101,47 @@ const ProductSlider = ({ title, products, linkTo = "/catalog" }) => {
               />
             </svg>
           </Link>
-        </div>
-
-        <div className="bestsellers__scroller-wrap">
-          <button
-            type="button"
-            aria-label="Назад"
-            onClick={() => scrollByStep(-1)}
-            aria-hidden={!canScrollLeft}
-            className={`bestsellers__arrow bestsellers__arrow--prev ${canScrollLeft ? '' : 'is-hidden'}`}
-          />
-
-          <div
-            className="bestsellers__scroller"
-            ref={scrollerRef}
-            onScroll={updateScrollState}
-          >
-            {hasProducts &&
-              products.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-          </div>
-
-          <button
-            className={`bestsellers__arrow bestsellers__arrow--next ${canScrollRight ? '' : 'is-hidden'}`}
-            type="button"
-            aria-label="Вперёд"
-            aria-hidden={!canScrollRight}
-            onClick={() => scrollByStep(1)}
-          />
-        </div>
+        )}
       </div>
+
+      <div className="bestsellers__scroller-wrap">
+        <button
+          type="button"
+          aria-label="Назад"
+          onClick={() => scrollByStep(-1)}
+          aria-hidden={!canScrollLeft}
+          className={`bestsellers__arrow bestsellers__arrow--prev ${canScrollLeft ? '' : 'is-hidden'}`}
+        />
+
+        <div
+          className="bestsellers__scroller"
+          ref={scrollerRef}
+          onScroll={updateScrollState}
+        >
+          {hasProducts &&
+            products.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+        </div>
+
+        <button
+          className={`bestsellers__arrow bestsellers__arrow--next ${canScrollRight ? '' : 'is-hidden'}`}
+          type="button"
+          aria-label="Вперёд"
+          aria-hidden={!canScrollRight}
+          onClick={() => scrollByStep(1)}
+        />
+      </div>
+    </>
+  );
+
+  return (
+    <section className="bestsellers block">
+      {withContainer ? (
+        <div className="container">{sliderContent}</div>
+      ) : (
+        sliderContent
+      )}
     </section>
   );
 };
