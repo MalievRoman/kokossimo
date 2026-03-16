@@ -91,6 +91,7 @@ class Profile(models.Model):
     phone = models.CharField("Телефон", max_length=20, blank=True)
     first_name = models.CharField("Имя", max_length=150, blank=True)
     last_name = models.CharField("Фамилия", max_length=150, blank=True)
+    birth_date = models.DateField("Дата рождения", null=True, blank=True)
     city = models.CharField("Город", max_length=150, blank=True)
     street = models.CharField("Улица", max_length=200, blank=True)
     house = models.CharField("Дом", max_length=50, blank=True)

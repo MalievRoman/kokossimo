@@ -135,6 +135,7 @@ class ProfileUpdateSerializer(serializers.Serializer):
     last_name = serializers.CharField(required=False, allow_blank=True)
     email = serializers.EmailField(required=False, allow_blank=True)
     phone = serializers.CharField(required=False, allow_blank=True)
+    birth_date = serializers.DateField(required=False, allow_null=True)
     city = serializers.CharField(required=False, allow_blank=True)
     street = serializers.CharField(required=False, allow_blank=True)
     house = serializers.CharField(required=False, allow_blank=True)

@@ -23,6 +23,10 @@ const AuthPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSendingCode, setIsSendingCode] = useState(false);
   const [resendSeconds, setResendSeconds] = useState(0);
+  const [lastCodeEmails, setLastCodeEmails] = useState({
+    register: '',
+    reset: '',
+  });
 
   const canResendCode = resendSeconds === 0;
 
@@ -58,6 +62,39 @@ const AuthPage = () => {
   const clearStatus = () => setStatus({ type: '', message: '' });
 
   const startCooldown = () => setResendSeconds(120);
+
+  const getAuthErrorMessage = (error, fallbackMessage) => {
+    const data = error?.response?.data;
+    if (!data) {
+      return fallbackMessage;
+    }
+
+    if (typeof data.detail === 'string' && data.detail.trim()) {
+      return data.detail;
+    }
+
+    const passwordError = data.password?.[0] || data.password;
+    if (typeof passwordError === 'string' && passwordError.trim()) {
+      return passwordError;
+    }
+
+    const codeError = data.code?.[0] || data.code;
+    if (typeof codeError === 'string' && codeError.trim()) {
+      return codeError;
+    }
+
+    const firstFieldError = Object.values(data).find((value) =>
+      typeof value === 'string' || (Array.isArray(value) && typeof value[0] === 'string')
+    );
+    if (typeof firstFieldError === 'string') {
+      return firstFieldError;
+    }
+    if (Array.isArray(firstFieldError) && typeof firstFieldError[0] === 'string') {
+      return firstFieldError[0];
+    }
+
+    return fallbackMessage;
+  };
 
   const goToScreen = (nextScreen) => {
     clearStatus();
@@ -105,12 +142,18 @@ const AuthPage = () => {
       setStatus({ type: 'error', message: 'Пароли не совпадают.' });
       return;
     }
+    if (resendSeconds > 0 && lastCodeEmails.register === form.registerEmail) {
+      setScreen('registerCode');
+      setStatus({ type: 'success', message: 'Код уже отправлен. Введите код из письма или дождитесь таймера.' });
+      return;
+    }
     setIsSendingCode(true);
     try {
       await sendEmailCode({
         email: form.registerEmail,
         purpose: 'register',
       });
+      setLastCodeEmails((prev) => ({ ...prev, register: form.registerEmail }));
       startCooldown();
       setScreen('registerCode');
       setStatus({ type: 'success', message: 'Код подтверждения отправлен на почту.' });
@@ -144,7 +187,7 @@ const AuthPage = () => {
       setAuthToken(response.data.token);
       setScreen('registerSuccess');
     } catch (error) {
-      const message = error?.response?.data?.detail || 'Неверный или просроченный код.';
+      const message = getAuthErrorMessage(error, 'Неверный или просроченный код.');
       setStatus({ type: 'error', message });
     } finally {
       setIsSubmitting(false);
@@ -179,12 +222,18 @@ const AuthPage = () => {
       setStatus({ type: 'error', message: 'Введите email.' });
       return;
     }
+    if (resendSeconds > 0 && lastCodeEmails.reset === form.resetEmail) {
+      setScreen('restoreSent');
+      setStatus({ type: 'success', message: 'Код уже отправлен. Проверьте почту или дождитесь таймера.' });
+      return;
+    }
     setIsSendingCode(true);
     try {
       await sendEmailCode({
         email: form.resetEmail,
         purpose: 'reset',
       });
+      setLastCodeEmails((prev) => ({ ...prev, reset: form.resetEmail }));
       startCooldown();
       setScreen('restoreSent');
     } catch (error) {
@@ -218,7 +267,7 @@ const AuthPage = () => {
       });
       setScreen('restoreSuccess');
     } catch (error) {
-      const message = error?.response?.data?.detail || 'Неверный или просроченный код.';
+      const message = getAuthErrorMessage(error, 'Неверный или просроченный код.');
       setStatus({ type: 'error', message });
     } finally {
       setIsSubmitting(false);
