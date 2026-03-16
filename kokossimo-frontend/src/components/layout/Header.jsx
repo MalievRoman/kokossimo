@@ -581,7 +581,47 @@ const Header = () => {
                 <Link to="/documents" onClick={closeMobileMenu}>ДОКУМЕНТЫ</Link>
               </div>
             </div>
+
+            <Link to="/certificates" onClick={closeMobileMenu}>СЕРТИФИКАТЫ</Link>
           </nav>
+
+          <div className="mobile-menu__account-wrap">
+            {isAuthenticated ? (
+              <Link
+                to="/profile?tab=main"
+                onClick={closeMobileMenu}
+                className="mobile-menu__account mobile-menu__account--auth"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path
+                    d="M12 12a4 4 0 100-8 4 4 0 000 8zM4 20a8 8 0 1116 0"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                <span>ЛИЧНЫЙ КАБИНЕТ</span>
+              </Link>
+            ) : (
+              <Link
+                to="/auth"
+                onClick={closeMobileMenu}
+                className="mobile-menu__account mobile-menu__account--guest"
+              >
+                <span>ВОЙТИ В ЛИЧНЫЙ КАБИНЕТ</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path
+                    d="M9 6l6 6-6 6"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </Link>
+            )}
+          </div>
         </aside>
       </div>
   </>

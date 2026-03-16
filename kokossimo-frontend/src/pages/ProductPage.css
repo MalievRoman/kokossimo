@@ -309,24 +309,63 @@
 }
 
 @media (max-width: 600px) {
+  .product-page {
+    padding: 20px 0 40px;
+  }
+
+  .product-breadcrumbs {
+    font-size: 12px;
+    margin-bottom: 12px;
+  }
+
+  .product-main {
+    margin-bottom: 32px;
+    gap: 16px;
+  }
+
+  .gallery-main-wrapper {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1 / 1;
+  }
+
   .product-title {
     font-size: 20px;
     line-height: 30px;
+    margin-bottom: 8px;
   }
 
-  .rating-value,
-  .rating-count {
-    font-size: 0.95rem;
+  .product-kind {
+    margin-bottom: 12px;
+    font-size: 16px;
+    line-height: 24px;
+  }
+
+  .product-price-block {
+    margin-bottom: 14px;
+  }
+
+  .current-price {
+    font-size: 40px;
+    line-height: 1.05;
   }
 
   .product-actions {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 10px;
   }
 
   .add-to-cart-btn-large {
-    width: 100%;
-    order: 3;
-    padding: 1rem;
+    width: 107px;
+    order: initial;
+    padding: 10px 14px;
+  }
+
+  .tabs-header {
+    grid-template-columns: repeat(3, 1fr);
+    overflow-x: visible;
+    white-space: normal;
   }
 
   .tab-content {
@@ -334,13 +373,21 @@
   }
 
   .tab-btn {
-    font-size: 16px;
-    line-height: 24px;
+    font-size: 14px;
+    line-height: 20px;
+    min-height: 30px;
+  }
+
+  .text-content,
+  .specs-content,
+  .reviews-placeholder {
+    font-size: 14px;
+    line-height: 22px;
   }
 
   .reviews-placeholder {
-    font-size: 32px;
-    line-height: 40px;
+    width: 100%;
+    font-weight: 500;
     min-height: 40px;
   }
 }
