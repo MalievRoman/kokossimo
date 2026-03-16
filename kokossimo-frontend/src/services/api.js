@@ -33,11 +33,6 @@ const api = axios.create({
 export const getProducts = (params) => api.get('/products/', { params });
 export const getProductsPriceRange = (params) => api.get('/products/price-range/', { params });
 export const getProduct = (id) => api.get(`/products/${id}/`);
-export const getProductRatings = (productId) => api.get(`/products/${productId}/ratings/`);
-export const rateProduct = (productId, payload, token) =>
-  api.post(`/products/${productId}/rate/`, payload, {
-    headers: { Authorization: `Token ${token}` },
-  });
 export const getCategories = () => api.get('/categories/');
 export const getProductSubcategories = () => api.get('/product-subcategories/');
 export const getProductSubcategoriesTree = () => api.get('/product-subcategories/tree/');

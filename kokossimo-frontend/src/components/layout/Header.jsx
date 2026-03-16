@@ -411,9 +411,9 @@ const Header = () => {
                 </button>
               </div>
 
-              <a className="header__logo-mobile" href="./" aria-label="KOKOSSIMO">
+              <Link className="header__logo-mobile" to="/" aria-label="KOKOSSIMO">
                 <img src={`${import.meta.env.BASE_URL}assets/logo_shot.svg`} alt="KOKOSSIMO" />
-              </a>
+              </Link>
 
               <div className="header__mobile-right">
                 <Link className="header__icon-btn" to="/cart" aria-label="Корзина">

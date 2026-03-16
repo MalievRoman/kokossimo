@@ -1,14 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { getProductSubcategoriesTree, getProducts } from '../../services/api';
-import { resolveMediaUrl } from '../../utils/media';
+import { getProductSubcategoriesTree } from '../../services/api';
 
 // Блок "КАТАЛОГ" на главной: актуальные категории из дерева подкатегорий (parent 1–6).
 // Ссылки ведут в каталог с фильтром ?parent=X.
 
 const CategoryList = () => {
   const [categories, setCategories] = useState([]);
-  const [categoryImages, setCategoryImages] = useState({});
+
+  const getCategoryImageUrl = (name) => {
+    const normalized = String(name || '').trim().toLowerCase();
+    const basePath = `${import.meta.env.BASE_URL}assets/`;
+
+    // Жесткое соответствие под файлы в public/assets
+    if (normalized.includes('лиц')) return encodeURI(`${basePath}уход за лицом.jpg`);
+    if (normalized.includes('тел')) return encodeURI(`${basePath}уход за телом.jpg`);
+    if (normalized.includes('волос')) return encodeURI(`${basePath}уход за волосами.jpg`);
+    if (normalized.includes('парфюм')) return encodeURI(`${basePath}парфюмерия.jpg`);
+    if (normalized.includes('макияж')) return encodeURI(`${basePath}макияж.jpg`);
+    if (normalized.includes('бад')) return encodeURI(`${basePath}бады.jpg`);
+
+    return `${basePath}beauty_elements.png`;
+  };
 
   useEffect(() => {
     getProductSubcategoriesTree()
@@ -22,47 +35,6 @@ const CategoryList = () => {
         setCategories([]);
       });
   }, []);
-
-  useEffect(() => {
-    if (categories.length === 0) return;
-    let isActive = true;
-
-    const loadCategoryImages = async () => {
-      const entries = await Promise.all(
-        categories.map(async (item) => {
-          try {
-            const response = await getProducts({
-              parent: [item.code],
-              page_size: 1,
-            });
-            const data = Array.isArray(response.data)
-              ? response.data
-              : response.data?.results || [];
-            const productWithImage = data.find((p) => p.image);
-            const imageUrl = productWithImage?.image
-              ? resolveMediaUrl(productWithImage.image)
-              : '';
-            return [item.code, imageUrl];
-          } catch {
-            return [item.code, ''];
-          }
-        })
-      );
-
-      if (!isActive) return;
-      const nextImages = {};
-      entries.forEach(([code, url]) => {
-        if (url) nextImages[code] = url;
-      });
-      setCategoryImages(nextImages);
-    };
-
-    loadCategoryImages();
-
-    return () => {
-      isActive = false;
-    };
-  }, [categories]);
 
   return (
     <section className="catalog block">
@@ -113,9 +85,7 @@ const CategoryList = () => {
 
         <div className="catalog__grid">
           {categories.map((item) => {
-            const imageUrl =
-              categoryImages[item.code] ||
-              `${import.meta.env.BASE_URL}assets/beauty_elements.png`;
+            const imageUrl = getCategoryImageUrl(item.name);
 
             return (
               <Link
