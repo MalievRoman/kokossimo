@@ -397,6 +397,9 @@ def send_email_code(request):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     _purge_expired_codes()
+    now = timezone.now()
+    ttl_minutes = _email_code_ttl()
+    cutoff = now - timedelta(minutes=ttl_minutes)
     email = serializer.validated_data['email'].strip().lower()
     purpose = serializer.validated_data['purpose']
 
@@ -407,6 +410,27 @@ def send_email_code(request):
     if purpose in ('login', 'reset') and not user_exists:
         return Response({"detail": "Пользователь с таким email не найден."}, status=status.HTTP_400_BAD_REQUEST)
 
+    existing_code = (
+        EmailVerificationCode.objects.filter(
+            email__iexact=email,
+            purpose=purpose,
+            is_used=False,
+            created_at__gte=cutoff,
+        )
+        .order_by('-created_at')
+        .first()
+    )
+    if existing_code:
+        expires_at = existing_code.created_at + timedelta(minutes=ttl_minutes)
+        seconds_left = max(int((expires_at - now).total_seconds()), 0)
+        return Response(
+            {
+                "detail": "Код уже отправлен на почту. Используйте ранее полученный код.",
+                "seconds_left": seconds_left,
+            },
+            status=status.HTTP_200_OK,
+        )
+
     EmailVerificationCode.objects.filter(email__iexact=email, purpose=purpose, is_used=False).update(is_used=True)
 
     code = _generate_email_code()
@@ -414,7 +438,7 @@ def send_email_code(request):
 
     send_mail(
         subject="Код подтверждения Kokossimo",
-        message=f"Ваш код подтверждения: {code}. Он действует {_email_code_ttl()} минут.",
+        message=f"Ваш код подтверждения: {code}. Он действует {ttl_minutes} минут.",
         from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', None),
         recipient_list=[email],
         fail_silently=False,
@@ -519,6 +543,7 @@ def current_user(request):
         "last_name": profile.last_name if profile else user.last_name,
         "email": user.email,
         "phone": profile.phone if profile else "",
+        "birth_date": profile.birth_date if profile else None,
         "city": profile.city if profile else "",
         "street": profile.street if profile else "",
         "house": profile.house if profile else "",
@@ -551,6 +576,8 @@ def update_profile(request):
         user.email = data['email']
     if 'phone' in data:
         profile.phone = data['phone']
+    if 'birth_date' in data:
+        profile.birth_date = data['birth_date']
     if 'city' in data:
         profile.city = data['city']
     if 'street' in data:
@@ -570,6 +597,7 @@ def update_profile(request):
         "last_name": profile.last_name,
         "email": user.email,
         "phone": profile.phone,
+        "birth_date": profile.birth_date,
         "city": profile.city,
         "street": profile.street,
         "house": profile.house,

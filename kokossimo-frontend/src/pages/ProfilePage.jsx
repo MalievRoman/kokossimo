@@ -33,6 +33,22 @@ const formatBirthDateInput = (value) => {
   return `${day}.${month}.${year}`;
 };
 
+const apiBirthDateToInput = (value) => {
+  if (typeof value !== 'string') return '';
+  const [year, month, day] = value.split('-');
+  if (!year || !month || !day) return '';
+  return `${day}.${month}.${year}`;
+};
+
+const inputBirthDateToApi = (value) => {
+  const normalized = formatBirthDateInput(value);
+  const [day, month, year] = normalized.split('.');
+  if (!day || !month || !year || year.length !== 4) {
+    return null;
+  }
+  return `${year}-${month}-${day}`;
+};
+
 const ProfilePage = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -53,9 +69,7 @@ const ProfilePage = () => {
     postal_code: '',
   });
   const [fullNameInput, setFullNameInput] = useState('');
-  const [birthDate, setBirthDate] = useState(
-    formatBirthDateInput(localStorage.getItem('profileBirthDate') || '')
-  );
+  const [birthDate, setBirthDate] = useState('');
   const [status, setStatus] = useState({ type: '', message: '' });
   const [orders, setOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
@@ -77,6 +91,7 @@ const ProfilePage = () => {
       postal_code: '',
     });
     setFullNameInput('');
+    setBirthDate('');
     setOrders([]);
     setOrdersLoading(false);
     setActiveTab('main');
@@ -110,6 +125,7 @@ const ProfilePage = () => {
           ...response.data,
           phone: formatRuPhone(response.data?.phone || ''),
         });
+        setBirthDate(apiBirthDateToInput(response.data?.birth_date));
       })
       .catch((error) => {
         if (error?.response?.status === 401) {
@@ -184,12 +200,13 @@ const ProfilePage = () => {
         last_name: lastName,
         email: profile.email,
         phone: profile.phone,
+        birth_date: inputBirthDateToApi(birthDate),
       });
       setProfile({
         ...response.data,
         phone: formatRuPhone(response.data?.phone || ''),
       });
-      localStorage.setItem('profileBirthDate', birthDate);
+      setBirthDate(apiBirthDateToInput(response.data?.birth_date));
       showTemporaryStatus('success', 'Данные профиля сохранены.');
     } catch (error) {
       if (error?.response?.status === 401) {
@@ -223,6 +240,7 @@ const ProfilePage = () => {
         postal_code: '',
       });
       setFullNameInput('');
+      setBirthDate('');
       setOrders([]);
       setOrdersLoading(false);
       showTemporaryStatus('success', 'Вы вышли из аккаунта.');
