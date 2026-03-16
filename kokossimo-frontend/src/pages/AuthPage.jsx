@@ -62,6 +62,7 @@ const AuthPage = () => {
   const clearStatus = () => setStatus({ type: '', message: '' });
 
   const startCooldown = () => setResendSeconds(120);
+  const MIN_PASSWORD_LENGTH = 6;
 
   const getAuthErrorMessage = (error, fallbackMessage) => {
     const data = error?.response?.data;
@@ -140,6 +141,10 @@ const AuthPage = () => {
     }
     if (form.registerPassword !== form.registerPasswordRepeat) {
       setStatus({ type: 'error', message: 'Пароли не совпадают.' });
+      return;
+    }
+    if (form.registerPassword.length < MIN_PASSWORD_LENGTH) {
+      setStatus({ type: 'error', message: `Пароль должен содержать не менее ${MIN_PASSWORD_LENGTH} символов.` });
       return;
     }
     if (resendSeconds > 0 && lastCodeEmails.register === form.registerEmail) {
@@ -255,6 +260,10 @@ const AuthPage = () => {
     }
     if (form.resetPassword !== form.resetPasswordRepeat) {
       setStatus({ type: 'error', message: 'Пароли не совпадают.' });
+      return;
+    }
+    if (form.resetPassword.length < MIN_PASSWORD_LENGTH) {
+      setStatus({ type: 'error', message: `Пароль должен содержать не менее ${MIN_PASSWORD_LENGTH} символов.` });
       return;
     }
     setIsSubmitting(true);

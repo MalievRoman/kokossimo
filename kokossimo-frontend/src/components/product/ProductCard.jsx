@@ -20,13 +20,6 @@ const ProductCard = ({ product }) => {
   const discount = Number.isFinite(Number(product.discount))
     ? Number(product.discount)
     : 0;
-  const ratingValue = Number(product.rating_avg ?? product.rating ?? product.average_rating ?? 0);
-  const ratingCount = Number(product.rating_count ?? product.ratingCount ?? 0);
-  const ratingData = {
-    avg: Number.isFinite(ratingValue) ? ratingValue : 0,
-    count: Number.isFinite(ratingCount) ? ratingCount : 0,
-  };
-  const roundedRating = Math.round(ratingData.avg || 0);
 
   let price = 0;
   try {
@@ -135,25 +128,6 @@ const ProductCard = ({ product }) => {
         <div className="product-card__title">{product.name}</div>
 
         <div className="product-card__meta">
-          <div className="product-card__rating">
-            <span className="product-card__rating-stars" aria-hidden="true">
-              {Array.from({ length: 5 }).map((_, index) => (
-                <span
-                  key={index}
-                  className={`product-card__rating-star ${index < roundedRating ? 'is-filled' : ''}`}
-                >
-                  ★
-                </span>
-              ))}
-            </span>
-            <span className="product-card__rating-value">
-              {Number.isFinite(ratingData.avg) ? ratingData.avg.toFixed(1) : '0.0'}
-            </span>
-            <span className="product-card__rating-count">
-              ({Number.isFinite(ratingData.count) ? ratingData.count : 0})
-            </span>
-          </div>
-
           <div className="product-card__desc">{description}</div>
 
           <div className="product-card__prices">
