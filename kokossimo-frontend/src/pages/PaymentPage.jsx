@@ -25,6 +25,26 @@ const PaymentPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [status, setStatus] = useState({ type: '', message: '' });
 
+  const extractErrorMessage = (data) => {
+    if (!data) return '';
+    if (typeof data === 'string') return data;
+    if (Array.isArray(data)) {
+      for (const item of data) {
+        const nested = extractErrorMessage(item);
+        if (nested) return nested;
+      }
+      return '';
+    }
+    if (typeof data === 'object') {
+      if (typeof data.detail === 'string' && data.detail) return data.detail;
+      for (const value of Object.values(data)) {
+        const nested = extractErrorMessage(value);
+        if (nested) return nested;
+      }
+    }
+    return '';
+  };
+
   useEffect(() => {
     const token = localStorage.getItem('authToken');
     if (!token) return;
@@ -120,7 +140,7 @@ const PaymentPage = () => {
       navigate(`/checkout/success?order=${response.data.id}`);
     } catch (error) {
       const message =
-        error?.response?.data?.detail ||
+        extractErrorMessage(error?.response?.data) ||
         'Не удалось создать заказ. Проверьте данные и попробуйте снова.';
       setStatus({ type: 'error', message });
     } finally {

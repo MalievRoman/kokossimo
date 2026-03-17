@@ -44,6 +44,7 @@ class Product(models.Model):
     name = models.CharField("Название товара", max_length=500)
     description = models.TextField("Описание")
     price = models.DecimalField("Цена", max_digits=10, decimal_places=2)
+    stock = models.PositiveIntegerField("Остаток", default=0)
     external_image_url = models.URLField("Внешняя ссылка на фото", blank=True, null=True)
     image = models.ImageField("Основное фото", upload_to="products/", blank=True, null=True)
     
@@ -61,6 +62,49 @@ class Product(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class SyncLog(models.Model):
+    OPERATION_CHOICES = [
+        ("full_sync", "Полный sync"),
+        ("full_sync_no_openai", "Полный sync без OpenAI"),
+        ("stock_sync", "Sync остатков"),
+        ("single_product_sync", "Пересинхронизация товара"),
+    ]
+    STATUS_CHOICES = [
+        ("running", "В процессе"),
+        ("success", "Успешно"),
+        ("stopped", "Остановлено"),
+        ("error", "Ошибка"),
+    ]
+
+    operation = models.CharField("Операция", max_length=40, choices=OPERATION_CHOICES)
+    status = models.CharField("Статус", max_length=20, choices=STATUS_CHOICES, default="running")
+    source = models.CharField("Источник", max_length=30, blank=True)
+    initiated_by = models.CharField("Кем запущено", max_length=150, blank=True)
+    target_product = models.ForeignKey(
+        Product,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sync_logs",
+        verbose_name="Товар",
+    )
+    stats = models.JSONField("Статистика", default=dict, blank=True)
+    log_output = models.TextField("Вывод синхронизации", blank=True)
+    stop_requested = models.BooleanField("Запрошена остановка", default=False)
+    error = models.TextField("Ошибка", blank=True)
+    started_at = models.DateTimeField("Начало", auto_now_add=True)
+    finished_at = models.DateTimeField("Завершение", null=True, blank=True)
+    duration_ms = models.PositiveIntegerField("Длительность, мс", null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Лог синхронизации"
+        verbose_name_plural = "Логи синхронизации"
+        ordering = ["-started_at"]
+
+    def __str__(self):
+        return f"{self.get_operation_display()} ({self.get_status_display()})"
 
 
 class ProductRating(models.Model):

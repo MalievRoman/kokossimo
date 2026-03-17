@@ -7,7 +7,7 @@ from urllib.parse import urlparse
 from django.conf import settings
 from django.utils import timezone
 
-from .models import Category, Product
+from .models import Category, Product, SyncLog
 from .moysklad import MoySkladClient
 from .openai_categorize import enrich_product, needs_description, needs_category
 
@@ -16,6 +16,10 @@ _last_sync_at = None
 _last_sync_attempt_at = None
 _last_sync_failed = False
 logger = logging.getLogger(__name__)
+
+
+class SyncStoppedError(Exception):
+    """Операция синхронизации остановлена по запросу пользователя."""
 
 
 def _normalize(value):
@@ -188,6 +192,17 @@ def _extract_price(row):
         return Decimal("0.00")
 
 
+def _extract_stock(row):
+    raw_stock = row.get("stock", 0)
+    try:
+        normalized = Decimal(str(raw_stock))
+    except Exception:
+        return 0
+    if normalized <= 0:
+        return 0
+    return int(normalized)
+
+
 def _get_original_image_url(image_obj, client):
     """Из объекта изображения возвращает URL исходного изображения (original).
     При отсутствии meta.downloadHref подгружает сущность по meta.href; fallback — миниатюра.
@@ -252,16 +267,269 @@ def _should_sync():
     return now - _last_sync_at >= timedelta(seconds=interval_seconds)
 
 
-def sync_site_products(force=False, progress_callback=None):
+def _start_sync_log(operation, sync_source="", initiated_by="", target_product=None, sync_log=None):
+    if sync_log is not None:
+        if sync_log.status != "running":
+            sync_log.status = "running"
+        sync_log.source = (sync_source or sync_log.source or "").strip()
+        sync_log.initiated_by = (initiated_by or sync_log.initiated_by or "").strip()
+        if target_product is not None:
+            sync_log.target_product = target_product
+        sync_log.stop_requested = False
+        sync_log.error = ""
+        sync_log.save(update_fields=["status", "source", "initiated_by", "target_product", "stop_requested", "error"])
+        return sync_log
+    return SyncLog.objects.create(
+        operation=operation,
+        status="running",
+        source=(sync_source or "").strip(),
+        initiated_by=(initiated_by or "").strip(),
+        target_product=target_product,
+    )
+
+
+def _finish_sync_log(sync_log, status, stats=None, error=""):
+    if not sync_log:
+        return
+    finished_at = timezone.now()
+    started_at = sync_log.started_at or finished_at
+    duration_ms = int(max(0, (finished_at - started_at).total_seconds() * 1000))
+    sync_log.status = status
+    sync_log.finished_at = finished_at
+    sync_log.duration_ms = duration_ms
+    sync_log.stats = stats or {}
+    sync_log.error = (error or "")[:5000]
+    sync_log.save(update_fields=["status", "finished_at", "duration_ms", "stats", "error"])
+
+
+def _ensure_site_category():
+    category_name = getattr(settings, "MOYSKLAD_SITE_CATEGORY_NAME", "САЙТ КОКОССИМО")
+    category_slug = getattr(settings, "MOYSKLAD_SITE_CATEGORY_SLUG", "site-kokossimo")
+    category, _ = Category.objects.get_or_create(
+        slug=category_slug,
+        defaults={"name": category_name},
+    )
+    if category.name != category_name:
+        category.name = category_name
+        category.save(update_fields=["name"])
+    return category
+
+
+def sync_single_product(
+    product,
+    progress_callback=None,
+    run_openai_enrichment=False,
+    sync_source="",
+    initiated_by="",
+    should_stop=None,
+    sync_log=None,
+):
+    def _progress(message):
+        if progress_callback:
+            progress_callback(message)
+
+    sync_log = _start_sync_log(
+        operation="single_product_sync",
+        sync_source=sync_source,
+        initiated_by=initiated_by,
+        target_product=product,
+        sync_log=sync_log,
+    )
+    if should_stop and should_stop():
+        _finish_sync_log(sync_log, status="stopped", stats={}, error="Операция остановлена пользователем.")
+        raise SyncStoppedError("Операция остановлена пользователем.")
+    if not product.moysklad_id:
+        result = {"updated": False, "detail": "У товара не указан moysklad_id."}
+        _finish_sync_log(sync_log, status="error", stats=result, error=result["detail"])
+        return result
+
+    try:
+        client = MoySkladClient()
+        category = _ensure_site_category()
+        row = client.get_assortment_item(product.moysklad_id)
+        if not row:
+            result = {"updated": False, "detail": "Товар не найден в МойСклад."}
+            _finish_sync_log(sync_log, status="error", stats=result, error=result["detail"])
+            return result
+
+        name = (row.get("name") or "").strip()
+        if not name:
+            result = {"updated": False, "detail": "В МойСклад у товара нет названия."}
+            _finish_sync_log(sync_log, status="error", stats=result, error=result["detail"])
+            return result
+        max_name_len = Product._meta.get_field("name").max_length
+        if len(name) > max_name_len:
+            name = name[: max_name_len - 3] + "..."
+
+        new_price = _extract_price(row)
+        image_url = _extract_image_url(
+            row,
+            client,
+            allow_meta_fetch=bool(getattr(settings, "MOYSKLAD_IMAGE_META_FETCH", False)),
+        ) or None
+        fields_to_update = []
+
+        if product.category_id != category.id:
+            product.category = category
+            fields_to_update.append("category")
+        if product.name != name:
+            product.name = name
+            fields_to_update.append("name")
+
+        description = (row.get("description") or "").strip()
+        if product.description != description:
+            product.description = description
+            fields_to_update.append("description")
+
+        if new_price > 0 and product.price != new_price:
+            product.price = new_price
+            fields_to_update.append("price")
+
+        stock = _extract_stock(row)
+        if int(product.stock or 0) != stock:
+            product.stock = stock
+            fields_to_update.append("stock")
+
+        if product.external_image_url != image_url:
+            product.external_image_url = image_url
+            fields_to_update.append("external_image_url")
+
+        if product.image is not None:
+            product.image = None
+            fields_to_update.append("image")
+
+        if fields_to_update:
+            if should_stop and should_stop():
+                _finish_sync_log(sync_log, status="stopped", stats={}, error="Операция остановлена пользователем.")
+                raise SyncStoppedError("Операция остановлена пользователем.")
+            product.save(update_fields=fields_to_update)
+
+        if (
+            run_openai_enrichment
+            and getattr(settings, "OPENAI_CATEGORIZE_ENABLED", True)
+            and getattr(settings, "OPENAI_API_KEY", "")
+            and (needs_category(product) or needs_description(product))
+        ):
+            if should_stop and should_stop():
+                _finish_sync_log(sync_log, status="stopped", stats={}, error="Операция остановлена пользователем.")
+                raise SyncStoppedError("Операция остановлена пользователем.")
+            _progress(f"OpenAI-обогащение товара ID={product.id}...")
+            enrich_product(product)
+
+        result = {
+            "updated": bool(fields_to_update),
+            "updated_fields": fields_to_update,
+            "detail": "Товар синхронизирован.",
+        }
+        _finish_sync_log(sync_log, status="success", stats=result)
+        return result
+    except SyncStoppedError:
+        raise
+    except Exception as exc:
+        _finish_sync_log(sync_log, status="error", stats={}, error=str(exc))
+        raise
+
+
+def sync_product_stocks(
+    progress_callback=None,
+    sync_source="",
+    initiated_by="",
+    should_stop=None,
+    sync_log=None,
+):
+    def _progress(message):
+        if progress_callback:
+            progress_callback(message)
+
+    sync_log = _start_sync_log(
+        operation="stock_sync",
+        sync_source=sync_source,
+        initiated_by=initiated_by,
+        sync_log=sync_log,
+    )
+    category_slug = getattr(settings, "MOYSKLAD_SITE_CATEGORY_SLUG", "site-kokossimo")
+    products = list(
+        Product.objects.filter(
+            category__slug=category_slug,
+            moysklad_id__isnull=False,
+        ).only("id", "stock", "moysklad_id")
+    )
+    try:
+        client = MoySkladClient()
+
+        updated = 0
+        unchanged = 0
+        missing = 0
+        errors = 0
+        to_update = []
+
+        for idx, product in enumerate(products, start=1):
+            if should_stop and should_stop():
+                raise SyncStoppedError("Операция остановлена пользователем.")
+            try:
+                row = client.get_assortment_item(product.moysklad_id)
+            except Exception:
+                errors += 1
+                continue
+            if not row:
+                missing += 1
+                continue
+            new_stock = _extract_stock(row)
+            if int(product.stock or 0) == new_stock:
+                unchanged += 1
+                continue
+            product.stock = new_stock
+            to_update.append(product)
+            updated += 1
+            if idx % 50 == 0:
+                _progress(f"Проверено {idx}/{len(products)} товаров, обновлено остатков: {updated}.")
+
+        if to_update:
+            Product.objects.bulk_update(to_update, ["stock"], batch_size=200)
+
+        result = {
+            "processed": len(products),
+            "updated": updated,
+            "unchanged": unchanged,
+            "missing": missing,
+            "errors": errors,
+        }
+        _finish_sync_log(sync_log, status="success", stats=result)
+        return result
+    except SyncStoppedError as exc:
+        _finish_sync_log(sync_log, status="stopped", stats={}, error=str(exc))
+        raise
+    except Exception as exc:
+        _finish_sync_log(sync_log, status="error", stats={}, error=str(exc))
+        raise
+
+
+def sync_site_products(
+    force=False,
+    progress_callback=None,
+    run_openai_enrichment=True,
+    sync_source="",
+    initiated_by="",
+    should_stop=None,
+    sync_log=None,
+):
     global _last_sync_at, _last_sync_attempt_at, _last_sync_failed
 
     def _progress(message):
         if progress_callback:
             progress_callback(message)
 
+    operation = "full_sync" if run_openai_enrichment else "full_sync_no_openai"
+    sync_log = _start_sync_log(
+        operation=operation,
+        sync_source=sync_source,
+        initiated_by=initiated_by,
+        sync_log=sync_log,
+    )
+
     if not force and not _should_sync():
         _progress("Синхронизация пропущена: сработал интервал защиты от частых запусков.")
-        return {
+        skipped_stats = {
             "skipped": True,
             "processed_pages": 0,
             "processed_rows": 0,
@@ -274,6 +542,8 @@ def sync_site_products(force=False, progress_callback=None):
             "descriptions_generated": 0,
             "descriptions_skipped": 0,
         }
+        _finish_sync_log(sync_log, status="success", stats=skipped_stats)
+        return skipped_stats
     _last_sync_attempt_at = timezone.now()
 
     category_name = getattr(settings, "MOYSKLAD_SITE_CATEGORY_NAME", "САЙТ КОКОССИМО")
@@ -343,6 +613,8 @@ def sync_site_products(force=False, progress_callback=None):
             folder_limit = 100
             all_folders = []
             while True:
+                if should_stop and should_stop():
+                    raise SyncStoppedError("Операция остановлена пользователем.")
                 folders_payload = client.get_product_folders(limit=folder_limit, offset=folder_offset)
                 folders_rows = folders_payload.get("rows", []) or []
                 if not folders_rows:
@@ -405,6 +677,8 @@ def sync_site_products(force=False, progress_callback=None):
         )
 
         while True:
+            if should_stop and should_stop():
+                raise SyncStoppedError("Операция остановлена пользователем.")
             if stats["processed_pages"] >= max_pages:
                 _progress(
                     f"Достигнут лимит страниц ({max_pages}), прерываем синк. "
@@ -452,6 +726,8 @@ def sync_site_products(force=False, progress_callback=None):
 
             prepared_rows = []
             for row in rows:
+                if should_stop and should_stop():
+                    raise SyncStoppedError("Операция остановлена пользователем.")
                 folder_id = _extract_folder_id_from_row(row)
                 if allowed_folder_ids:
                     if assortment_filter_expr:
@@ -493,6 +769,7 @@ def sync_site_products(force=False, progress_callback=None):
                         "name": name,
                         "description": (row.get("description") or "").strip(),
                         "price": product_price,
+                        "stock": _extract_stock(row),
                         "external_image_url": _extract_image_url(
                             row, client, allow_meta_fetch=allow_image_meta_fetch
                         ),
@@ -522,6 +799,7 @@ def sync_site_products(force=False, progress_callback=None):
                                 name=item["name"],
                                 description=item["description"],
                                 price=item["price"],
+                                stock=item["stock"],
                                 external_image_url=item["external_image_url"] or None,
                                 image=None,
                                 is_bestseller=False,
@@ -534,6 +812,7 @@ def sync_site_products(force=False, progress_callback=None):
                         existing.name = item["name"]
                         existing.description = item["description"]
                         existing.price = item["price"]
+                        existing.stock = item["stock"]
                         existing.external_image_url = item["external_image_url"] or None
                         existing.image = None
                         # Важно: эти поля редактируются вручную в админке.
@@ -551,6 +830,7 @@ def sync_site_products(force=False, progress_callback=None):
                             "name",
                             "description",
                             "price",
+                            "stock",
                             "external_image_url",
                             "image",
                         ],
@@ -587,7 +867,11 @@ def sync_site_products(force=False, progress_callback=None):
             _progress(f"Удалено устаревших товаров: {stats['deleted']}.")
 
         # Один вызов OpenAI на товар: сначала описание, затем категория
-        if getattr(settings, "OPENAI_CATEGORIZE_ENABLED", True) and getattr(settings, "OPENAI_API_KEY", ""):
+        if (
+            run_openai_enrichment
+            and getattr(settings, "OPENAI_CATEGORIZE_ENABLED", True)
+            and getattr(settings, "OPENAI_API_KEY", "")
+        ):
             candidates = list(
                 Product.objects.filter(category=category)
                 .select_related("product_subcategory")
@@ -599,6 +883,8 @@ def sync_site_products(force=False, progress_callback=None):
                     f"Обогащение через OpenAI (описание + категория): товаров {len(to_enrich)}."
                 )
             for idx, product in enumerate(to_enrich, start=1):
+                if should_stop and should_stop():
+                    raise SyncStoppedError("Операция остановлена пользователем.")
                 need_cat = needs_category(product)
                 need_desc = needs_description(product)
                 _progress(
@@ -627,7 +913,7 @@ def sync_site_products(force=False, progress_callback=None):
                 _progress(
                     f"Категоризовано {stats['categorized']}, описаний сгенерировано {stats['descriptions_generated']}, не удалось {stats['categorize_skipped']}."
                 )
-        else:
+        elif run_openai_enrichment:
             uncategorized_count = Product.objects.filter(
                 category=category, product_subcategory__isnull=True
             ).count()
@@ -637,6 +923,8 @@ def sync_site_products(force=False, progress_callback=None):
                     "OpenAI отключен (OPENAI_CATEGORIZE_ENABLED или OPENAI_API_KEY). "
                     f"Товаров без подкатегории: {uncategorized_count}."
                 )
+        else:
+            _progress("OpenAI-обогащение пропущено (run_openai_enrichment=false).")
 
         _last_sync_at = timezone.now()
         _last_sync_failed = False
@@ -653,8 +941,15 @@ def sync_site_products(force=False, progress_callback=None):
                 f"Внимание: не найдено товаров по категории '{category_name}'. "
                 "Проверьте sample_paths/sample_folder_names в итоге команды."
             )
+        _finish_sync_log(sync_log, status="success", stats=stats)
         return stats
-    except Exception:
+    except SyncStoppedError as exc:
+        _last_sync_failed = False
+        _progress("Синк остановлен пользователем.")
+        _finish_sync_log(sync_log, status="stopped", stats={}, error=str(exc))
+        raise
+    except Exception as exc:
         _last_sync_failed = True
         _progress("Синк завершился с ошибкой.")
+        _finish_sync_log(sync_log, status="error", stats={}, error=str(exc))
         raise

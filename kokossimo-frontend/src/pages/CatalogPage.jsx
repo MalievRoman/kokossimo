@@ -23,6 +23,7 @@ const CatalogPage = () => {
   const [expandedParents, setExpandedParents] = useState(new Set());
   const [priceFrom, setPriceFrom] = useState('');
   const [priceTo, setPriceTo] = useState('');
+  const [onlyInStock, setOnlyInStock] = useState(false);
   const [priceError, setPriceError] = useState('');
   const [priceRange, setPriceRange] = useState({ min: null, max: null });
   const [loading, setLoading] = useState(true);
@@ -78,6 +79,10 @@ const CatalogPage = () => {
       setSelectedParents([]);
       setSelectedSubcategories([]);
     }
+  }, [searchParams]);
+
+  useEffect(() => {
+    setOnlyInStock(searchParams.get('in_stock') === 'true');
   }, [searchParams]);
 
   const normalizeText = (value) =>
@@ -174,6 +179,9 @@ const CatalogPage = () => {
       if (p.length) params.parent = p;
       if (s.length) params.subcategory = s;
     }
+    if (searchParams.get('in_stock') === 'true') {
+      params.in_stock = 'true';
+    }
 
     // Если пользователь в режиме поиска — всё равно покажем диапазон по выбранным категориям.
     // searchQuery переменная используется только чтобы зависимость обновлялась вместе с остальной логикой.
@@ -242,6 +250,9 @@ const CatalogPage = () => {
       const s = legacyCategoryFromFilter.filter(c => /^\d+\.\d+$/.test(c));
       if (p.length) params.parent = p;
       if (s.length) params.subcategory = s;
+    }
+    if (searchParams.get('in_stock') === 'true') {
+      params.in_stock = 'true';
     }
     if (minPrice) params.price_min = minPrice;
     if (maxPrice) params.price_max = maxPrice;
@@ -380,6 +391,7 @@ const CatalogPage = () => {
     if (selectedSubcategories.length > 0) nextParams.subcategory = selectedSubcategories;
     if (fromVal) nextParams.price_min = fromVal;
     if (toVal) nextParams.price_max = toVal;
+    if (onlyInStock) nextParams.in_stock = 'true';
     if (searchParams.get('q')) {
       nextParams.q = searchParams.get('q');
     }
@@ -391,6 +403,7 @@ const CatalogPage = () => {
     setSelectedSubcategories([]);
     setPriceFrom('');
     setPriceTo('');
+    setOnlyInStock(false);
     setPriceError('');
     const nextParams = new URLSearchParams(searchParams);
     // Сбрасываем только фильтры, не трогаем поисковый запрос `q`
@@ -399,6 +412,7 @@ const CatalogPage = () => {
     nextParams.delete('subcategory');
     nextParams.delete('price_min');
     nextParams.delete('price_max');
+    nextParams.delete('in_stock');
     setSearchParams(nextParams, { replace: true });
   };
 
@@ -424,6 +438,7 @@ const CatalogPage = () => {
     const nextParams = {};
     if (selectedParents.length > 0) nextParams.parent = selectedParents;
     if (selectedSubcategories.length > 0) nextParams.subcategory = selectedSubcategories;
+    if (onlyInStock) nextParams.in_stock = 'true';
     if (searchParams.get('q')) {
       nextParams.q = searchParams.get('q');
     }
@@ -542,6 +557,21 @@ const CatalogPage = () => {
                   {priceError}
                 </p>
               )}
+            </section>
+            <section className="catalog-sidebar-section">
+              <h2 className="catalog-sidebar-title">НАЛИЧИЕ</h2>
+              <ul className="catalog-filter-list">
+                <li>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={onlyInStock}
+                      onChange={(event) => setOnlyInStock(event.target.checked)}
+                    />
+                    Только в наличии
+                  </label>
+                </li>
+              </ul>
             </section>
 
             <div className="catalog-sidebar-actions">
@@ -740,7 +770,7 @@ const CatalogPage = () => {
                 )}
               </div>
 
-              {(selectedParents.length > 0 || selectedSubcategories.length > 0 || priceFrom || priceTo) && (
+              {(selectedParents.length > 0 || selectedSubcategories.length > 0 || priceFrom || priceTo || onlyInStock) && (
                 <div className="catalog-mobile-selected">
                   {(priceFrom || priceTo) && (
                     <button
@@ -749,6 +779,20 @@ const CatalogPage = () => {
                       onClick={handleMobilePriceReset}
                     >
                       {`ЦЕНА: ${priceFrom || '0'}–${priceTo || '∞'} ×`}
+                    </button>
+                  )}
+                  {onlyInStock && (
+                    <button
+                      type="button"
+                      className="catalog-mobile-selected-tag"
+                      onClick={() => {
+                        setOnlyInStock(false);
+                        const nextParams = new URLSearchParams(searchParams);
+                        nextParams.delete('in_stock');
+                        setSearchParams(nextParams, { replace: true });
+                      }}
+                    >
+                      ТОЛЬКО В НАЛИЧИИ ×
                     </button>
                   )}
                   {selectedParents.map((code) => {
@@ -790,6 +834,21 @@ const CatalogPage = () => {
 
             <div className="catalog-controls">
               <div className="catalog-controls-left">
+                {onlyInStock && (
+                  <button
+                    key="in-stock-tag"
+                    type="button"
+                    className="catalog-tag"
+                    onClick={() => {
+                      setOnlyInStock(false);
+                      const nextParams = new URLSearchParams(searchParams);
+                      nextParams.delete('in_stock');
+                      setSearchParams(nextParams, { replace: true });
+                    }}
+                  >
+                    Только в наличии ×
+                  </button>
+                )}
                 {selectedParents.map((code) => {
                   const parent = categoryTree.find((p) => p.code === code);
                   return (
