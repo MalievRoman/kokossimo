@@ -500,7 +500,8 @@ def verify_email_code(request):
             return Response({"detail": "Пользователь не найден."}, status=status.HTTP_400_BAD_REQUEST)
         user.set_password(password)
         user.save(update_fields=['password'])
-        token, _ = Token.objects.get_or_create(user=user)
+        Token.objects.filter(user=user).delete()
+        token = Token.objects.create(user=user)
         return Response({"token": token.key, "detail": "Пароль обновлен."}, status=status.HTTP_200_OK)
 
     password = serializer.validated_data.get('password')
