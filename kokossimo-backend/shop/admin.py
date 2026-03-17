@@ -104,7 +104,7 @@ class ProductAdmin(admin.ModelAdmin):
     date_hierarchy = "created_at"
     autocomplete_fields = ("category", "product_subcategory")
     fieldsets = (
-        (None, {"fields": ("name", "category", "product_subcategory", "description", "price", "image")}),
+        (None, {"fields": ("name", "category", "product_subcategory", "description", "composition", "usage_instructions", "price", "image")}),
         ("Главная страница", {"fields": ("is_bestseller", "is_new", "discount")}),
     )
 

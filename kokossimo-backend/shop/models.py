@@ -43,6 +43,8 @@ class Product(models.Model):
     moysklad_id = models.CharField("ID в МойСклад", max_length=64, blank=True, null=True, unique=True, db_index=True)
     name = models.CharField("Название товара", max_length=500)
     description = models.TextField("Описание")
+    composition = models.TextField("Состав", blank=True, default="")
+    usage_instructions = models.TextField("Способ применения", blank=True, default="")
     price = models.DecimalField("Цена", max_digits=10, decimal_places=2)
     stock = models.PositiveIntegerField("Остаток", default=0)
     external_image_url = models.URLField("Внешняя ссылка на фото", blank=True, null=True)
