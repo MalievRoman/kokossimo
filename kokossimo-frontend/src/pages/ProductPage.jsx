@@ -75,6 +75,8 @@ const ProductPage = () => {
 
   const favorite = isFavorite(product.id);
   const price = Number.parseFloat(product.price) || 0;
+  const stock = Number.isFinite(Number(product.stock)) ? Number(product.stock) : null;
+  const isInStock = typeof product.is_in_stock === 'boolean' ? product.is_in_stock : (stock == null ? true : stock > 0);
 
   const breadcrumbCategory = (product.category_slug || 'каталог').replaceAll('-', ' ');
   const breadcrumbCategoryLabel = capitalizeWords(breadcrumbCategory);
@@ -82,6 +84,7 @@ const ProductPage = () => {
   const tabText = String(product.description || '').trim();
 
   const handleAddToCart = () => {
+    if (!isInStock) return;
     addToCart(product, 1);
     setAdded(true);
     window.setTimeout(() => setAdded(false), 1500);
@@ -121,8 +124,9 @@ const ProductPage = () => {
                 type="button"
                 className={`add-to-cart-btn-large ${added ? 'added' : ''}`}
                 onClick={handleAddToCart}
+                disabled={!isInStock}
               >
-                {added ? 'ДОБАВЛЕНО' : 'В КОРЗИНУ'}
+                {!isInStock ? 'НЕТ В НАЛИЧИИ' : added ? 'ДОБАВЛЕНО' : 'В КОРЗИНУ'}
               </button>
               <button
                 type="button"

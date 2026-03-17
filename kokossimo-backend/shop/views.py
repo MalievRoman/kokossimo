@@ -143,6 +143,7 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
         ordering = (self.request.query_params.get("ordering") or "").strip()
         is_new = self.request.query_params.get('is_new', None)
         is_bestseller = self.request.query_params.get('is_bestseller', None)
+        in_stock = self.request.query_params.get('in_stock', None)
 
         def _parse_decimal(value):
             if value is None:
@@ -192,6 +193,8 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
                 queryset = queryset.filter(is_new=True)
             if is_bestseller == 'true':
                 queryset = queryset.filter(is_bestseller=True)
+            if in_stock == 'true':
+                queryset = queryset.filter(stock__gt=0)
 
             # Важно: если выбраны подкатегории, они должны быть приоритетнее родителя.
             # Иначе при одновременной передаче parent+subcategory (как в UI) получаем весь parent.
@@ -221,6 +224,8 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
         
         if is_bestseller == 'true':
             queryset = queryset.filter(is_bestseller=True)
+        if in_stock == 'true':
+            queryset = queryset.filter(stock__gt=0)
 
         if category_slugs:
             queryset = queryset.filter(category__slug__in=category_slugs)

@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from django.db import transaction
+from collections import defaultdict
 from .models import Product, Category, Profile, Order, OrderItem, ProductRating, ProductSubcategory
 from django.conf import settings
 
@@ -34,6 +35,7 @@ class ProductSerializer(serializers.ModelSerializer):
     rating_avg = serializers.FloatField(read_only=True)
     rating_count = serializers.IntegerField(read_only=True)
     user_rating = serializers.SerializerMethodField()
+    is_in_stock = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
@@ -42,6 +44,8 @@ class ProductSerializer(serializers.ModelSerializer):
             'name',
             'description',
             'price',
+            'stock',
+            'is_in_stock',
             'image',
             'category_slug',
             'product_subcategory_code',
@@ -83,6 +87,9 @@ class ProductSerializer(serializers.ModelSerializer):
             return None
         rating = obj.ratings.filter(user=request.user).first()
         return rating.rating if rating else None
+
+    def get_is_in_stock(self, obj):
+        return int(getattr(obj, "stock", 0) or 0) > 0
 
 
 class ProductRatingSerializer(serializers.ModelSerializer):
@@ -178,6 +185,20 @@ class OrderCreateSerializer(serializers.Serializer):
             if products.count() != len(set(product_ids)):
                 raise serializers.ValidationError("Некоторые товары не найдены.")
             self._product_map = {product.id: product for product in products}
+
+            requested_quantities = defaultdict(int)
+            for item in items:
+                product_id = item.get('product_id')
+                if product_id:
+                    requested_quantities[product_id] += int(item.get('quantity') or 0)
+
+            for product_id, requested_qty in requested_quantities.items():
+                product = self._product_map[product_id]
+                available = int(getattr(product, "stock", 0) or 0)
+                if requested_qty > available:
+                    raise serializers.ValidationError(
+                        f"Товара '{product.name}' недостаточно на складе. Доступно: {available}."
+                    )
         return items
 
     @transaction.atomic
@@ -186,14 +207,36 @@ class OrderCreateSerializer(serializers.Serializer):
         request = self.context.get('request')
         user = request.user if request and request.user.is_authenticated else None
 
+        requested_quantities = defaultdict(int)
+        product_ids = []
+        for item in items_data:
+            product_id = item.get('product_id')
+            if product_id:
+                product_ids.append(product_id)
+                requested_quantities[product_id] += int(item.get('quantity') or 0)
+
+        locked_products = {}
+        if product_ids:
+            locked_qs = Product.objects.select_for_update().filter(id__in=set(product_ids))
+            locked_products = {product.id: product for product in locked_qs}
+            if len(locked_products) != len(set(product_ids)):
+                raise serializers.ValidationError({"detail": "Некоторые товары больше недоступны."})
+
+            for product_id, requested_qty in requested_quantities.items():
+                product = locked_products[product_id]
+                available = int(getattr(product, "stock", 0) or 0)
+                if requested_qty > available:
+                    raise serializers.ValidationError(
+                        {"detail": f"Товара '{product.name}' недостаточно на складе. Доступно: {available}."}
+                    )
+
         order = Order.objects.create(user=user, **validated_data)
         total = 0
 
-        product_map = getattr(self, '_product_map', {})
         for item in items_data:
             quantity = item['quantity']
             if item.get('product_id'):
-                product = product_map.get(item['product_id'])
+                product = locked_products[item['product_id']]
                 price = product.price
                 OrderItem.objects.create(
                     order=order,
@@ -201,6 +244,8 @@ class OrderCreateSerializer(serializers.Serializer):
                     quantity=quantity,
                     price=price,
                 )
+                product.stock = int(product.stock or 0) - quantity
+                product.save(update_fields=['stock'])
                 total += price * quantity
             else:
                 amount = item.get('gift_certificate_amount')

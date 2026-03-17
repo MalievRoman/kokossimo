@@ -14,7 +14,12 @@ class Command(BaseCommand):
             self.stdout.write(f"[sync] {message}")
 
         try:
-            stats = sync_site_products(force=True, progress_callback=progress)
+            stats = sync_site_products(
+                force=True,
+                progress_callback=progress,
+                sync_source="management_command",
+                initiated_by="sync_moysklad_site_products",
+            )
         except (MoySkladConfigError, MoySkladError) as exc:
             raise CommandError(str(exc))
 

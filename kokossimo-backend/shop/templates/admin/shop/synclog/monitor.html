@@ -1,0 +1,62 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
+    <h1 style="margin:0;">Монитор синхронизации #{{ sync_log.id }}</h1>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <a class="button" href="{% url 'admin:shop_synclog_change' sync_log.id %}">Карточка лога</a>
+      {% if sync_log.status == "running" %}
+        <form method="post" action="{{ stop_url }}" style="margin:0;">
+          {% csrf_token %}
+          <button type="submit" class="button" style="background:#ba2121;">Остановить</button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+
+  <div style="margin-bottom:12px;">
+    <strong>Статус:</strong> <span id="sync-status">{{ sync_log.get_status_display }}</span>
+    {% if sync_log.stop_requested %}<span style="margin-left:8px;">(остановка запрошена)</span>{% endif %}
+  </div>
+
+  <pre id="sync-log-output" style="background:#111;color:#e8e8e8;padding:12px;border-radius:6px;max-height:65vh;overflow:auto;white-space:pre-wrap;">{{ sync_log.log_output|default:"Ожидание вывода..." }}</pre>
+
+  <script>
+    (function () {
+      const outputEl = document.getElementById('sync-log-output');
+      const statusEl = document.getElementById('sync-status');
+      const streamUrl = "{{ stream_url }}";
+      let lastOutputLength = outputEl.textContent.length;
+
+      const statusMap = {
+        running: 'В процессе',
+        success: 'Успешно',
+        stopped: 'Остановлено',
+        error: 'Ошибка'
+      };
+
+      const poll = async () => {
+        try {
+          const response = await fetch(streamUrl, { credentials: 'same-origin' });
+          if (!response.ok) return;
+          const data = await response.json();
+          statusEl.textContent = statusMap[data.status] || data.status;
+          const nextText = data.log_output || '';
+          if (nextText.length !== lastOutputLength) {
+            outputEl.textContent = nextText || 'Ожидание вывода...';
+            outputEl.scrollTop = outputEl.scrollHeight;
+            lastOutputLength = nextText.length;
+          }
+          if (data.status !== 'running') {
+            return;
+          }
+        } catch (e) {
+          // keep polling silently
+        }
+        setTimeout(poll, 1200);
+      };
+
+      setTimeout(poll, 600);
+    })();
+  </script>
+{% endblock %}
