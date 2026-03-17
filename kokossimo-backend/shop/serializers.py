@@ -43,6 +43,8 @@ class ProductSerializer(serializers.ModelSerializer):
             'id',
             'name',
             'description',
+            'composition',
+            'usage_instructions',
             'price',
             'stock',
             'is_in_stock',
