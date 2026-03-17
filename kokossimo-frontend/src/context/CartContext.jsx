@@ -13,6 +13,12 @@ export const useCart = () => {
 export const CartProvider = ({ children }) => {
   const [cartItems, setCartItems] = useState([]);
 
+  const getMaxAvailableQuantity = (product) => {
+    const numericStock = Number(product?.stock);
+    if (!Number.isFinite(numericStock)) return null;
+    return Math.max(0, Math.floor(numericStock));
+  };
+
   // Загружаем корзину из localStorage при монтировании
   useEffect(() => {
     const savedCart = localStorage.getItem('cart');
@@ -41,22 +47,30 @@ export const CartProvider = ({ children }) => {
         ? normalizedDiscount
         : 0;
 
+    const maxAvailable = getMaxAvailableQuantity(product);
+    if (maxAvailable === 0) return;
+
     setCartItems(prevItems => {
       const existingItem = prevItems.find(item => item.id === product.id);
       
       if (existingItem) {
+        const nextQuantity = existingItem.quantity + quantity;
+        const clampedQuantity = maxAvailable == null ? nextQuantity : Math.min(nextQuantity, maxAvailable);
         // Если товар уже есть, увеличиваем количество
         return prevItems.map(item =>
           item.id === product.id
             ? {
                 ...item,
-                quantity: item.quantity + quantity,
+                quantity: clampedQuantity,
                 // Актуализируем скидку, если товар добавили повторно из карточки
-                discount: safeDiscount
+                discount: safeDiscount,
+                stock: maxAvailable
               }
             : item
         );
       } else {
+        const initialQuantity = maxAvailable == null ? quantity : Math.min(quantity, maxAvailable);
+        if (initialQuantity <= 0) return prevItems;
         // Если товара нет, добавляем новый
         return [...prevItems, {
           id: product.id,
@@ -64,7 +78,8 @@ export const CartProvider = ({ children }) => {
           price: safePrice,
           discount: safeDiscount,
           image: product.image,
-          quantity: quantity,
+          quantity: initialQuantity,
+          stock: maxAvailable,
           is_gift_certificate: Boolean(product.is_gift_certificate)
         }];
       }
@@ -86,7 +101,10 @@ export const CartProvider = ({ children }) => {
     setCartItems(prevItems =>
       prevItems.map(item =>
         item.id === productId
-          ? { ...item, quantity }
+          ? {
+              ...item,
+              quantity: item.stock == null ? quantity : Math.min(quantity, item.stock)
+            }
           : item
       )
     );

@@ -45,6 +45,7 @@ def _kokossimo_get_app_list(request):
             order = [
                 "order",
                 "feedback",
+                "synclog",
                 "product",
                 "category",
                 "profile",

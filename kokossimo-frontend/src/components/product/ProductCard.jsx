@@ -15,6 +15,8 @@ const ProductCard = ({ product }) => {
 
   const cartItem = cartItems.find((item) => item.id === product.id);
   const quantity = cartItem?.quantity || 0;
+  const stock = Number.isFinite(Number(product.stock)) ? Number(product.stock) : null;
+  const isInStock = typeof product.is_in_stock === 'boolean' ? product.is_in_stock : (stock == null ? true : stock > 0);
 
   const isNew = Boolean(product.is_new ?? product.isNew);
   const discount = Number.isFinite(Number(product.discount))
@@ -49,12 +51,14 @@ const ProductCard = ({ product }) => {
   const handleAddToCart = (e) => {
     e.preventDefault();
     e.stopPropagation();
+    if (!isInStock) return;
     addToCart(product, 1);
   };
 
   const handleIncrease = (e) => {
     e.preventDefault();
     e.stopPropagation();
+    if (!canIncrease) return;
     updateQuantity(product.id, quantity + 1);
   };
 
@@ -79,6 +83,7 @@ const ProductCard = ({ product }) => {
     : `${import.meta.env.BASE_URL}assets/fav.svg`;
 
   const showQtyControls = quantity > 0;
+  const canIncrease = stock == null ? true : quantity < stock;
 
   return (
     <div className="product-card" data-product-id={product.id}>
@@ -142,12 +147,16 @@ const ProductCard = ({ product }) => {
               </span>
             )}
           </div>
+          {!isInStock && (
+            <div className="product-card__stock-status">Нет в наличии</div>
+          )}
 
           <div className="product-card__action">
             <button
               type="button"
               className={`product-card__btn ${showQtyControls ? 'is-hidden' : ''}`}
               onClick={handleAddToCart}
+              disabled={!isInStock}
             >
               В КОРЗИНУ
             </button>
@@ -170,6 +179,7 @@ const ProductCard = ({ product }) => {
                 className="product-card__qty-btn"
                 onClick={handleIncrease}
                 data-qty-plus
+                disabled={!canIncrease}
               >
                 +
               </button>

@@ -162,6 +162,12 @@
   background-color: #4a9d4a;
 }
 
+.add-to-cart-btn-large:disabled {
+  background-color: #e5dcda;
+  color: #a8938f;
+  cursor: not-allowed;
+}
+
 .wishlist-btn {
   width: 40px;
   min-width: 40px;
@@ -281,6 +287,9 @@
 
   .add-to-cart-btn-large:hover {
     background-color: #330200;
+  }
+  .add-to-cart-btn-large:disabled:hover {
+    background-color: #e5dcda;
   }
 
   .wishlist-btn:hover {

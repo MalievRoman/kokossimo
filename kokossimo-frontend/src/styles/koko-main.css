@@ -1241,6 +1241,15 @@ body {
   text-decoration: line-through;
 }
 
+.product-card__stock-status {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 400;
+  color: #740400;
+  text-transform: uppercase;
+}
+
 
 .product-card__btn {
   margin-top: 16px;
@@ -1264,10 +1273,22 @@ body {
     color 180ms ease;
 }
 
+.product-card__btn:disabled {
+  border-color: #d8c9c5;
+  background: #f3ecea;
+  color: #b79f99;
+  cursor: not-allowed;
+}
+
 @media (hover: hover) {
   .product-card__btn:hover {
     background: var(--accent);
     color: var(--bg);
+  }
+  .product-card__btn:disabled:hover {
+    border-color: #d8c9c5;
+    background: #f3ecea;
+    color: #b79f99;
   }
 }
 
