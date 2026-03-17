@@ -82,6 +82,8 @@ const ProductPage = () => {
   const breadcrumbCategoryLabel = capitalizeWords(breadcrumbCategory);
   const productKind = capitalizeFirst(product.product_subcategory_name || 'Парфюмерная вода');
   const tabText = String(product.description || '').trim();
+  const compositionText = String(product.composition || '').trim();
+  const usageText = String(product.usage_instructions || '').trim();
 
   const handleAddToCart = () => {
     if (!isInStock) return;
@@ -175,9 +177,9 @@ const ProductPage = () => {
             {activeTab === 'specs' && (
               <div className="specs-content">
                 <h3>Состав</h3>
-                <p>{tabText || 'Информация о составе появится позже.'}</p>
+                <p>{compositionText || 'Информация о составе появится позже.'}</p>
                 <h3>Применение</h3>
-                <p>{tabText || 'Информация о применении появится позже.'}</p>
+                <p>{usageText || 'Информация о применении появится позже.'}</p>
               </div>
             )}
 
