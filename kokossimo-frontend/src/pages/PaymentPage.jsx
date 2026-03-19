@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { createOrder, getCurrentUser, updateProfile } from '../services/api';
+import { createOrder, createYooKassaPayment, getCurrentUser, updateProfile } from '../services/api';
 import { useCart } from '../context/CartContext';
 import { formatRuPhone, isPhoneInputKeyAllowed } from '../utils/phone';
 import './PaymentPage.css';
@@ -137,7 +137,19 @@ const PaymentPage = () => {
 
       const response = await createOrder(payload, token);
       clearCart();
-      navigate(`/checkout/success?order=${response.data.id}`);
+      const orderId = response.data.id;
+
+      if (form.paymentMethod === 'yookassa') {
+        const paymentResponse = await createYooKassaPayment(token, orderId);
+        const confirmationUrl = paymentResponse?.data?.confirmation_url;
+        if (!confirmationUrl) {
+          throw new Error('Не удалось получить ссылку на оплату.');
+        }
+        window.location.href = confirmationUrl;
+        return;
+      }
+
+      navigate(`/checkout/success?order=${orderId}`);
     } catch (error) {
       const message =
         extractErrorMessage(error?.response?.data) ||
@@ -300,7 +312,7 @@ const PaymentPage = () => {
                       setForm((prev) => ({
                         ...prev,
                         deliveryMethod: event.target.value,
-                        paymentMethod: 'cash_on_delivery',
+                        paymentMethod: prev.paymentMethod === 'yookassa' ? 'yookassa' : 'cash_on_delivery',
                       }));
                     }}
                   />
@@ -316,7 +328,7 @@ const PaymentPage = () => {
                       setForm((prev) => ({
                         ...prev,
                         deliveryMethod: event.target.value,
-                        paymentMethod: 'cash_pickup',
+                        paymentMethod: prev.paymentMethod === 'yookassa' ? 'yookassa' : 'cash_pickup',
                       }));
                     }}
                   />
@@ -349,6 +361,16 @@ const PaymentPage = () => {
                     disabled={form.deliveryMethod !== 'pickup'}
                   />
                   <span>На кассе при самовывозе</span>
+                </label>
+                <label className="payment-option">
+                  <input
+                    type="radio"
+                    name="payment"
+                    value="yookassa"
+                    checked={form.paymentMethod === 'yookassa'}
+                    onChange={handleChange('paymentMethod')}
+                  />
+                  <span>Онлайн-оплата картой (ЮKassa)</span>
                 </label>
               </div>
             </div>
@@ -388,7 +410,7 @@ const PaymentPage = () => {
               <span>{getTotalPrice().toLocaleString('ru-RU')} ₽</span>
             </div>
             <p className="payment-summary__note">
-              Онлайн-оплата пока недоступна. Выберите оплату при получении.
+              Для онлайн-оплаты вы будете перенаправлены на защищенную страницу ЮKassa.
             </p>
             <Link to="/cart" className="btn-link btn-link--center">
               Вернуться в корзину

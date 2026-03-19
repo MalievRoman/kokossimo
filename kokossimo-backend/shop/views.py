@@ -12,6 +12,7 @@ from django.utils import timezone
 from datetime import timedelta
 import secrets
 import time
+from django.db import transaction
 from django.db.models import Q, Avg, Count, Min, Max
 from decimal import Decimal, InvalidOperation
 from django.shortcuts import get_object_or_404
@@ -47,6 +48,7 @@ def _placeholder_image_response(reason=""):
     return resp
 from .moysklad import MoySkladClient, MoySkladError, MoySkladConfigError
 from .moysklad_sync import _extract_image_url
+from .services.yookassa_client import YooKassaClient, YooKassaConfigError, YooKassaServiceError
 from .serializers import (
     ProductSerializer,
     CategorySerializer,
@@ -641,6 +643,177 @@ def order_detail(request, order_id):
     except Order.DoesNotExist:
         return Response({"detail": "Заказ не найден."}, status=status.HTTP_404_NOT_FOUND)
     return Response(OrderSerializer(order, context={'request': request}).data)
+
+
+@api_view(['POST'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def create_yookassa_payment(request):
+    raw_order_id = request.data.get("order_id")
+    try:
+        order_id = int(raw_order_id)
+    except (TypeError, ValueError):
+        return Response({"detail": "Некорректный order_id."}, status=status.HTTP_400_BAD_REQUEST)
+
+    with transaction.atomic():
+        order = (
+            Order.objects.select_for_update()
+            .filter(id=order_id, user=request.user)
+            .first()
+        )
+        if not order:
+            return Response({"detail": "Заказ не найден."}, status=status.HTTP_404_NOT_FOUND)
+
+        if order.payment_method != 'yookassa':
+            return Response(
+                {"detail": "Для этого заказа не выбран способ оплаты ЮKassa."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if order.status == 'paid' or order.payment_status == 'succeeded':
+            return Response({"detail": "Заказ уже оплачен."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if (
+            order.payment_status == 'pending'
+            and order.payment_provider == 'yookassa'
+            and order.payment_id
+            and order.payment_confirmation_url
+        ):
+            return Response(
+                {
+                    "order_id": order.id,
+                    "payment_id": order.payment_id,
+                    "confirmation_url": order.payment_confirmation_url,
+                    "payment_status": order.payment_status,
+                    "already_created": True,
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        try:
+            client = YooKassaClient()
+            payment = client.create_payment(
+                order_id=order.id,
+                amount=Decimal(order.total_price),
+                description=f"Оплата заказа #{order.id}",
+            )
+        except YooKassaConfigError as exc:
+            logger.error("YooKassa config error: %s", exc)
+            return Response({"detail": str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        except YooKassaServiceError as exc:
+            logger.error("YooKassa create payment error for order=%s: %s", order.id, exc)
+            return Response({"detail": str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
+
+        try:
+            provider_amount = Decimal(payment.amount_value)
+            order_amount = Decimal(order.total_price)
+        except (TypeError, ValueError, InvalidOperation):
+            return Response(
+                {"detail": "Некорректный формат суммы от YooKassa."},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        if provider_amount != order_amount:
+            logger.error(
+                "YooKassa amount mismatch for order=%s: provider=%s local=%s",
+                order.id,
+                provider_amount,
+                order_amount,
+            )
+            return Response({"detail": "Сумма платежа не совпадает с суммой заказа."}, status=status.HTTP_502_BAD_GATEWAY)
+
+        order.payment_provider = 'yookassa'
+        order.payment_id = payment.payment_id
+        order.payment_confirmation_url = payment.confirmation_url
+        order.payment_status = 'pending'
+        order.save(update_fields=['payment_provider', 'payment_id', 'payment_confirmation_url', 'payment_status', 'updated_at'])
+
+        return Response(
+            {
+                "order_id": order.id,
+                "payment_id": payment.payment_id,
+                "confirmation_url": payment.confirmation_url,
+                "payment_status": order.payment_status,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
+@api_view(['POST'])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def yookassa_webhook(request):
+    payload = request.data if isinstance(request.data, dict) else {}
+    payment_obj = payload.get("object") if isinstance(payload.get("object"), dict) else {}
+    payment_id = (payment_obj.get("id") or "").strip()
+
+    if not payment_id:
+        return Response({"detail": "payment_id is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        client = YooKassaClient()
+        provider_payment = client.get_payment(payment_id)
+    except YooKassaConfigError as exc:
+        logger.error("YooKassa webhook config error: %s", exc)
+        return Response({"detail": str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+    except YooKassaServiceError as exc:
+        logger.error("YooKassa webhook fetch payment error id=%s: %s", payment_id, exc)
+        return Response({"detail": str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
+
+    metadata = provider_payment.get("metadata") or {}
+    metadata_order_id = metadata.get("order_id")
+
+    order = Order.objects.filter(payment_id=payment_id).first()
+    if not order and metadata_order_id:
+        order = Order.objects.filter(id=metadata_order_id).first()
+
+    if not order:
+        logger.warning("YooKassa webhook for unknown payment_id=%s", payment_id)
+        return Response({"ok": True, "detail": "Payment is not linked to local order."}, status=status.HTTP_200_OK)
+
+    provider_amount_raw = ((provider_payment.get("amount") or {}).get("value") or "").strip()
+    provider_status = (provider_payment.get("status") or "").strip()
+    try:
+        provider_amount = Decimal(provider_amount_raw)
+        order_amount = Decimal(order.total_price)
+    except (TypeError, ValueError, InvalidOperation):
+        logger.error("YooKassa webhook amount parse error payment=%s value=%s", payment_id, provider_amount_raw)
+        return Response({"detail": "Некорректная сумма платежа."}, status=status.HTTP_400_BAD_REQUEST)
+
+    if provider_amount != order_amount:
+        logger.error(
+            "YooKassa webhook amount mismatch order=%s payment=%s provider=%s local=%s",
+            order.id,
+            payment_id,
+            provider_amount,
+            order_amount,
+        )
+        return Response({"detail": "Сумма платежа не совпадает с суммой заказа."}, status=status.HTTP_400_BAD_REQUEST)
+
+    with transaction.atomic():
+        locked_order = Order.objects.select_for_update().get(id=order.id)
+        update_fields = ['payment_provider', 'payment_id', 'payment_status', 'updated_at']
+        locked_order.payment_provider = 'yookassa'
+        locked_order.payment_id = payment_id
+
+        if provider_status == 'succeeded':
+            locked_order.payment_status = 'succeeded'
+            locked_order.status = 'paid'
+            if not locked_order.paid_at:
+                locked_order.paid_at = timezone.now()
+                update_fields.append('paid_at')
+            update_fields.append('status')
+        elif provider_status == 'canceled':
+            locked_order.payment_status = 'canceled'
+            if locked_order.status != 'paid':
+                locked_order.status = 'cancelled'
+                update_fields.append('status')
+        else:
+            locked_order.payment_status = 'pending'
+
+        locked_order.save(update_fields=update_fields)
+
+    return Response({"ok": True}, status=status.HTTP_200_OK)
 
 
 @api_view(['GET'])

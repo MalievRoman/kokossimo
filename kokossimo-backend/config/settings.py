@@ -198,6 +198,12 @@ EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'true').lower() in ('1', 'true', 'yes
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
 EMAIL_CODE_TTL_MINUTES = int(os.getenv('EMAIL_CODE_TTL_MINUTES', '10'))
 
+# YooKassa settings
+YOOKASSA_SHOP_ID = os.getenv('YOOKASSA_SHOP_ID', '')
+YOOKASSA_SECRET_KEY = os.getenv('YOOKASSA_SECRET_KEY', '')
+YOOKASSA_RETURN_URL = os.getenv('YOOKASSA_RETURN_URL', '')
+YOOKASSA_CAPTURE_PAYMENT = os.getenv('YOOKASSA_CAPTURE_PAYMENT', 'true').lower() in ('1', 'true', 'yes')
+
 # Telegram-бот для обратной связи (отзывы, предложения, просьбы о связи)
 # Токен создаётся у @BotFather. Запуск: python manage.py run_telegram_bot
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', '')

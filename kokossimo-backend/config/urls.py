@@ -19,6 +19,7 @@ from shop.views import (
     current_user,
     update_profile,
     create_order,
+    create_yookassa_payment,
     list_orders,
     order_detail,
     product_ratings,
@@ -27,6 +28,7 @@ from shop.views import (
     product_image_proxy,
     moysklad_status,
     moysklad_assortment,
+    yookassa_webhook,
 )
 
 # Оформление админки для сотрудников магазина
@@ -120,6 +122,8 @@ urlpatterns = [
     path('api/orders/', create_order),
     path('api/orders/list/', list_orders),
     path('api/orders/<int:order_id>/', order_detail),
+    path('api/payments/yookassa/create/', create_yookassa_payment),
+    path('api/payments/yookassa/webhook/', yookassa_webhook),
     path('api/products/<int:product_id>/ratings/', product_ratings),
     path('api/products/<int:product_id>/image/', product_image_proxy),
     path('api/products/<int:product_id>/rate', rate_product_missing_trailing_slash),

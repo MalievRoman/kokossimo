@@ -69,6 +69,14 @@ export const getOrderDetail = (token, orderId) =>
   api.get(`/orders/${orderId}/`, {
     headers: { Authorization: `Token ${token}` },
   });
+export const createYooKassaPayment = (token, orderId) =>
+  api.post(
+    '/payments/yookassa/create/',
+    { order_id: orderId },
+    {
+      headers: { Authorization: `Token ${token}` },
+    }
+  );
 
 // Специальные фильтры
 export const getBestsellers = () => api.get('/products/', { params: { is_bestseller: 'true', page_size: 12 } });

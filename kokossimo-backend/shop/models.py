@@ -186,6 +186,13 @@ class Order(models.Model):
     PAYMENT_METHOD_CHOICES = [
         ('cash_on_delivery', 'Наличными курьеру'),
         ('cash_pickup', 'На кассе при самовывозе'),
+        ('yookassa', 'Онлайн-оплата (ЮKassa)'),
+    ]
+
+    PAYMENT_STATUS_CHOICES = [
+        ('pending', 'Ожидает оплаты'),
+        ('succeeded', 'Оплата подтверждена'),
+        ('canceled', 'Оплата отменена'),
     ]
 
     DELIVERY_METHOD_CHOICES = [
@@ -203,6 +210,11 @@ class Order(models.Model):
     status = models.CharField("Статус", max_length=20, choices=STATUS_CHOICES, default='new')
     delivery_method = models.CharField("Способ доставки", max_length=20, choices=DELIVERY_METHOD_CHOICES, default='courier')
     payment_method = models.CharField("Способ оплаты", max_length=20, choices=PAYMENT_METHOD_CHOICES, default='cash_on_delivery')
+    payment_status = models.CharField("Статус оплаты", max_length=20, choices=PAYMENT_STATUS_CHOICES, default='pending')
+    payment_provider = models.CharField("Платежный провайдер", max_length=30, blank=True, default="")
+    payment_id = models.CharField("ID платежа провайдера", max_length=100, blank=True, default="", db_index=True)
+    payment_confirmation_url = models.URLField("Ссылка на оплату", blank=True, default="")
+    paid_at = models.DateTimeField("Дата оплаты", null=True, blank=True)
 
     full_name = models.CharField("Имя и фамилия", max_length=200)
     phone = models.CharField("Телефон", max_length=30)
