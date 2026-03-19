@@ -20,7 +20,7 @@ from django.http import JsonResponse, HttpResponse
 import base64
 import logging
 
-from .models import Product, Category, Profile, Order, EmailVerificationCode, ProductRating, ProductSubcategory, Cart, CartItem
+from .models import Product, Category, Profile, Order, EmailVerificationCode, ProductRating, ProductSubcategory, Cart, CartItem, FavoriteList, FavoriteItem
 
 logger = logging.getLogger(__name__)
 # Миниатюра 1×1 прозрачный GIF — чтобы при ошибках отдавать изображение, а не JSON,
@@ -63,6 +63,7 @@ from .serializers import (
     ProductRatingSerializer,
     ProductRatingCreateSerializer,
     CartSyncSerializer,
+    FavoriteSyncSerializer,
 )
 
 
@@ -285,6 +286,64 @@ def _get_user_cart_payload(user, request):
     return {
         "user_id": user.id,
         "items": [_cart_item_public_payload(row, request) for row in items],
+    }
+
+
+def _favorite_item_public_payload(product, request):
+    return {
+        "id": product.id,
+        "name": product.name,
+        "price": str(product.price),
+        "image": _cart_item_image_url(product, request),
+        "description": product.description,
+        "is_new": bool(product.is_new),
+        "discount": int(product.discount or 0),
+        "is_gift_certificate": False,
+    }
+
+
+@transaction.atomic
+def _upsert_user_favorites(user, incoming_product_ids, merge=False):
+    favorite_list, _ = FavoriteList.objects.select_for_update().get_or_create(user=user)
+    incoming_ids = {
+        int(product_id)
+        for product_id in incoming_product_ids
+        if isinstance(product_id, int) and int(product_id) > 0
+    }
+
+    if merge:
+        existing_ids = set(favorite_list.items.values_list("product_id", flat=True))
+        target_ids = existing_ids | incoming_ids
+    else:
+        target_ids = incoming_ids
+
+    valid_products = Product.objects.filter(id__in=target_ids).values_list("id", flat=True)
+    valid_ids = set(valid_products)
+
+    favorite_list.items.exclude(product_id__in=valid_ids).delete()
+
+    existing_ids = set(favorite_list.items.values_list("product_id", flat=True))
+    missing_ids = valid_ids - existing_ids
+    if missing_ids:
+        FavoriteItem.objects.bulk_create(
+            [
+                FavoriteItem(favorite_list=favorite_list, product_id=product_id)
+                for product_id in missing_ids
+            ]
+        )
+
+
+def _get_user_favorites_payload(user, request):
+    favorite_list, _ = FavoriteList.objects.get_or_create(user=user)
+    items = (
+        favorite_list.items
+        .select_related("product")
+        .order_by("-created_at")
+    )
+    products = [item.product for item in items if item.product_id]
+    return {
+        "user_id": user.id,
+        "items": [_favorite_item_public_payload(product, request) for product in products],
     }
 
 
@@ -856,6 +915,41 @@ def merge_user_cart(request):
         merge=True,
     )
     return Response(_get_user_cart_payload(request.user, request), status=status.HTTP_200_OK)
+
+
+@api_view(['GET', 'PUT'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def user_favorites(request):
+    if request.method == 'GET':
+        return Response(_get_user_favorites_payload(request.user, request), status=status.HTTP_200_OK)
+
+    serializer = FavoriteSyncSerializer(data=request.data or {})
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    _upsert_user_favorites(
+        request.user,
+        serializer.validated_data.get("items", []),
+        merge=False,
+    )
+    return Response(_get_user_favorites_payload(request.user, request), status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def merge_user_favorites(request):
+    serializer = FavoriteSyncSerializer(data=request.data or {})
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    _upsert_user_favorites(
+        request.user,
+        serializer.validated_data.get("items", []),
+        merge=True,
+    )
+    return Response(_get_user_favorites_payload(request.user, request), status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])

@@ -232,6 +232,45 @@ class CartItem(models.Model):
         return f"{self.title or 'Подарочный сертификат'} x {self.quantity}"
 
 
+class FavoriteList(models.Model):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='favorite_list',
+        verbose_name="Пользователь",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Избранное"
+        verbose_name_plural = "Избранное"
+
+    def __str__(self):
+        return f"Избранное пользователя {self.user_id}"
+
+
+class FavoriteItem(models.Model):
+    favorite_list = models.ForeignKey(FavoriteList, on_delete=models.CASCADE, related_name='items')
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name='favorite_items',
+        verbose_name="Товар",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Позиция избранного"
+        verbose_name_plural = "Позиции избранного"
+        constraints = [
+            models.UniqueConstraint(fields=['favorite_list', 'product'], name='uniq_favorite_product_per_user'),
+        ]
+
+    def __str__(self):
+        return f"Избранное {self.favorite_list.user_id}: товар {self.product_id}"
+
+
 class Order(models.Model):
     STATUS_CHOICES = [
         ('new', 'Новый'),

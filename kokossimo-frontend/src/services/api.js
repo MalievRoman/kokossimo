@@ -100,4 +100,27 @@ export const mergeUserCart = (token, items) =>
     }
   );
 
+export const getUserFavorites = (token) =>
+  api.get('/favorites/', {
+    headers: { Authorization: `Token ${token}` },
+  });
+
+export const replaceUserFavorites = (token, items) =>
+  api.put(
+    '/favorites/',
+    { items },
+    {
+      headers: { Authorization: `Token ${token}` },
+    }
+  );
+
+export const mergeUserFavorites = (token, items) =>
+  api.post(
+    '/favorites/merge/',
+    { items },
+    {
+      headers: { Authorization: `Token ${token}` },
+    }
+  );
+
 export default api;

@@ -165,6 +165,13 @@ class CartSyncSerializer(serializers.Serializer):
     items = CartItemSyncSerializer(many=True)
 
 
+class FavoriteSyncSerializer(serializers.Serializer):
+    items = serializers.ListField(
+        child=serializers.IntegerField(min_value=1),
+        allow_empty=True,
+    )
+
+
 class OrderItemCreateSerializer(serializers.Serializer):
     product_id = serializers.IntegerField(required=False)
     gift_certificate_amount = serializers.IntegerField(required=False, min_value=1)

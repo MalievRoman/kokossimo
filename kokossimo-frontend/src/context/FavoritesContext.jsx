@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { getCurrentUser } from '../services/api';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { getUserFavorites, mergeUserFavorites, replaceUserFavorites } from '../services/api';
 
 const FavoritesContext = createContext();
 
@@ -13,111 +13,186 @@ export const useFavorites = () => {
 
 export const FavoritesProvider = ({ children }) => {
   const [favorites, setFavorites] = useState([]);
-  const [storageKey, setStorageKey] = useState('favorites:guest');
+  const [authToken, setAuthToken] = useState(() => localStorage.getItem('authToken') || '');
+  const modeRef = useRef('guest');
+  const skipNextServerSyncRef = useRef(false);
+  const serverSyncTimerRef = useRef(null);
+
+  const GUEST_FAVORITES_KEY = 'favorites:guest';
+  const MERGED_GUEST_HASH_KEY_PREFIX = 'favorites_guest_merged_hash_user_';
 
   const parseFavorites = (rawValue) => {
     if (!rawValue) return [];
     try {
       const parsed = JSON.parse(rawValue);
       return Array.isArray(parsed) ? parsed : [];
-    } catch (e) {
-      console.error('Ошибка загрузки избранного из localStorage:', e);
+    } catch {
       return [];
     }
   };
 
-  const buildUserFavoritesKey = (profile) => {
-    const email = (profile?.email || '').trim().toLowerCase();
-    if (email) {
-      return `favorites:user:${email}`;
-    }
-    const phone = (profile?.phone || '').replace(/\D/g, '');
-    if (phone) {
-      return `favorites:user:phone:${phone}`;
-    }
-    return 'favorites:guest';
+  const normalizeFavorite = (product) => {
+    const rawId = product?.id;
+    const numericId = Number(rawId);
+    const id =
+      Number.isFinite(numericId) &&
+      String(rawId ?? '').trim() !== '' &&
+      String(rawId).trim() === String(numericId)
+        ? numericId
+        : rawId;
+    const normalizedPrice = Number(product?.price);
+    const price = Number.isFinite(normalizedPrice) ? normalizedPrice : 0;
+    const normalizedDiscount = Number(product?.discount);
+    const discount =
+      Number.isFinite(normalizedDiscount) && normalizedDiscount > 0 && normalizedDiscount < 100
+        ? normalizedDiscount
+        : 0;
+
+    return {
+      id,
+      name: product?.name || '',
+      price,
+      image: product?.image || null,
+      description: product?.description || '',
+      is_new: Boolean(product?.is_new || product?.isNew),
+      discount,
+      is_gift_certificate: Boolean(product?.is_gift_certificate),
+    };
   };
 
-  // Следим за сменой токена авторизации и подгружаем избранное конкретного пользователя.
+  const readGuestFavorites = () => parseFavorites(localStorage.getItem(GUEST_FAVORITES_KEY));
+  const writeGuestFavorites = (items) => {
+    localStorage.setItem(GUEST_FAVORITES_KEY, JSON.stringify(items));
+  };
+
+  const extractFavoriteProductIds = (items) => {
+    const unique = new Set();
+    (items || []).forEach((item) => {
+      const numericId = Number(item?.id);
+      if (Number.isFinite(numericId) && numericId > 0) {
+        unique.add(Math.floor(numericId));
+      }
+    });
+    return Array.from(unique);
+  };
+
+  const buildGuestFavoritesMergeHash = (items) => {
+    const ids = extractFavoriteProductIds(items).sort((a, b) => a - b);
+    return JSON.stringify(ids);
+  };
+
+  // Следим за сменой токена авторизации.
+  useEffect(() => {
+    const syncAuth = () => setAuthToken(localStorage.getItem('authToken') || '');
+    window.addEventListener('auth-token-changed', syncAuth);
+    window.addEventListener('storage', syncAuth);
+    return () => {
+      window.removeEventListener('auth-token-changed', syncAuth);
+      window.removeEventListener('storage', syncAuth);
+    };
+  }, []);
+
+  // Переключение источника избранного: guest(localStorage) / user(API).
   useEffect(() => {
     let cancelled = false;
+    modeRef.current = 'hydrating';
 
-    const syncFavoritesWithAuth = async () => {
-      const token = localStorage.getItem('authToken');
-
-      if (!token) {
-        const guestKey = 'favorites:guest';
-        if (!cancelled) {
-          setStorageKey(guestKey);
-          setFavorites(parseFavorites(localStorage.getItem(guestKey)));
-        }
+    const hydrateFavorites = async () => {
+      if (!authToken) {
+        if (cancelled) return;
+        modeRef.current = 'guest';
+        setFavorites(readGuestFavorites());
         return;
       }
 
       try {
-        const response = await getCurrentUser(token);
-        const nextKey = buildUserFavoritesKey(response.data);
-        if (!cancelled) {
-          setStorageKey(nextKey);
-          setFavorites(parseFavorites(localStorage.getItem(nextKey)));
+        const guestItems = readGuestFavorites();
+        const serverResponse = await getUserFavorites(authToken);
+        let nextItems = Array.isArray(serverResponse?.data?.items)
+          ? serverResponse.data.items.map(normalizeFavorite)
+          : [];
+        const userId = serverResponse?.data?.user_id;
+
+        if (guestItems.length > 0 && userId) {
+          const hash = buildGuestFavoritesMergeHash(guestItems);
+          const mergeHashKey = `${MERGED_GUEST_HASH_KEY_PREFIX}${userId}`;
+          const prevHash = localStorage.getItem(mergeHashKey) || '';
+          if (hash !== prevHash) {
+            const mergeResponse = await mergeUserFavorites(authToken, extractFavoriteProductIds(guestItems));
+            nextItems = Array.isArray(mergeResponse?.data?.items)
+              ? mergeResponse.data.items.map(normalizeFavorite)
+              : [];
+            localStorage.setItem(mergeHashKey, hash);
+          }
         }
+
+        if (cancelled) return;
+        modeRef.current = 'auth';
+        skipNextServerSyncRef.current = true;
+        setFavorites(nextItems);
       } catch {
-        // Если токен невалиден, откатываемся к гостевому избранному.
-        const guestKey = 'favorites:guest';
-        if (!cancelled) {
-          setStorageKey(guestKey);
-          setFavorites(parseFavorites(localStorage.getItem(guestKey)));
-        }
+        if (cancelled) return;
+        modeRef.current = 'guest';
+        setFavorites(readGuestFavorites());
       }
     };
 
-    syncFavoritesWithAuth();
-
-    const handleAuthTokenChanged = () => {
-      syncFavoritesWithAuth();
-    };
-
-    window.addEventListener('auth-token-changed', handleAuthTokenChanged);
-
+    hydrateFavorites();
     return () => {
       cancelled = true;
-      window.removeEventListener('auth-token-changed', handleAuthTokenChanged);
     };
-  }, []);
+  }, [authToken]);
 
-  // Сохраняем избранное в localStorage при изменении для активного пользователя.
+  // Сохраняем гостевое избранное.
   useEffect(() => {
-    localStorage.setItem(storageKey, JSON.stringify(favorites));
-  }, [favorites, storageKey]);
+    if (modeRef.current !== 'guest') return;
+    writeGuestFavorites(favorites);
+  }, [favorites]);
+
+  // Сохраняем серверное избранное для авторизованного пользователя.
+  useEffect(() => {
+    if (modeRef.current !== 'auth' || !authToken) return;
+
+    if (skipNextServerSyncRef.current) {
+      skipNextServerSyncRef.current = false;
+      return;
+    }
+
+    if (serverSyncTimerRef.current) {
+      clearTimeout(serverSyncTimerRef.current);
+    }
+
+    serverSyncTimerRef.current = setTimeout(() => {
+      replaceUserFavorites(authToken, extractFavoriteProductIds(favorites)).catch(() => {});
+    }, 150);
+
+    return () => {
+      if (serverSyncTimerRef.current) {
+        clearTimeout(serverSyncTimerRef.current);
+      }
+    };
+  }, [authToken, favorites]);
 
   // Добавить товар в избранное
   const addToFavorites = (product) => {
-    setFavorites(prevFavorites => {
+    const normalized = normalizeFavorite(product);
+    setFavorites((prevFavorites) => {
       // Проверяем, не добавлен ли уже товар
-      if (prevFavorites.find(item => item.id === product.id)) {
+      if (prevFavorites.find((item) => String(item.id) === String(normalized.id))) {
         return prevFavorites;
       }
-      return [...prevFavorites, {
-        id: product.id,
-        name: product.name,
-        price: typeof product.price === 'string' ? parseFloat(product.price) : product.price,
-        image: product.image,
-        description: product.description,
-        is_new: product.is_new || product.isNew,
-        discount: product.discount || 0,
-        is_gift_certificate: Boolean(product.is_gift_certificate)
-      }];
+      return [...prevFavorites, normalized];
     });
   };
 
   // Удалить товар из избранного
   const removeFromFavorites = (productId) => {
-    setFavorites(prevFavorites => prevFavorites.filter(item => item.id !== productId));
+    setFavorites((prevFavorites) => prevFavorites.filter((item) => String(item.id) !== String(productId)));
   };
 
   // Проверить, есть ли товар в избранном
   const isFavorite = (productId) => {
-    return favorites.some(item => item.id === productId);
+    return favorites.some((item) => String(item.id) === String(productId));
   };
 
   // Переключить состояние избранного (добавить/удалить)
