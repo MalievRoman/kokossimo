@@ -13,13 +13,14 @@ from datetime import timedelta
 import secrets
 import time
 from django.db.models import Q, Avg, Count, Min, Max
+from django.db import transaction
 from decimal import Decimal, InvalidOperation
 from django.shortcuts import get_object_or_404
 from django.http import JsonResponse, HttpResponse
 import base64
 import logging
 
-from .models import Product, Category, Profile, Order, EmailVerificationCode, ProductRating, ProductSubcategory
+from .models import Product, Category, Profile, Order, EmailVerificationCode, ProductRating, ProductSubcategory, Cart, CartItem, FavoriteList, FavoriteItem
 
 logger = logging.getLogger(__name__)
 # Миниатюра 1×1 прозрачный GIF — чтобы при ошибках отдавать изображение, а не JSON,
@@ -61,6 +62,8 @@ from .serializers import (
     OrderListSerializer,
     ProductRatingSerializer,
     ProductRatingCreateSerializer,
+    CartSyncSerializer,
+    FavoriteSyncSerializer,
 )
 
 
@@ -75,6 +78,273 @@ def _generate_email_code():
 def _purge_expired_codes():
     cutoff = timezone.now() - timedelta(minutes=_email_code_ttl())
     EmailVerificationCode.objects.filter(created_at__lt=cutoff).delete()
+
+
+def _cart_item_image_url(product, request):
+    if not product:
+        return None
+    if getattr(product, "external_image_url", ""):
+        if request:
+            return request.build_absolute_uri(f"/api/products/{product.id}/image/")
+        return f"/api/products/{product.id}/image/"
+    if product.image:
+        if request:
+            return request.build_absolute_uri(product.image.url)
+        return f"{settings.MEDIA_URL}{product.image}"
+    return None
+
+
+def _cart_item_public_payload(item, request):
+    if item.product_id:
+        product = item.product
+        return {
+            "id": product.id,
+            "name": product.name,
+            "price": str(product.price),
+            "discount": int(product.discount or 0),
+            "image": _cart_item_image_url(product, request),
+            "quantity": int(item.quantity or 0),
+            "stock": int(product.stock or 0),
+            "is_gift_certificate": False,
+        }
+
+    gift_title = (item.title or "Подарочный сертификат").strip() or "Подарочный сертификат"
+    gift_id = (item.external_id or "").strip() or f"gift-{int(item.unit_price)}"
+    return {
+        "id": gift_id,
+        "name": gift_title,
+        "price": str(item.unit_price),
+        "discount": 0,
+        "image": None,
+        "quantity": int(item.quantity or 0),
+        "stock": None,
+        "is_gift_certificate": True,
+    }
+
+
+def _cart_guest_item_is_product(item):
+    if item.get("is_gift_certificate") is True:
+        return False
+    raw_id = item.get("id")
+    if isinstance(raw_id, int):
+        return True
+    if isinstance(raw_id, str) and raw_id.strip().isdigit():
+        return True
+    return False
+
+
+def _cart_guest_item_product_id(item):
+    raw_id = item.get("id")
+    if isinstance(raw_id, int):
+        return raw_id
+    if isinstance(raw_id, str) and raw_id.strip().isdigit():
+        return int(raw_id.strip())
+    return None
+
+
+def _cart_guest_item_gift_external_id(item):
+    raw_id = str(item.get("id") or "").strip()
+    if raw_id:
+        return raw_id[:120]
+    fallback_name = str(item.get("name") or "Подарочный сертификат").strip()
+    fallback_price = str(item.get("price") or "0").strip()
+    return f"gift-{fallback_price}-{fallback_name}"[:120]
+
+
+@transaction.atomic
+def _upsert_user_cart(user, incoming_items, merge=False):
+    cart, _ = Cart.objects.select_for_update().get_or_create(user=user)
+    existing_items = list(cart.items.select_related("product"))
+
+    normalized = {}
+
+    if merge:
+        for row in existing_items:
+            if row.product_id:
+                key = f"p:{row.product_id}"
+                normalized[key] = {
+                    "product_id": row.product_id,
+                    "quantity": int(row.quantity or 0),
+                }
+            else:
+                gift_key = f"g:{row.external_id}"
+                normalized[gift_key] = {
+                    "external_id": row.external_id,
+                    "title": row.title,
+                    "unit_price": row.unit_price,
+                    "quantity": int(row.quantity or 0),
+                    "is_gift_certificate": True,
+                }
+
+    for item in incoming_items:
+        qty = int(item.get("quantity") or 0)
+        if qty <= 0:
+            continue
+
+        if _cart_guest_item_is_product(item):
+            product_id = _cart_guest_item_product_id(item)
+            if not product_id:
+                continue
+            key = f"p:{product_id}"
+            if key not in normalized:
+                normalized[key] = {"product_id": product_id, "quantity": 0}
+            normalized[key]["quantity"] += qty
+            continue
+
+        try:
+            unit_price = Decimal(str(item.get("price") or "0"))
+        except (InvalidOperation, TypeError, ValueError):
+            unit_price = Decimal("0")
+        title = str(item.get("name") or "Подарочный сертификат").strip() or "Подарочный сертификат"
+        external_id = _cart_guest_item_gift_external_id(item)
+        key = f"g:{external_id}"
+        if key not in normalized:
+            normalized[key] = {
+                "external_id": external_id,
+                "title": title[:255],
+                "unit_price": unit_price,
+                "quantity": 0,
+                "is_gift_certificate": True,
+            }
+        normalized[key]["quantity"] += qty
+
+    product_ids = [entry["product_id"] for entry in normalized.values() if entry.get("product_id")]
+    products = Product.objects.in_bulk(product_ids)
+
+    cart.items.all().delete()
+    to_create = []
+
+    for entry in normalized.values():
+        product_id = entry.get("product_id")
+        if product_id:
+            product = products.get(product_id)
+            if not product:
+                continue
+            stock = max(0, int(product.stock or 0))
+            if stock <= 0:
+                continue
+            quantity = min(int(entry.get("quantity") or 0), stock)
+            if quantity <= 0:
+                continue
+            to_create.append(
+                CartItem(
+                    cart=cart,
+                    product=product,
+                    quantity=quantity,
+                    unit_price=product.price,
+                    discount=int(product.discount or 0),
+                    title=product.name[:255],
+                    is_gift_certificate=False,
+                    external_id="",
+                )
+            )
+            continue
+
+        quantity = int(entry.get("quantity") or 0)
+        if quantity <= 0:
+            continue
+        to_create.append(
+            CartItem(
+                cart=cart,
+                product=None,
+                quantity=quantity,
+                unit_price=entry.get("unit_price") or Decimal("0"),
+                discount=0,
+                title=(entry.get("title") or "Подарочный сертификат")[:255],
+                is_gift_certificate=True,
+                external_id=(entry.get("external_id") or "")[:120],
+            )
+        )
+
+    if to_create:
+        CartItem.objects.bulk_create(to_create)
+
+
+@transaction.atomic
+def _get_user_cart_payload(user, request):
+    cart, _ = Cart.objects.select_for_update().get_or_create(user=user)
+    items = list(cart.items.select_related("product"))
+    touched = False
+
+    # Корректируем устаревшие строки корзины (товар удален / остаток уменьшился).
+    for row in items:
+        if not row.product_id:
+            continue
+        stock = max(0, int(row.product.stock or 0))
+        if stock <= 0:
+            row.delete()
+            touched = True
+            continue
+        if int(row.quantity or 0) > stock:
+            row.quantity = stock
+            row.save(update_fields=["quantity", "updated_at"])
+            touched = True
+
+    if touched:
+        items = list(cart.items.select_related("product"))
+
+    return {
+        "user_id": user.id,
+        "items": [_cart_item_public_payload(row, request) for row in items],
+    }
+
+
+def _favorite_item_public_payload(product, request):
+    return {
+        "id": product.id,
+        "name": product.name,
+        "price": str(product.price),
+        "image": _cart_item_image_url(product, request),
+        "description": product.description,
+        "is_new": bool(product.is_new),
+        "discount": int(product.discount or 0),
+        "is_gift_certificate": False,
+    }
+
+
+@transaction.atomic
+def _upsert_user_favorites(user, incoming_product_ids, merge=False):
+    favorite_list, _ = FavoriteList.objects.select_for_update().get_or_create(user=user)
+    incoming_ids = {
+        int(product_id)
+        for product_id in incoming_product_ids
+        if isinstance(product_id, int) and int(product_id) > 0
+    }
+
+    if merge:
+        existing_ids = set(favorite_list.items.values_list("product_id", flat=True))
+        target_ids = existing_ids | incoming_ids
+    else:
+        target_ids = incoming_ids
+
+    valid_products = Product.objects.filter(id__in=target_ids).values_list("id", flat=True)
+    valid_ids = set(valid_products)
+
+    favorite_list.items.exclude(product_id__in=valid_ids).delete()
+
+    existing_ids = set(favorite_list.items.values_list("product_id", flat=True))
+    missing_ids = valid_ids - existing_ids
+    if missing_ids:
+        FavoriteItem.objects.bulk_create(
+            [
+                FavoriteItem(favorite_list=favorite_list, product_id=product_id)
+                for product_id in missing_ids
+            ]
+        )
+
+
+def _get_user_favorites_payload(user, request):
+    favorite_list, _ = FavoriteList.objects.get_or_create(user=user)
+    items = (
+        favorite_list.items
+        .select_related("product")
+        .order_by("-created_at")
+    )
+    products = [item.product for item in items if item.product_id]
+    return {
+        "user_id": user.id,
+        "items": [_favorite_item_public_payload(product, request) for product in products],
+    }
 
 
 class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
@@ -610,6 +880,76 @@ def update_profile(request):
         "apartment": profile.apartment,
         "postal_code": profile.postal_code,
     })
+
+
+@api_view(['GET', 'PUT'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def user_cart(request):
+    if request.method == 'GET':
+        return Response(_get_user_cart_payload(request.user, request), status=status.HTTP_200_OK)
+
+    serializer = CartSyncSerializer(data=request.data or {})
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    _upsert_user_cart(
+        request.user,
+        serializer.validated_data.get("items", []),
+        merge=False,
+    )
+    return Response(_get_user_cart_payload(request.user, request), status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def merge_user_cart(request):
+    serializer = CartSyncSerializer(data=request.data or {})
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    _upsert_user_cart(
+        request.user,
+        serializer.validated_data.get("items", []),
+        merge=True,
+    )
+    return Response(_get_user_cart_payload(request.user, request), status=status.HTTP_200_OK)
+
+
+@api_view(['GET', 'PUT'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def user_favorites(request):
+    if request.method == 'GET':
+        return Response(_get_user_favorites_payload(request.user, request), status=status.HTTP_200_OK)
+
+    serializer = FavoriteSyncSerializer(data=request.data or {})
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    _upsert_user_favorites(
+        request.user,
+        serializer.validated_data.get("items", []),
+        merge=False,
+    )
+    return Response(_get_user_favorites_payload(request.user, request), status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def merge_user_favorites(request):
+    serializer = FavoriteSyncSerializer(data=request.data or {})
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    _upsert_user_favorites(
+        request.user,
+        serializer.validated_data.get("items", []),
+        merge=True,
+    )
+    return Response(_get_user_favorites_payload(request.user, request), status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])

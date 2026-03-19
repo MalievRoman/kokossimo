@@ -77,4 +77,50 @@ export const getNewProducts = () => api.get('/products/', { params: { is_new: 't
 // Юридические документы (из backend/legal_info)
 export const getLegalDocument = (slug) => api.get(`/legal/${slug}/`);
 
+export const getUserCart = (token) =>
+  api.get('/cart/', {
+    headers: { Authorization: `Token ${token}` },
+  });
+
+export const replaceUserCart = (token, items) =>
+  api.put(
+    '/cart/',
+    { items },
+    {
+      headers: { Authorization: `Token ${token}` },
+    }
+  );
+
+export const mergeUserCart = (token, items) =>
+  api.post(
+    '/cart/merge/',
+    { items },
+    {
+      headers: { Authorization: `Token ${token}` },
+    }
+  );
+
+export const getUserFavorites = (token) =>
+  api.get('/favorites/', {
+    headers: { Authorization: `Token ${token}` },
+  });
+
+export const replaceUserFavorites = (token, items) =>
+  api.put(
+    '/favorites/',
+    { items },
+    {
+      headers: { Authorization: `Token ${token}` },
+    }
+  );
+
+export const mergeUserFavorites = (token, items) =>
+  api.post(
+    '/favorites/merge/',
+    { items },
+    {
+      headers: { Authorization: `Token ${token}` },
+    }
+  );
+
 export default api;
