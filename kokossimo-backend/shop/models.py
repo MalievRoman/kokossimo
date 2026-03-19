@@ -173,6 +173,65 @@ class EmailVerificationCode(models.Model):
         return f"{self.email} ({self.purpose})"
 
 
+class Cart(models.Model):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='cart',
+        verbose_name="Пользователь",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Корзина"
+        verbose_name_plural = "Корзины"
+
+    def __str__(self):
+        return f"Корзина пользователя {self.user_id}"
+
+
+class CartItem(models.Model):
+    cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='items')
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='cart_items',
+        verbose_name="Товар",
+    )
+    external_id = models.CharField("Внешний ID", max_length=120, blank=True, default="")
+    title = models.CharField("Название", max_length=255, blank=True, default="")
+    is_gift_certificate = models.BooleanField("Подарочный сертификат", default=False)
+    quantity = models.PositiveIntegerField("Количество", default=1)
+    unit_price = models.DecimalField("Цена за единицу", max_digits=10, decimal_places=2, default=0)
+    discount = models.PositiveIntegerField("Скидка %", default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Позиция корзины"
+        verbose_name_plural = "Позиции корзины"
+        constraints = [
+            models.UniqueConstraint(
+                fields=['cart', 'product'],
+                condition=models.Q(product__isnull=False),
+                name='uniq_cartitem_cart_product',
+            ),
+            models.UniqueConstraint(
+                fields=['cart', 'external_id'],
+                condition=models.Q(is_gift_certificate=True),
+                name='uniq_cartitem_cart_gift_external_id',
+            ),
+        ]
+
+    def __str__(self):
+        if self.product_id:
+            return f"Товар {self.product_id} x {self.quantity}"
+        return f"{self.title or 'Подарочный сертификат'} x {self.quantity}"
+
+
 class Order(models.Model):
     STATUS_CHOICES = [
         ('new', 'Новый'),
