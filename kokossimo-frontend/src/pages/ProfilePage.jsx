@@ -71,6 +71,9 @@ const ProfilePage = () => {
   const [fullNameInput, setFullNameInput] = useState('');
   const [birthDate, setBirthDate] = useState('');
   const [status, setStatus] = useState({ type: '', message: '' });
+  const [settingsStatus, setSettingsStatus] = useState({ type: '', message: '' });
+  const [settingsBaseline, setSettingsBaseline] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [orders, setOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
   const [detailsOrder, setDetailsOrder] = useState(null);
@@ -92,6 +95,8 @@ const ProfilePage = () => {
     });
     setFullNameInput('');
     setBirthDate('');
+    setSettingsStatus({ type: '', message: '' });
+    setSettingsBaseline(null);
     setOrders([]);
     setOrdersLoading(false);
     setActiveTab('main');
@@ -121,11 +126,22 @@ const ProfilePage = () => {
 
     getCurrentUser(authToken)
       .then((response) => {
+        const fullName = `${response.data?.first_name || ''} ${response.data?.last_name || ''}`.trim();
+        const normalizedPhone = formatRuPhone(response.data?.phone || '');
+        const normalizedBirthDate = apiBirthDateToInput(response.data?.birth_date);
+        const normalizedEmail = response.data?.email || '';
+
         setProfile({
           ...response.data,
-          phone: formatRuPhone(response.data?.phone || ''),
+          phone: normalizedPhone,
         });
-        setBirthDate(apiBirthDateToInput(response.data?.birth_date));
+        setBirthDate(normalizedBirthDate);
+        setSettingsBaseline({
+          fullName,
+          phone: normalizedPhone,
+          email: normalizedEmail,
+          birthDate: normalizedBirthDate,
+        });
       })
       .catch((error) => {
         if (error?.response?.status === 401) {
@@ -163,6 +179,35 @@ const ProfilePage = () => {
     return fullName || 'Гость';
   }, [profile.first_name, profile.last_name]);
 
+  const normalizeSettingsComparable = ({
+    fullName = '',
+    phone = '',
+    email = '',
+    birthDate: nextBirthDate = '',
+  }) => ({
+    fullName: String(fullName).trim().replace(/\s+/g, ' '),
+    phone: formatRuPhone(String(phone || '')),
+    email: String(email || '').trim().toLowerCase(),
+    birthDate: formatBirthDateInput(String(nextBirthDate || '')),
+  });
+
+  const isSettingsDirty = useMemo(() => {
+    if (!settingsBaseline) return false;
+    const baselineComparable = normalizeSettingsComparable(settingsBaseline);
+    const currentComparable = normalizeSettingsComparable({
+      fullName: fullNameInput,
+      phone: profile.phone,
+      email: profile.email,
+      birthDate,
+    });
+    return (
+      baselineComparable.fullName !== currentComparable.fullName ||
+      baselineComparable.phone !== currentComparable.phone ||
+      baselineComparable.email !== currentComparable.email ||
+      baselineComparable.birthDate !== currentComparable.birthDate
+    );
+  }, [settingsBaseline, fullNameInput, profile.phone, profile.email, birthDate]);
+
   const latestOrder = orders[0] || null;
 
   const formatPrice = (value) => Number(value || 0).toLocaleString('ru-RU');
@@ -186,8 +231,14 @@ const ProfilePage = () => {
   };
 
   const handleSaveSettings = async () => {
+    setSettingsStatus({ type: '', message: '' });
+
+    if (!isSettingsDirty) {
+      return;
+    }
+
     if (!authToken) {
-      showTemporaryStatus('error', 'Сначала войдите в аккаунт.');
+      setSettingsStatus({ type: 'error', message: 'Сначала войдите в аккаунт.' });
       return;
     }
 
@@ -195,6 +246,7 @@ const ProfilePage = () => {
     const lastName = rest.join(' ');
 
     try {
+      setIsSubmitting(true);
       const response = await updateProfile(authToken, {
         first_name: firstName,
         last_name: lastName,
@@ -207,13 +259,25 @@ const ProfilePage = () => {
         phone: formatRuPhone(response.data?.phone || ''),
       });
       setBirthDate(apiBirthDateToInput(response.data?.birth_date));
-      showTemporaryStatus('success', 'Данные профиля сохранены.');
+      const updatedFullName = `${response.data?.first_name || ''} ${response.data?.last_name || ''}`.trim();
+      const updatedPhone = formatRuPhone(response.data?.phone || '');
+      const updatedEmail = response.data?.email || '';
+      const updatedBirthDate = apiBirthDateToInput(response.data?.birth_date);
+      setSettingsBaseline({
+        fullName: updatedFullName,
+        phone: updatedPhone,
+        email: updatedEmail,
+        birthDate: updatedBirthDate,
+      });
+      setSettingsStatus({ type: 'success', message: 'Данные профиля сохранены.' });
     } catch (error) {
       if (error?.response?.status === 401) {
         resetAuthState('Сессия истекла. Войдите в аккаунт заново.');
         return;
       }
-      showTemporaryStatus('error', 'Не удалось сохранить профиль.');
+      setSettingsStatus({ type: 'error', message: 'Не удалось сохранить профиль.' });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -500,7 +564,10 @@ const ProfilePage = () => {
                     type="text"
                     placeholder="Иванов Иван Иванович"
                     value={fullNameInput}
-                    onChange={(event) => setFullNameInput(event.target.value)}
+                    onChange={(event) => {
+                      setSettingsStatus({ type: '', message: '' });
+                      setFullNameInput(event.target.value);
+                    }}
                   />
                 </label>
                 <label className="profile-field">
@@ -509,9 +576,10 @@ const ProfilePage = () => {
                     type="tel"
                     placeholder="+7 (___) ___-__-__"
                     value={profile.phone}
-                    onChange={(event) =>
-                      setProfile((prev) => ({ ...prev, phone: formatRuPhone(event.target.value) }))
-                    }
+                    onChange={(event) => {
+                      setSettingsStatus({ type: '', message: '' });
+                      setProfile((prev) => ({ ...prev, phone: formatRuPhone(event.target.value) }));
+                    }}
                     onKeyDown={(event) => {
                       if (!isPhoneInputKeyAllowed(event)) {
                         event.preventDefault();
@@ -525,7 +593,10 @@ const ProfilePage = () => {
                     type="text"
                     placeholder="15.10.1998"
                     value={birthDate}
-                    onChange={(event) => setBirthDate(formatBirthDateInput(event.target.value))}
+                    onChange={(event) => {
+                      setSettingsStatus({ type: '', message: '' });
+                      setBirthDate(formatBirthDateInput(event.target.value));
+                    }}
                   />
                 </label>
                 <label className="profile-field">
@@ -534,9 +605,10 @@ const ProfilePage = () => {
                     type="email"
                     placeholder="email@example.com"
                     value={profile.email}
-                    onChange={(event) =>
-                      setProfile((prev) => ({ ...prev, email: event.target.value }))
-                    }
+                    onChange={(event) => {
+                      setSettingsStatus({ type: '', message: '' });
+                      setProfile((prev) => ({ ...prev, email: event.target.value }));
+                    }}
                   />
                 </label>
 
@@ -544,9 +616,15 @@ const ProfilePage = () => {
                   type="button"
                   className="profile-btn profile-btn--primary profile-btn--full"
                   onClick={handleSaveSettings}
+                  disabled={!isSettingsDirty || isSubmitting}
                 >
-                  СОХРАНИТЬ ИЗМЕНЕНИЯ
+                  {isSubmitting ? 'СОХРАНЕНИЕ...' : 'СОХРАНИТЬ ИЗМЕНЕНИЯ'}
                 </button>
+                {settingsStatus.message && (
+                  <div className={`profile-settings-status profile-settings-status--${settingsStatus.type}`}>
+                    {settingsStatus.message}
+                  </div>
+                )}
                 <button
                   type="button"
                   className="profile-btn profile-btn--outline profile-btn--full"
