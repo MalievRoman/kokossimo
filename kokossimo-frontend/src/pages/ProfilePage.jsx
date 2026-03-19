@@ -23,6 +23,9 @@ const STATUS_LABELS = {
   cancelled: 'Отменен',
 };
 
+const FULL_NAME_MAX_LENGTH = 80;
+const FULL_NAME_ALLOWED_CHARS_REGEX = /^[A-Za-zА-Яа-яЁё\s'-]*$/;
+
 const formatBirthDateInput = (value) => {
   const digits = value.replace(/\D/g, '').slice(0, 8);
   const day = digits.slice(0, 2);
@@ -47,6 +50,28 @@ const inputBirthDateToApi = (value) => {
     return null;
   }
   return `${year}-${month}-${day}`;
+};
+
+const normalizeFullNameInput = (value) =>
+  String(value || '')
+    .replace(/\s+/g, ' ')
+    .replace(/^\s+/, '')
+    .slice(0, FULL_NAME_MAX_LENGTH);
+
+const getFullNameValidationError = (value) => {
+  const rawValue = String(value || '');
+  const trimmed = rawValue.trim();
+  if (!trimmed) return '';
+  if (!FULL_NAME_ALLOWED_CHARS_REGEX.test(rawValue)) {
+    return 'ФИО может содержать только буквы, пробел, дефис и апостроф.';
+  }
+  if (!/[A-Za-zА-Яа-яЁё]/.test(rawValue)) {
+    return 'Введите корректное ФИО.';
+  }
+  if (trimmed.length > FULL_NAME_MAX_LENGTH) {
+    return `ФИО не должно быть длиннее ${FULL_NAME_MAX_LENGTH} символов.`;
+  }
+  return '';
 };
 
 const ProfilePage = () => {
@@ -207,6 +232,7 @@ const ProfilePage = () => {
       baselineComparable.birthDate !== currentComparable.birthDate
     );
   }, [settingsBaseline, fullNameInput, profile.phone, profile.email, birthDate]);
+  const fullNameError = useMemo(() => getFullNameValidationError(fullNameInput), [fullNameInput]);
 
   const latestOrder = orders[0] || null;
 
@@ -234,6 +260,11 @@ const ProfilePage = () => {
     setSettingsStatus({ type: '', message: '' });
 
     if (!isSettingsDirty) {
+      return;
+    }
+
+    if (fullNameError) {
+      setSettingsStatus({ type: 'error', message: 'Исправьте поле ФИО перед сохранением.' });
       return;
     }
 
@@ -564,11 +595,15 @@ const ProfilePage = () => {
                     type="text"
                     placeholder="Иванов Иван Иванович"
                     value={fullNameInput}
+                    maxLength={FULL_NAME_MAX_LENGTH}
+                    className={fullNameError ? 'is-invalid' : ''}
+                    aria-invalid={fullNameError ? 'true' : 'false'}
                     onChange={(event) => {
                       setSettingsStatus({ type: '', message: '' });
-                      setFullNameInput(event.target.value);
+                      setFullNameInput(normalizeFullNameInput(event.target.value));
                     }}
                   />
+                  {fullNameError && <small className="profile-field-error">{fullNameError}</small>}
                 </label>
                 <label className="profile-field">
                   <span>Номер телефона</span>
@@ -616,7 +651,7 @@ const ProfilePage = () => {
                   type="button"
                   className="profile-btn profile-btn--primary profile-btn--full"
                   onClick={handleSaveSettings}
-                  disabled={!isSettingsDirty || isSubmitting}
+                  disabled={!isSettingsDirty || isSubmitting || Boolean(fullNameError)}
                 >
                   {isSubmitting ? 'СОХРАНЕНИЕ...' : 'СОХРАНИТЬ ИЗМЕНЕНИЯ'}
                 </button>

@@ -112,6 +112,8 @@
   line-height: 24px;
   font-family: "Open Sans", sans-serif;
   font-weight: 500;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .profile-user-meta {
@@ -390,6 +392,18 @@
   padding: 0 14px;
   font-size: 17px;
   color: #4c3430;
+}
+
+.profile-field input.is-invalid {
+  border-color: #d6a4a4;
+}
+
+.profile-field-error {
+  margin: 0;
+  color: #b13d3d;
+  font-size: 13px;
+  line-height: 18px;
+  font-family: "Open Sans", sans-serif;
 }
 
 .profile-btn {
