@@ -34,7 +34,6 @@ const ScrollToTop = () => {
 
 function App() {
   const { pathname } = useLocation();
-  const isAuthRoute = pathname === '/auth' || pathname.startsWith('/auth/');
 
   return (
     <div className="app">
@@ -68,7 +67,7 @@ function App() {
         </div>
       </main>
       
-      {!isAuthRoute && <Footer />}
+      <Footer />
     </div>
   );
 }
