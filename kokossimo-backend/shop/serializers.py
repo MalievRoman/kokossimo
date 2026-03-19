@@ -152,6 +152,26 @@ class ProfileUpdateSerializer(serializers.Serializer):
     postal_code = serializers.CharField(required=False, allow_blank=True)
 
 
+class CartItemSyncSerializer(serializers.Serializer):
+    id = serializers.CharField()
+    quantity = serializers.IntegerField(min_value=1)
+    name = serializers.CharField(required=False, allow_blank=True)
+    price = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)
+    discount = serializers.IntegerField(required=False, min_value=0, max_value=99)
+    is_gift_certificate = serializers.BooleanField(required=False)
+
+
+class CartSyncSerializer(serializers.Serializer):
+    items = CartItemSyncSerializer(many=True)
+
+
+class FavoriteSyncSerializer(serializers.Serializer):
+    items = serializers.ListField(
+        child=serializers.IntegerField(min_value=1),
+        allow_empty=True,
+    )
+
+
 class OrderItemCreateSerializer(serializers.Serializer):
     product_id = serializers.IntegerField(required=False)
     gift_certificate_amount = serializers.IntegerField(required=False, min_value=1)

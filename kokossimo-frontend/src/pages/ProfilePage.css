@@ -96,6 +96,10 @@
   min-height: 192px;
 }
 
+.profile-user-info {
+  min-width: 0;
+}
+
 .profile-user-avatar {
   width: 160px;
   height: 160px;
@@ -108,6 +112,8 @@
   line-height: 24px;
   font-family: "Open Sans", sans-serif;
   font-weight: 500;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .profile-user-meta {
@@ -115,6 +121,8 @@
   color: #938582;
   font-size: 14px;
   line-height: 22px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .profile-balance-panel {
@@ -386,6 +394,18 @@
   color: #4c3430;
 }
 
+.profile-field input.is-invalid {
+  border-color: #d6a4a4;
+}
+
+.profile-field-error {
+  margin: 0;
+  color: #b13d3d;
+  font-size: 13px;
+  line-height: 18px;
+  font-family: "Open Sans", sans-serif;
+}
+
 .profile-btn {
   display: inline-flex;
   align-items: center;
@@ -407,6 +427,13 @@
 .profile-btn--primary {
   background: #6f0808;
   color: #fff;
+}
+
+.profile-settings .profile-btn--primary:disabled {
+  border-color: #ddd2cf;
+  background: #fbf9f9;
+  color: #d4c8c5;
+  cursor: not-allowed;
 }
 
 .profile-btn--repeat {
@@ -508,6 +535,28 @@
   font-size: 16px;
   font-family: "Bebas Neue", "Open Sans", sans-serif;
   text-decoration: none;
+}
+
+.profile-settings-status {
+  margin-top: -2px;
+  border-radius: 4px;
+  border: 1px solid #d9cbc7;
+  padding: 10px 12px;
+  font-size: 14px;
+  line-height: 20px;
+  font-family: "Open Sans", sans-serif;
+}
+
+.profile-settings-status--success {
+  color: #2f7d32;
+  border-color: #9bcc9d;
+  background: #f6fbf6;
+}
+
+.profile-settings-status--error {
+  color: #b13d3d;
+  border-color: #d6a4a4;
+  background: #fff7f7;
 }
 
 @media (hover: hover) {
