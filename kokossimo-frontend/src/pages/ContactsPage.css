@@ -69,19 +69,8 @@
   margin: 0;
 }
 
-.contacts-support {
-  padding: 16px 32px;
-  border: 1px solid #D2C1C1;
-  border-radius: 4px;
-  background: #fcf8f7;
-}
-
 @media (max-width: 640px) {
   .contacts-page {
     padding: 2.5rem 0;
-  }
-
-  .contacts-support {
-    padding: 1.5rem;
   }
 }

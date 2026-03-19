@@ -32,17 +32,12 @@ const Footer = () => (
           <h3 className="footer__title">КОНТАКТЫ</h3>
           <ul className="footer__list">
             <li><a className="footer__link" href="tel:+79375068999">+7 (937) 506-89-99</a></li>
+            <li><a className="footer__link" href="mailto:info@kokossimo.ru">info@kokossimo.ru</a></li>
           </ul>
 
           <div className="footer__social">
-            <a className="footer__social-btn" href="https://instagram.com" aria-label="Instagram" target="_blank" rel="noreferrer">
-              <img src={`${import.meta.env.BASE_URL}assets/insta.svg`} alt="" />
-            </a>
             <a className="footer__social-btn" href="https://t.me/" aria-label="Telegram" target="_blank" rel="noreferrer">
               <img src={`${import.meta.env.BASE_URL}assets/telegram.svg`} alt="" />
-            </a>
-            <a className="footer__social-btn" href="https://wa.me/79375068999" aria-label="WhatsApp" target="_blank" rel="noreferrer">
-              <img src={`${import.meta.env.BASE_URL}assets/whatsapp.svg`} alt="" />
             </a>
             <a className="footer__social-btn" href="https://vk.com" aria-label="VK" target="_blank" rel="noreferrer">
               <img src={`${import.meta.env.BASE_URL}assets/vk.svg`} alt="" />
@@ -59,7 +54,11 @@ const Footer = () => (
           </ul>
 
           <p className="footer__note">
-            *Компания Meta признана<br /> экстремистской и запрещена в РФ
+            ИП Сангаджиева Амуланга Очировна
+            <br />
+            ИНН: 081410434036
+            <br />
+            ОГРНИП: 325080000024099
           </p>
         </div>
       </div>
