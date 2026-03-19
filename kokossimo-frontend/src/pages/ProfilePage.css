@@ -96,6 +96,10 @@
   min-height: 192px;
 }
 
+.profile-user-info {
+  min-width: 0;
+}
+
 .profile-user-avatar {
   width: 160px;
   height: 160px;
@@ -115,6 +119,8 @@
   color: #938582;
   font-size: 14px;
   line-height: 22px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .profile-balance-panel {

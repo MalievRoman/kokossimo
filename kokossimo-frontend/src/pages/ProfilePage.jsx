@@ -316,7 +316,7 @@ const ProfilePage = () => {
                     src={`${import.meta.env.BASE_URL}assets/account.png`}
                     alt="Фото профиля"
                   />
-                  <div>
+                  <div className="profile-user-info">
                     <h2 className="profile-user-name">{userName}</h2>
                     <p className="profile-user-meta">{profile.phone || '+7 (___) ___-__-__'}</p>
                     <p className="profile-user-meta">{profile.email || 'Добавьте email в параметрах'}</p>
