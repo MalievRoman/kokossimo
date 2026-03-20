@@ -27,6 +27,13 @@ const AuthPage = () => {
     register: '',
     reset: '',
   });
+  const [passwordVisibility, setPasswordVisibility] = useState({
+    loginPassword: false,
+    registerPassword: false,
+    registerPasswordRepeat: false,
+    resetPassword: false,
+    resetPasswordRepeat: false,
+  });
 
   const canResendCode = resendSeconds === 0;
 
@@ -92,6 +99,10 @@ const AuthPage = () => {
 
   const handleChange = (field) => (event) => {
     setForm((prev) => ({ ...prev, [field]: event.target.value }));
+  };
+
+  const togglePasswordVisibility = (field) => {
+    setPasswordVisibility((prev) => ({ ...prev, [field]: !prev[field] }));
   };
 
   const handleLoginSubmit = async (event) => {
@@ -310,12 +321,26 @@ const AuthPage = () => {
                 </label>
                 <label className="auth-field">
                   <span>Пароль</span>
-                  <input
-                    type="password"
-                    placeholder="Ваш пароль"
-                    value={form.loginPassword}
-                    onChange={handleChange('loginPassword')}
-                  />
+                  <div className="auth-password-wrap">
+                    <input
+                      type={passwordVisibility.loginPassword ? 'text' : 'password'}
+                      placeholder="Ваш пароль"
+                      value={form.loginPassword}
+                      onChange={handleChange('loginPassword')}
+                    />
+                    <button
+                      type="button"
+                      className="auth-password-toggle"
+                      onClick={() => togglePasswordVisibility('loginPassword')}
+                      aria-label={passwordVisibility.loginPassword ? 'Скрыть пароль' : 'Показать пароль'}
+                    >
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M1.5 12s3.8-6 10.5-6 10.5 6 10.5 6-3.8 6-10.5 6S1.5 12 1.5 12z" />
+                        <circle cx="12" cy="12" r="3.5" />
+                        {passwordVisibility.loginPassword ? null : <line x1="4" y1="20" x2="20" y2="4" />}
+                      </svg>
+                    </button>
+                  </div>
                 </label>
                 <button type="button" className="auth-link auth-link--forgot" onClick={() => goToScreen('restoreRequest')}>
                   Забыли пароль?
@@ -343,21 +368,49 @@ const AuthPage = () => {
                 </label>
                 <label className="auth-field">
                   <span>Пароль</span>
-                  <input
-                    type="password"
-                    placeholder="Придумайте пароль"
-                    value={form.registerPassword}
-                    onChange={handleChange('registerPassword')}
-                  />
+                  <div className="auth-password-wrap">
+                    <input
+                      type={passwordVisibility.registerPassword ? 'text' : 'password'}
+                      placeholder="Придумайте пароль"
+                      value={form.registerPassword}
+                      onChange={handleChange('registerPassword')}
+                    />
+                    <button
+                      type="button"
+                      className="auth-password-toggle"
+                      onClick={() => togglePasswordVisibility('registerPassword')}
+                      aria-label={passwordVisibility.registerPassword ? 'Скрыть пароль' : 'Показать пароль'}
+                    >
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M1.5 12s3.8-6 10.5-6 10.5 6 10.5 6-3.8 6-10.5 6S1.5 12 1.5 12z" />
+                        <circle cx="12" cy="12" r="3.5" />
+                        {passwordVisibility.registerPassword ? null : <line x1="4" y1="20" x2="20" y2="4" />}
+                      </svg>
+                    </button>
+                  </div>
                 </label>
                 <label className="auth-field">
                   <span>Пароль</span>
-                  <input
-                    type="password"
-                    placeholder="Повторите пароль еще раз"
-                    value={form.registerPasswordRepeat}
-                    onChange={handleChange('registerPasswordRepeat')}
-                  />
+                  <div className="auth-password-wrap">
+                    <input
+                      type={passwordVisibility.registerPasswordRepeat ? 'text' : 'password'}
+                      placeholder="Повторите пароль еще раз"
+                      value={form.registerPasswordRepeat}
+                      onChange={handleChange('registerPasswordRepeat')}
+                    />
+                    <button
+                      type="button"
+                      className="auth-password-toggle"
+                      onClick={() => togglePasswordVisibility('registerPasswordRepeat')}
+                      aria-label={passwordVisibility.registerPasswordRepeat ? 'Скрыть пароль' : 'Показать пароль'}
+                    >
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M1.5 12s3.8-6 10.5-6 10.5 6 10.5 6-3.8 6-10.5 6S1.5 12 1.5 12z" />
+                        <circle cx="12" cy="12" r="3.5" />
+                        {passwordVisibility.registerPasswordRepeat ? null : <line x1="4" y1="20" x2="20" y2="4" />}
+                      </svg>
+                    </button>
+                  </div>
                 </label>
                 <button type="submit" className="auth-btn auth-btn--primary auth-btn--form-primary" disabled={isSendingCode}>
                   {isSendingCode ? 'Отправка...' : 'Продолжить'}
@@ -472,21 +525,49 @@ const AuthPage = () => {
                 </label>
                 <label className="auth-field">
                   <span>Новый пароль</span>
-                  <input
-                    type="password"
-                    placeholder="Введите пароль"
-                    value={form.resetPassword}
-                    onChange={handleChange('resetPassword')}
-                  />
+                  <div className="auth-password-wrap">
+                    <input
+                      type={passwordVisibility.resetPassword ? 'text' : 'password'}
+                      placeholder="Введите пароль"
+                      value={form.resetPassword}
+                      onChange={handleChange('resetPassword')}
+                    />
+                    <button
+                      type="button"
+                      className="auth-password-toggle"
+                      onClick={() => togglePasswordVisibility('resetPassword')}
+                      aria-label={passwordVisibility.resetPassword ? 'Скрыть пароль' : 'Показать пароль'}
+                    >
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M1.5 12s3.8-6 10.5-6 10.5 6 10.5 6-3.8 6-10.5 6S1.5 12 1.5 12z" />
+                        <circle cx="12" cy="12" r="3.5" />
+                        {passwordVisibility.resetPassword ? null : <line x1="4" y1="20" x2="20" y2="4" />}
+                      </svg>
+                    </button>
+                  </div>
                 </label>
                 <label className="auth-field">
                   <span>Новый пароль</span>
-                  <input
-                    type="password"
-                    placeholder="Повторите пароль еще раз"
-                    value={form.resetPasswordRepeat}
-                    onChange={handleChange('resetPasswordRepeat')}
-                  />
+                  <div className="auth-password-wrap">
+                    <input
+                      type={passwordVisibility.resetPasswordRepeat ? 'text' : 'password'}
+                      placeholder="Повторите пароль еще раз"
+                      value={form.resetPasswordRepeat}
+                      onChange={handleChange('resetPasswordRepeat')}
+                    />
+                    <button
+                      type="button"
+                      className="auth-password-toggle"
+                      onClick={() => togglePasswordVisibility('resetPasswordRepeat')}
+                      aria-label={passwordVisibility.resetPasswordRepeat ? 'Скрыть пароль' : 'Показать пароль'}
+                    >
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M1.5 12s3.8-6 10.5-6 10.5 6 10.5 6-3.8 6-10.5 6S1.5 12 1.5 12z" />
+                        <circle cx="12" cy="12" r="3.5" />
+                        {passwordVisibility.resetPasswordRepeat ? null : <line x1="4" y1="20" x2="20" y2="4" />}
+                      </svg>
+                    </button>
+                  </div>
                 </label>
                 <button type="submit" className="auth-btn auth-btn--primary auth-btn--form-primary" disabled={isSubmitting}>
                   {isSubmitting ? 'Сохранение...' : 'Подтвердить'}

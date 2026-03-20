@@ -12,7 +12,8 @@ export const formatRuPhone = (value) => {
   const rest = normalized.slice(1);
   let result = '+7';
   if (rest.length > 0) result += ` (${rest.slice(0, 3)}`;
-  if (rest.length >= 3) result += ')';
+  // Close bracket only when next block starts, so Backspace can remove 3rd area-code digit naturally.
+  if (rest.length > 3) result += ')';
   if (rest.length > 3) result += ` ${rest.slice(3, 6)}`;
   if (rest.length > 6) result += `-${rest.slice(6, 8)}`;
   if (rest.length > 8) result += `-${rest.slice(8, 10)}`;
