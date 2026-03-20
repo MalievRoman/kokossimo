@@ -63,6 +63,62 @@
   text-align: center;
 }
 
+.about-delivery-intro {
+  font-family: "Open Sans", sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 24px;
+  color: #5a3d3d;
+  margin: 1rem 0 0;
+}
+
+.about-delivery-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2rem;
+  margin-top: 1.2rem;
+}
+
+.delivery-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 32px;
+  border: 1px solid #D2C1C1;
+  border-radius: 4px;
+  background: #fcf8f7;
+}
+
+.delivery-card__title {
+  font-family: "Open Sans", sans-serif;
+  font-weight: 600;
+  font-size: 16px;
+  line-height: 24px;
+  color: #240100;
+  margin: 0;
+}
+
+.delivery-card__text {
+  font-family: "Open Sans", sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 24px;
+  color: #240100;
+  margin: 0;
+}
+
+.delivery-card__list {
+  margin: 0;
+  padding-left: 1.2rem;
+  display: grid;
+  gap: 0.5rem;
+  font-family: "Open Sans", sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 24px;
+  color: #240100;
+}
+
 @media (max-width: 640px) {
   .about-page {
     padding: 2.5rem 0;
@@ -74,5 +130,13 @@
 
   .about-quote {
     font-size: 1rem;
+  }
+
+  .about-delivery-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .delivery-card {
+    padding: 1.5rem;
   }
 }
