@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { createPortal } from 'react-dom';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
 import { getCurrentUser, getMyOrders, logoutUser, updateProfile } from '../services/api';
@@ -198,6 +199,25 @@ const ProfilePage = () => {
     const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
     setFullNameInput(fullName);
   }, [profile.first_name, profile.last_name]);
+
+  useEffect(() => {
+    if (!detailsOrder) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') {
+        setDetailsOrder(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleEscape);
+    };
+  }, [detailsOrder]);
 
   const userName = useMemo(() => {
     const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
@@ -547,17 +567,33 @@ const ProfilePage = () => {
                 ) : (
                   favorites.map((item) => (
                     <article key={item.id} className="profile-panel profile-favorite-row">
-                      <div className="profile-favorite-main">
-                        <img
-                          src={item.image || `${import.meta.env.BASE_URL}assets/account.png`}
-                          alt={item.name}
-                          className="profile-favorite-image"
-                        />
-                        <div>
-                          <h3 className="profile-favorite-name">{item.name}</h3>
-                          <p className="profile-favorite-price">{formatPrice(item.price)} ₽</p>
+                      {item.is_gift_certificate ? (
+                        <div className="profile-favorite-main">
+                          <img
+                            src={item.image || `${import.meta.env.BASE_URL}assets/account.png`}
+                            alt={item.name}
+                            className="profile-favorite-image"
+                          />
+                          <div>
+                            <h3 className="profile-favorite-name">{item.name}</h3>
+                            <p className="profile-favorite-price">{formatPrice(item.price)} ₽</p>
+                          </div>
                         </div>
-                      </div>
+                      ) : (
+                        <Link to={`/product/${item.id}`} className="profile-favorite-link">
+                          <div className="profile-favorite-main">
+                            <img
+                              src={item.image || `${import.meta.env.BASE_URL}assets/account.png`}
+                              alt={item.name}
+                              className="profile-favorite-image"
+                            />
+                            <div>
+                              <h3 className="profile-favorite-name">{item.name}</h3>
+                              <p className="profile-favorite-price">{formatPrice(item.price)} ₽</p>
+                            </div>
+                          </div>
+                        </Link>
+                      )}
                       <div className="profile-favorite-actions">
                         <button
                           type="button"
@@ -690,64 +726,96 @@ const ProfilePage = () => {
                 {status.message}
               </div>
             )}
-            {detailsOrder && (
-              <div className="profile-modal" onClick={() => setDetailsOrder(null)}>
-                <div className="profile-modal__dialog" onClick={(event) => event.stopPropagation()}>
-                  <button
-                    type="button"
-                    className="profile-modal__close"
-                    onClick={() => setDetailsOrder(null)}
-                    aria-label="Закрыть"
-                  >
-                    ×
-                  </button>
-                  <h3 className="profile-modal__title">ИНФОРМАЦИЯ О ЗАКАЗЕ</h3>
-                  <div className="profile-modal__meta">
-                    <div className="profile-modal__meta-label">Номер заказа</div>
-                    <div className="profile-modal__meta-value">{detailsOrder.id}</div>
-                    <div className="profile-modal__meta-label">Дата заказа</div>
-                    <div className="profile-modal__meta-value">{new Date(detailsOrder.created_at).toLocaleDateString('ru-RU')}</div>
-                    <div className="profile-modal__meta-label">Статус</div>
-                    <div className="profile-modal__meta-value">{getOrderStatusLabel(detailsOrder.status)}</div>
-                    <div className="profile-modal__meta-label">Адрес доставки</div>
-                    <div className="profile-modal__meta-value">{formatOrderAddress(detailsOrder)}</div>
-                  </div>
-                  <h4 className="profile-modal__subtitle">СОСТАВ ЗАКАЗА</h4>
-                  <div className="profile-modal__items">
-                    {(detailsOrder.items || []).map((item, index) => (
-                      <article
-                        key={`${detailsOrder.id}-${item.product_id || item.product_name}-${index}`}
-                        className="profile-modal__item"
-                      >
-                        <img
-                          src={item.product_image || `${import.meta.env.BASE_URL}assets/account.png`}
-                          alt={item.product_name}
-                          className="profile-modal__item-image"
-                        />
-                        <div className="profile-modal__item-main">
-                          <div className="profile-modal__item-name">{item.product_name}</div>
-                          <div className="profile-modal__item-category">
-                            {item.category_name || (item.is_gift_certificate ? 'Подарочный сертификат' : 'Категория товара')}
-                          </div>
-                        </div>
-                        <div className="profile-modal__item-price">{formatPrice(item.line_total || item.price)} ₽</div>
-                      </article>
-                    ))}
-                  </div>
-                  <div className="profile-modal__total">Итого: {formatPrice(detailsOrder.total_price)} ₽</div>
-                  <button
-                    type="button"
-                    className="profile-btn profile-btn--outline profile-modal__repeat-btn"
-                    onClick={() => {
-                      handleRepeatOrder(detailsOrder);
+            {detailsOrder &&
+              createPortal(
+                <div
+                  className="profile-modal"
+                  onMouseDown={(event) => {
+                    if (event.target === event.currentTarget) {
                       setDetailsOrder(null);
-                    }}
-                  >
-                    ПОВТОРИТЬ ЗАКАЗ
-                  </button>
-                </div>
-              </div>
-            )}
+                    }
+                  }}
+                >
+                  <div className="profile-modal__dialog" onMouseDown={(event) => event.stopPropagation()}>
+                    <button
+                      type="button"
+                      className="profile-modal__close"
+                      onClick={() => setDetailsOrder(null)}
+                      aria-label="Закрыть"
+                    >
+                      ×
+                    </button>
+                    <h3 className="profile-modal__title">ИНФОРМАЦИЯ О ЗАКАЗЕ</h3>
+                    <div className="profile-modal__meta">
+                      <div className="profile-modal__meta-label">Номер заказа</div>
+                      <div className="profile-modal__meta-value">{detailsOrder.id}</div>
+                      <div className="profile-modal__meta-label">Дата заказа</div>
+                      <div className="profile-modal__meta-value">{new Date(detailsOrder.created_at).toLocaleDateString('ru-RU')}</div>
+                      <div className="profile-modal__meta-label">Статус</div>
+                      <div className="profile-modal__meta-value">{getOrderStatusLabel(detailsOrder.status)}</div>
+                      <div className="profile-modal__meta-label">Адрес доставки</div>
+                      <div className="profile-modal__meta-value">{formatOrderAddress(detailsOrder)}</div>
+                    </div>
+                    <h4 className="profile-modal__subtitle">СОСТАВ ЗАКАЗА</h4>
+                    <div className="profile-modal__items">
+                      {(detailsOrder.items || []).map((item, index) => (
+                        (() => {
+                          const productId = item.product_id ?? item.id;
+                          const hasProductPage = !item.is_gift_certificate && Number.isFinite(Number(productId));
+                          const openProductPage = () => {
+                            if (!hasProductPage) return;
+                            setDetailsOrder(null);
+                            navigate(`/product/${productId}`);
+                          };
+
+                          return (
+                            <article
+                              key={`${detailsOrder.id}-${item.product_id || item.product_name}-${index}`}
+                              className={`profile-modal__item ${hasProductPage ? 'profile-modal__item--clickable' : ''}`}
+                              role={hasProductPage ? 'link' : undefined}
+                              tabIndex={hasProductPage ? 0 : undefined}
+                              onClick={hasProductPage ? openProductPage : undefined}
+                              onKeyDown={
+                                hasProductPage
+                                  ? (event) => {
+                                      if (event.key === 'Enter' || event.key === ' ') {
+                                        event.preventDefault();
+                                        openProductPage();
+                                      }
+                                    }
+                                  : undefined
+                              }
+                              aria-label={hasProductPage ? `Открыть товар ${item.product_name}` : undefined}
+                            >
+                              <img
+                                src={item.product_image || `${import.meta.env.BASE_URL}assets/account.png`}
+                                alt={item.product_name}
+                                className="profile-modal__item-image"
+                              />
+                              <div className="profile-modal__item-main">
+                                <div className="profile-modal__item-name">{item.product_name}</div>
+                              </div>
+                              <div className="profile-modal__item-price">{formatPrice(item.line_total || item.price)} ₽</div>
+                            </article>
+                          );
+                        })()
+                      ))}
+                    </div>
+                    <div className="profile-modal__total">Итого: {formatPrice(detailsOrder.total_price)} ₽</div>
+                    <button
+                      type="button"
+                      className="profile-btn profile-btn--outline profile-modal__repeat-btn"
+                      onClick={() => {
+                        handleRepeatOrder(detailsOrder);
+                        setDetailsOrder(null);
+                      }}
+                    >
+                      ПОВТОРИТЬ ЗАКАЗ
+                    </button>
+                  </div>
+                </div>,
+                document.body
+              )}
           </>
           )}
         </div>

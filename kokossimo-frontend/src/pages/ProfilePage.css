@@ -345,6 +345,17 @@
   gap: 16px;
 }
 
+.profile-favorite-link {
+  text-decoration: none;
+  color: inherit;
+}
+
+@media (hover: hover) {
+  .profile-favorite-link:hover .profile-favorite-name {
+    color: #740400;
+  }
+}
+
 .profile-favorite-image {
   width: 56px;
   height: 84px;
@@ -590,12 +601,16 @@
 .profile-modal {
   position: fixed;
   inset: 0;
-  background: rgba(30, 20, 18, 0.45);
+  width: 100vw;
+  height: 100dvh;
+  background: rgba(30, 20, 18, 0.36);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 2100;
-  padding: 16px;
+  z-index: 4000;
+  padding: 18px;
 }
 
 .profile-modal__dialog {
@@ -603,20 +618,21 @@
   height: auto;
   max-height: calc(100vh - 24px);
   overflow: auto;
-  background: #fcf8f7;
-  border-radius: 8px;
-  border: 1px solid #e5d8d4;
-  padding: 24px;
+  background: #fffaf8;
+  border-radius: 12px;
+  border: 1px solid #e7d8d2;
+  box-shadow: 0 20px 44px rgba(36, 1, 0, 0.2);
+  padding: 28px 24px 24px;
   position: relative;
 }
 
 .profile-modal__close {
   position: absolute;
-  top: 8px;
-  right: 12px;
+  top: 10px;
+  right: 14px;
   border: 0;
   background: transparent;
-  font-size: 30px;
+  font-size: 32px;
   line-height: 1;
   color: #4c3430;
   cursor: pointer;
@@ -654,8 +670,8 @@
 }
 
 .profile-modal__items {
-  border: 1px solid #e5d8d4;
-  border-radius: 4px;
+  border: 1px solid #e9dfdc;
+  border-radius: 8px;
   padding: 12px;
   display: grid;
   gap: 10px;
@@ -666,6 +682,16 @@
   grid-template-columns: 72px minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
+}
+
+.profile-modal__item--clickable {
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .profile-modal__item--clickable:hover .profile-modal__item-name {
+    color: #740400;
+  }
 }
 
 .profile-modal__item-image {
@@ -710,6 +736,19 @@
   line-height: 24px;
   letter-spacing: 0;
   color: #240100;
+}
+
+@media (max-width: 640px) {
+  .profile-modal {
+    padding: 10px;
+  }
+
+  .profile-modal__dialog {
+    width: 100%;
+    max-height: calc(100dvh - 20px);
+    border-radius: 10px;
+    padding: 20px 14px 16px;
+  }
 }
 
 .profile-modal__repeat-btn {
