@@ -29,6 +29,31 @@ body {
   background-color: #fcf8f7; /* совпадает с фоном страниц, убирает белую полосу над футером */
 }
 
+.development-notice {
+  background-color: #fff4d6;
+  border-bottom: 1px solid #ead7a1;
+  color: #6b4f1f;
+}
+
+.development-notice .container {
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+}
+
+.development-notice p {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  text-align: center;
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .development-notice p {
+    font-size: 0.85rem;
+  }
+}
+
 /* Глобальная анимация появления страницы */
 @keyframes pageFadeIn {
   from {

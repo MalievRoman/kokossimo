@@ -428,6 +428,13 @@ const Header = () => {
 
           </div>
         </div>
+        <section className="development-notice" role="status" aria-live="polite">
+          <div className="container">
+            <p>
+              Сайт находится в разработке. Заказы временно не обрабатываются до полного запуска.
+            </p>
+          </div>
+        </section>
       </header>
     <div
       className={`mobile-search ${isMobileSearchOpen ? 'is-open' : ''}`}
