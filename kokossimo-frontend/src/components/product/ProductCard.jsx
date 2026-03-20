@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
 import { useFavorites } from '../../context/FavoritesContext';
 import { resolveMediaUrl } from '../../utils/media';
@@ -10,6 +10,7 @@ import { resolveMediaUrl } from '../../utils/media';
 const ProductCard = ({ product }) => {
   if (!product) return null;
 
+  const navigate = useNavigate();
   const { addToCart, updateQuantity, removeFromCart, cartItems } = useCart();
   const { toggleFavorite, isFavorite } = useFavorites();
 
@@ -81,12 +82,42 @@ const ProductCard = ({ product }) => {
   const favoriteIcon = favorite
     ? `${import.meta.env.BASE_URL}assets/fav_pressed.svg`
     : `${import.meta.env.BASE_URL}assets/fav.svg`;
+  const productLink = product.id != null ? `/product/${product.id}` : null;
 
   const showQtyControls = quantity > 0;
   const canIncrease = stock == null ? true : quantity < stock;
 
+  const openProductPage = () => {
+    if (!productLink) return;
+    navigate(productLink);
+  };
+
+  const handleCardClick = (e) => {
+    if (!productLink || e.defaultPrevented) return;
+    const interactive = e.target.closest('a, button, input, textarea, select, label');
+    if (interactive) return;
+    openProductPage();
+  };
+
+  const handleCardKeyDown = (e) => {
+    if (!productLink) return;
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const interactive = e.target.closest('a, button, input, textarea, select, label');
+    if (interactive) return;
+    e.preventDefault();
+    openProductPage();
+  };
+
   return (
-    <div className="product-card" data-product-id={product.id}>
+    <div
+      className={`product-card ${productLink ? 'product-card--clickable' : ''}`}
+      data-product-id={product.id}
+      role={productLink ? 'link' : undefined}
+      tabIndex={productLink ? 0 : undefined}
+      onClick={handleCardClick}
+      onKeyDown={handleCardKeyDown}
+      aria-label={productLink ? `Открыть товар ${product.name}` : undefined}
+    >
       <div className="product-card__media">
         {(isNew || discount > 0) && (
           <div className="product-card__badges">
@@ -110,8 +141,11 @@ const ProductCard = ({ product }) => {
 
         <Link
           className="product-card__image-link"
-          to={`/product/${product.id}`}
+          to={productLink || '#'}
           aria-label={product.name}
+          onClick={(e) => {
+            if (!productLink) e.preventDefault();
+          }}
         >
           <div className="product-card__image">
             {displayImageUrl && (
@@ -130,7 +164,13 @@ const ProductCard = ({ product }) => {
       </div>
 
       <div className="product-card__info">
-        <div className="product-card__title">{product.name}</div>
+        {productLink ? (
+          <Link to={productLink} className="product-card__title-link">
+            <div className="product-card__title">{product.name}</div>
+          </Link>
+        ) : (
+          <div className="product-card__title">{product.name}</div>
+        )}
 
         <div className="product-card__meta">
           <div className="product-card__desc">{description}</div>

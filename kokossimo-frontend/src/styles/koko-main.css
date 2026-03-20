@@ -1060,6 +1060,10 @@ body {
     transform 180ms ease;
 }
 
+.product-card--clickable {
+  cursor: pointer;
+}
+
 @media (hover: hover) {
   .product-card:hover,
   .product-card:focus-within {
@@ -1112,6 +1116,11 @@ body {
   -webkit-box-orient: vertical;
   min-height: calc(1.35em * 3);
   color: #240100;
+}
+
+.product-card__title-link {
+  text-decoration: none;
+  color: inherit;
 }
 
 .product-card__info {
