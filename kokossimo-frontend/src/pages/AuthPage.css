@@ -187,6 +187,53 @@
   border-color: #740400;
 }
 
+.auth-password-wrap {
+  position: relative;
+}
+
+.auth-password-wrap input {
+  padding-right: 42px;
+}
+
+.auth-password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  color: #7a7377;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-password-toggle svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.auth-password-toggle:focus-visible {
+  outline: 2px solid #740400;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (hover: hover) {
+  .auth-password-toggle:hover {
+    color: #4f484c;
+  }
+}
+
 .auth-form--login {
   gap: 0;
 }
