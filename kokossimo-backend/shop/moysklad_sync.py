@@ -595,6 +595,8 @@ def sync_site_products(
         "created": 0,
         "updated": 0,
         "deleted": 0,
+        "hidden_protected": 0,
+        "delete_skipped_protected": 0,
         "target_category_name": category_name,
         "sample_paths": [],
         "sample_folder_names": [],
@@ -860,11 +862,36 @@ def sync_site_products(
             offset += limit
 
         if synced_ids:
-            deleted_count, _ = Product.objects.filter(category=category, moysklad_id__isnull=False).exclude(
-                moysklad_id__in=synced_ids
-            ).delete()
+            stale_qs = Product.objects.filter(
+                category=category,
+                moysklad_id__isnull=False,
+            ).exclude(moysklad_id__in=synced_ids)
+            protected_qs = stale_qs.filter(order_items__isnull=False).distinct()
+            protected_count = protected_qs.count()
+            if protected_count:
+                # Товар участвовал в заказах (OrderItem.product = PROTECT), поэтому удалить нельзя.
+                # Скрываем его с витрины, чтобы не показывать удаленные из МойСклад позиции.
+                protected_qs.update(moysklad_id=None, stock=0)
+                stats["hidden_protected"] = int(protected_count)
+                _progress(
+                    "Скрыто товаров, связанных с заказами "
+                    f"(удалены в МойСклад, PROTECT): {protected_count}."
+                )
+            # OrderItem.product использует PROTECT, поэтому такие товары
+            # нельзя удалять и нужно безопасно пропускать.
+            deletable_qs = stale_qs.exclude(order_items__isnull=False).distinct()
+            stale_count = stale_qs.count()
+            deletable_count = deletable_qs.count()
+            protected_count = max(0, stale_count - deletable_count)
+            deleted_count, _ = deletable_qs.delete()
             stats["deleted"] = int(deleted_count)
+            stats["delete_skipped_protected"] = int(protected_count)
             _progress(f"Удалено устаревших товаров: {stats['deleted']}.")
+            if protected_count:
+                _progress(
+                    "Пропущено удаление товаров, связанных с заказами "
+                    f"(PROTECT): {protected_count}."
+                )
 
         # Один вызов OpenAI на товар: сначала описание, затем категория
         if (
@@ -934,6 +961,8 @@ def sync_site_products(
             f"подготовлено {stats['prepared_rows']}, отфильтровано {stats['filtered_out']}, "
             f"пропущено без id/названия {stats['skipped_no_id_or_name']}, с нулевой ценой {stats['skipped_zero_price']}, "
             f"создано {stats['created']}, обновлено {stats['updated']}, удалено {stats['deleted']}, "
+            f"скрыто (были в заказах) {stats['hidden_protected']}, "
+            f"пропущено удаление (PROTECT) {stats['delete_skipped_protected']}, "
             f"категоризовано {stats['categorized']}, описаний сгенерировано {stats['descriptions_generated']}."
         )
         if stats["prepared_rows"] == 0:
