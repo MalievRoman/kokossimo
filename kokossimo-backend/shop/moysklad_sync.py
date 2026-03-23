@@ -595,6 +595,7 @@ def sync_site_products(
         "created": 0,
         "updated": 0,
         "deleted": 0,
+        "delete_skipped_protected": 0,
         "target_category_name": category_name,
         "sample_paths": [],
         "sample_folder_names": [],
@@ -860,11 +861,25 @@ def sync_site_products(
             offset += limit
 
         if synced_ids:
-            deleted_count, _ = Product.objects.filter(category=category, moysklad_id__isnull=False).exclude(
-                moysklad_id__in=synced_ids
-            ).delete()
+            stale_qs = Product.objects.filter(
+                category=category,
+                moysklad_id__isnull=False,
+            ).exclude(moysklad_id__in=synced_ids)
+            # OrderItem.product использует PROTECT, поэтому такие товары
+            # нельзя удалять и нужно безопасно пропускать.
+            deletable_qs = stale_qs.exclude(order_items__isnull=False).distinct()
+            stale_count = stale_qs.count()
+            deletable_count = deletable_qs.count()
+            protected_count = max(0, stale_count - deletable_count)
+            deleted_count, _ = deletable_qs.delete()
             stats["deleted"] = int(deleted_count)
+            stats["delete_skipped_protected"] = int(protected_count)
             _progress(f"Удалено устаревших товаров: {stats['deleted']}.")
+            if protected_count:
+                _progress(
+                    "Пропущено удаление товаров, связанных с заказами "
+                    f"(PROTECT): {protected_count}."
+                )
 
         # Один вызов OpenAI на товар: сначала описание, затем категория
         if (
@@ -934,6 +949,7 @@ def sync_site_products(
             f"подготовлено {stats['prepared_rows']}, отфильтровано {stats['filtered_out']}, "
             f"пропущено без id/названия {stats['skipped_no_id_or_name']}, с нулевой ценой {stats['skipped_zero_price']}, "
             f"создано {stats['created']}, обновлено {stats['updated']}, удалено {stats['deleted']}, "
+            f"пропущено удаление (PROTECT) {stats['delete_skipped_protected']}, "
             f"категоризовано {stats['categorized']}, описаний сгенерировано {stats['descriptions_generated']}."
         )
         if stats["prepared_rows"] == 0:
