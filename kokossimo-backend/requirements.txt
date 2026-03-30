@@ -9,3 +9,4 @@ python-telegram-bot==21.7
 sqlparse==0.5.5
 tzdata==2025.3
 openai>=1.0.0
+yookassa==3.7.0

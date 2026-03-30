@@ -61,6 +61,14 @@ export const createOrder = (payload, token) =>
   api.post('/orders/', payload, {
     headers: token ? { Authorization: `Token ${token}` } : undefined,
   });
+export const createYooKassaPayment = (orderId, token) =>
+  api.post(
+    '/payments/yookassa/create/',
+    { order_id: orderId },
+    {
+      headers: { Authorization: `Token ${token}` },
+    }
+  );
 export const getMyOrders = (token) =>
   api.get('/orders/list/', {
     headers: { Authorization: `Token ${token}` },
