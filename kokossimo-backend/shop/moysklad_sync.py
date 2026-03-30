@@ -250,6 +250,17 @@ def _extract_image_url(row, client, allow_meta_fetch=False):
     return ""
 
 
+def _resolve_description_for_update(current_description, incoming_description):
+    """
+    Не даем пустому описанию из МойСклад затирать уже заполненное описание на сайте.
+    """
+    incoming = (incoming_description or "").strip()
+    current = current_description or ""
+    if incoming:
+        return incoming
+    return current
+
+
 def _should_sync():
     global _last_sync_at, _last_sync_attempt_at, _last_sync_failed
 
@@ -376,9 +387,12 @@ def sync_single_product(
             product.name = name
             fields_to_update.append("name")
 
-        description = (row.get("description") or "").strip()
-        if product.description != description:
-            product.description = description
+        resolved_description = _resolve_description_for_update(
+            product.description,
+            row.get("description"),
+        )
+        if product.description != resolved_description:
+            product.description = resolved_description
             fields_to_update.append("description")
 
         if new_price > 0 and product.price != new_price:
@@ -812,7 +826,10 @@ def sync_site_products(
                     else:
                         existing.category = category
                         existing.name = item["name"]
-                        existing.description = item["description"]
+                        existing.description = _resolve_description_for_update(
+                            existing.description,
+                            item["description"],
+                        )
                         existing.price = item["price"]
                         existing.stock = item["stock"]
                         existing.external_image_url = item["external_image_url"] or None
