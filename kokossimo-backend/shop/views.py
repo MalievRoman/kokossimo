@@ -1272,15 +1272,9 @@ def _product_image_proxy_impl(request, product_id):
         except (MoySkladError, MoySkladConfigError):
             return None
 
-    # Устаревшие записи могли сохранить meta.href вместо downloadHref.
-    # Сначала пробуем взять актуальную ссылку из API (работает с истёкшими URL).
-    if product.moysklad_id:
-        refreshed = _refresh_image_url_and_download(
-            product.external_image_url or "", "initial fetch"
-        )
-        if refreshed is not None:
-            return refreshed
-        # Refresh не вернул картинку — пробуем сохранённую ссылку
+    # В бою сначала пробуем уже сохраненную ссылку:
+    # так мы не делаем extra-запрос в МойСклад на каждый <img>.
+    # К API за "освежением" обращаемся только если скачивание не удалось.
     last_error = None
     for attempt in range(2):  # две попытки на случай временного сбоя (таймаут, сеть)
         try:
