@@ -198,6 +198,11 @@ EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'true').lower() in ('1', 'true', 'yes
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
 EMAIL_CODE_TTL_MINUTES = int(os.getenv('EMAIL_CODE_TTL_MINUTES', '10'))
 
+# YooKassa (stage/prod keys are configured via .env)
+YOOKASSA_SHOP_ID = os.getenv('YOOKASSA_SHOP_ID', '')
+YOOKASSA_SECRET_KEY = os.getenv('YOOKASSA_SECRET_KEY', '')
+YOOKASSA_RETURN_URL = os.getenv('YOOKASSA_RETURN_URL', '')
+
 # Telegram-бот для обратной связи (отзывы, предложения, просьбы о связи)
 # Токен создаётся у @BotFather. Запуск: python manage.py run_telegram_bot
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', '')
@@ -222,6 +227,7 @@ MOYSKLAD_USE_FOLDER_TREE_FILTER = os.getenv('MOYSKLAD_USE_FOLDER_TREE_FILTER', '
 MOYSKLAD_RELAX_FOLDER_FILTER = os.getenv('MOYSKLAD_RELAX_FOLDER_FILTER', 'true').lower() in ('1', 'true', 'yes')
 MOYSKLAD_STRICT_CATEGORY_ONLY = os.getenv('MOYSKLAD_STRICT_CATEGORY_ONLY', 'true').lower() in ('1', 'true', 'yes')
 MOYSKLAD_IMAGE_META_FETCH = os.getenv('MOYSKLAD_IMAGE_META_FETCH', 'true').lower() in ('1', 'true', 'yes')
+MOYSKLAD_IMAGE_PROXY_REDIRECT_ONLY = os.getenv('MOYSKLAD_IMAGE_PROXY_REDIRECT_ONLY', 'false').lower() in ('1', 'true', 'yes')
 MOYSKLAD_SYNC_PAGE_SIZE = int(os.getenv('MOYSKLAD_SYNC_PAGE_SIZE', '50'))
 MOYSKLAD_USE_SEARCH_FILTER = os.getenv('MOYSKLAD_USE_SEARCH_FILTER', 'true').lower() in ('1', 'true', 'yes')
 MOYSKLAD_SITE_SEARCH_QUERY = os.getenv('MOYSKLAD_SITE_SEARCH_QUERY', '')

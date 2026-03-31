@@ -28,6 +28,30 @@ def _normalize(value):
     return " ".join(str(value).strip().lower().replace("ё", "е").split())
 
 
+def _sanitize_text(value):
+    """PostgreSQL TEXT не принимает NUL-байт (\x00)."""
+    if value is None:
+        return ""
+    return str(value).replace("\x00", "").strip()
+
+
+def _sanitize_for_db(value):
+    """Рекурсивно очищает NUL-байты из структур, сохраняемых в БД/JSONField."""
+    if isinstance(value, str):
+        return value.replace("\x00", "")
+    if isinstance(value, list):
+        return [_sanitize_for_db(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_sanitize_for_db(item) for item in value)
+    if isinstance(value, dict):
+        cleaned = {}
+        for key, item in value.items():
+            clean_key = _sanitize_for_db(key) if isinstance(key, str) else key
+            cleaned[clean_key] = _sanitize_for_db(item)
+        return cleaned
+    return value
+
+
 def _extract_id_from_href(href):
     if not href:
         return ""
@@ -250,6 +274,17 @@ def _extract_image_url(row, client, allow_meta_fetch=False):
     return ""
 
 
+def _resolve_description_for_update(current_description, incoming_description):
+    """
+    Не даем пустому описанию из МойСклад затирать уже заполненное описание на сайте.
+    """
+    incoming = _sanitize_text(incoming_description)
+    current = _sanitize_text(current_description)
+    if incoming:
+        return incoming
+    return current
+
+
 def _should_sync():
     global _last_sync_at, _last_sync_attempt_at, _last_sync_failed
 
@@ -297,8 +332,8 @@ def _finish_sync_log(sync_log, status, stats=None, error=""):
     sync_log.status = status
     sync_log.finished_at = finished_at
     sync_log.duration_ms = duration_ms
-    sync_log.stats = stats or {}
-    sync_log.error = (error or "")[:5000]
+    sync_log.stats = _sanitize_for_db(stats or {})
+    sync_log.error = _sanitize_text(error)[:5000]
     sync_log.save(update_fields=["status", "finished_at", "duration_ms", "stats", "error"])
 
 
@@ -352,7 +387,7 @@ def sync_single_product(
             _finish_sync_log(sync_log, status="error", stats=result, error=result["detail"])
             return result
 
-        name = (row.get("name") or "").strip()
+        name = _sanitize_text(row.get("name"))
         if not name:
             result = {"updated": False, "detail": "В МойСклад у товара нет названия."}
             _finish_sync_log(sync_log, status="error", stats=result, error=result["detail"])
@@ -376,9 +411,12 @@ def sync_single_product(
             product.name = name
             fields_to_update.append("name")
 
-        description = (row.get("description") or "").strip()
-        if product.description != description:
-            product.description = description
+        resolved_description = _resolve_description_for_update(
+            product.description,
+            row.get("description"),
+        )
+        if product.description != resolved_description:
+            product.description = resolved_description
             fields_to_update.append("description")
 
         if new_price > 0 and product.price != new_price:
@@ -752,7 +790,7 @@ def sync_site_products(
                             continue
 
                 external_id = row.get("id")
-                name = (row.get("name") or "").strip()
+                name = _sanitize_text(row.get("name"))
                 if not external_id or not name:
                     stats["skipped_no_id_or_name"] += 1
                     continue
@@ -769,7 +807,7 @@ def sync_site_products(
                     {
                         "moysklad_id": external_id,
                         "name": name,
-                        "description": (row.get("description") or "").strip(),
+                        "description": _sanitize_text(row.get("description")),
                         "price": product_price,
                         "stock": _extract_stock(row),
                         "external_image_url": _extract_image_url(
@@ -812,7 +850,10 @@ def sync_site_products(
                     else:
                         existing.category = category
                         existing.name = item["name"]
-                        existing.description = item["description"]
+                        existing.description = _resolve_description_for_update(
+                            existing.description,
+                            item["description"],
+                        )
                         existing.price = item["price"]
                         existing.stock = item["stock"]
                         existing.external_image_url = item["external_image_url"] or None

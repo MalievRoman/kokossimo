@@ -16,9 +16,13 @@ from django.db.models import Q, Avg, Count, Min, Max
 from django.db import transaction
 from decimal import Decimal, InvalidOperation
 from django.shortcuts import get_object_or_404
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponse, HttpResponseRedirect
 import base64
 import logging
+import uuid
+from decimal import ROUND_HALF_UP
+
+from yookassa import Configuration, Payment
 
 from .models import Product, Category, Profile, Order, EmailVerificationCode, ProductRating, ProductSubcategory, Cart, CartItem, FavoriteList, FavoriteItem
 
@@ -78,6 +82,57 @@ def _generate_email_code():
 def _purge_expired_codes():
     cutoff = timezone.now() - timedelta(minutes=_email_code_ttl())
     EmailVerificationCode.objects.filter(created_at__lt=cutoff).delete()
+
+
+def _yookassa_enabled():
+    return bool(getattr(settings, "YOOKASSA_SHOP_ID", "")) and bool(getattr(settings, "YOOKASSA_SECRET_KEY", ""))
+
+
+def _yookassa_amount(value):
+    amount = Decimal(value).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    return f"{amount:.2f}"
+
+
+def _yookassa_return_url(request, order):
+    configured = (getattr(settings, "YOOKASSA_RETURN_URL", "") or "").strip()
+    if configured:
+        return configured
+    return request.build_absolute_uri(f"/checkout/success?order={order.id}")
+
+
+def _create_yookassa_payment(order, request):
+    Configuration.account_id = settings.YOOKASSA_SHOP_ID
+    Configuration.secret_key = settings.YOOKASSA_SECRET_KEY
+
+    payment_request = {
+        "amount": {
+            "value": _yookassa_amount(order.total_price),
+            "currency": "RUB",
+        },
+        "confirmation": {
+            "type": "redirect",
+            "return_url": _yookassa_return_url(request, order),
+        },
+        "capture": True,
+        "description": f"Оплата заказа #{order.id}",
+        "metadata": {
+            "order_id": str(order.id),
+            "user_id": str(order.user_id or ""),
+        },
+    }
+
+    payment = Payment.create(payment_request, str(uuid.uuid4()))
+    confirmation_url = ""
+    confirmation = getattr(payment, "confirmation", None)
+    if confirmation is not None:
+        confirmation_url = getattr(confirmation, "confirmation_url", "") or ""
+
+    order.payment_provider = "yookassa"
+    order.payment_id = str(getattr(payment, "id", "") or "")
+    order.payment_status = str(getattr(payment, "status", "") or "pending")
+    order.save(update_fields=["payment_provider", "payment_id", "payment_status"])
+
+    return payment, confirmation_url
 
 
 def _cart_item_image_url(product, request):
@@ -964,6 +1019,109 @@ def create_order(request):
     return Response(OrderSerializer(order, context={'request': request}).data, status=status.HTTP_201_CREATED)
 
 
+@api_view(['POST'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def create_yookassa_payment(request):
+    if not _yookassa_enabled():
+        return Response({"detail": "ЮKassa не настроена на сервере."}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+    order_id = request.data.get("order_id")
+    if not order_id:
+        return Response({"detail": "Поле order_id обязательно."}, status=status.HTTP_400_BAD_REQUEST)
+
+    order = get_object_or_404(Order, id=order_id, user=request.user)
+    if order.payment_method != "card_online":
+        return Response({"detail": "Для заказа не выбрана онлайн-оплата."}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Уже оплачен: повторный checkout не создаем.
+    if order.payment_status == "succeeded" or order.status == "paid":
+        return Response(
+            {
+                "detail": "Заказ уже оплачен.",
+                "order_id": order.id,
+                "payment_id": order.payment_id,
+                "payment_status": order.payment_status,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    try:
+        payment, confirmation_url = _create_yookassa_payment(order, request)
+    except Exception as exc:
+        logger.exception("Failed to create YooKassa payment for order %s", order.id)
+        return Response({"detail": f"Не удалось создать платеж: {exc}"}, status=status.HTTP_502_BAD_GATEWAY)
+
+    return Response(
+        {
+            "order_id": order.id,
+            "payment_id": str(getattr(payment, "id", "") or ""),
+            "payment_status": str(getattr(payment, "status", "") or ""),
+            "confirmation_url": confirmation_url,
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(['POST'])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def yookassa_webhook(request):
+    payload = request.data or {}
+    event = payload.get("event")
+    payment_obj = payload.get("object") or {}
+    payment_id = str(payment_obj.get("id") or "")
+    payment_status = str(payment_obj.get("status") or "")
+    metadata = payment_obj.get("metadata") or {}
+    order_id = metadata.get("order_id")
+
+    if not payment_id:
+        return Response({"detail": "Missing payment id."}, status=status.HTTP_400_BAD_REQUEST)
+
+    order = None
+    if order_id:
+        order = Order.objects.filter(id=order_id).first()
+    if order is None:
+        order = Order.objects.filter(payment_id=payment_id).first()
+    if order is None:
+        return Response({"detail": "Order not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    amount_obj = payment_obj.get("amount") or {}
+    amount_value = amount_obj.get("value")
+    try:
+        paid_amount = Decimal(str(amount_value)) if amount_value is not None else None
+    except (InvalidOperation, TypeError):
+        paid_amount = None
+    if paid_amount is not None and paid_amount != Decimal(order.total_price):
+        logger.warning(
+            "YooKassa amount mismatch for order %s: expected=%s got=%s",
+            order.id,
+            order.total_price,
+            paid_amount,
+        )
+        return Response({"detail": "Amount mismatch."}, status=status.HTTP_400_BAD_REQUEST)
+
+    updates = {
+        "payment_provider": "yookassa",
+        "payment_id": payment_id,
+        "payment_status": payment_status,
+    }
+
+    if payment_status == "succeeded":
+        updates["status"] = "paid"
+        if not order.paid_at:
+            updates["paid_at"] = timezone.now()
+    elif payment_status == "canceled":
+        # Бизнес-логика может отличаться; для стейджа помечаем как отмененный.
+        updates["status"] = "cancelled"
+
+    for field, value in updates.items():
+        setattr(order, field, value)
+    order.save(update_fields=list(updates.keys()))
+
+    return Response({"detail": "ok", "event": event}, status=status.HTTP_200_OK)
+
+
 @api_view(['GET'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
@@ -1007,6 +1165,8 @@ def _product_image_proxy_impl(request, product_id):
         return _placeholder_or_debug(request, "product_not_found")
     if not product.external_image_url:
         return _placeholder_or_debug(request, "no_external_image_url")
+    if getattr(settings, "MOYSKLAD_IMAGE_PROXY_REDIRECT_ONLY", False):
+        return HttpResponseRedirect(product.external_image_url)
 
     def _image_response(binary_payload, mime_type):
         response = HttpResponse(binary_payload, content_type=mime_type)
@@ -1114,15 +1274,9 @@ def _product_image_proxy_impl(request, product_id):
         except (MoySkladError, MoySkladConfigError):
             return None
 
-    # Устаревшие записи могли сохранить meta.href вместо downloadHref.
-    # Сначала пробуем взять актуальную ссылку из API (работает с истёкшими URL).
-    if product.moysklad_id:
-        refreshed = _refresh_image_url_and_download(
-            product.external_image_url or "", "initial fetch"
-        )
-        if refreshed is not None:
-            return refreshed
-        # Refresh не вернул картинку — пробуем сохранённую ссылку
+    # В бою сначала пробуем уже сохраненную ссылку:
+    # так мы не делаем extra-запрос в МойСклад на каждый <img>.
+    # К API за "освежением" обращаемся только если скачивание не удалось.
     last_error = None
     for attempt in range(2):  # две попытки на случай временного сбоя (таймаут, сеть)
         try:
