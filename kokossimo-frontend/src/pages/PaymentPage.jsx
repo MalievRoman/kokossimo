@@ -1,161 +1,510 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { ChevronDown, ChevronUp, Info, X } from 'lucide-react';
 import { createOrder, createYooKassaPayment, getCurrentUser, updateProfile } from '../services/api';
 import { useCart } from '../context/CartContext';
 import { formatRuPhone, isPhoneInputKeyAllowed } from '../utils/phone';
 import './PaymentPage.css';
 
-const PaymentPage = () => {
+const CITY_CONFIG = {
+  moscow: {
+    label: 'Москва',
+    courierAvailable: false,
+    pickupFee: 250,
+    courierFee: 0,
+    pickupProvider: 'СДЭК',
+    pickupPoints: [
+      {
+        id: 'msk-537',
+        name: 'Пункт СДЭК MSK537',
+        address: 'Москва, 2-й Хвостов переулок, 12',
+        type: 'Пункт выдачи',
+        weight: 'до 35 кг',
+        hours: 'с 9:00 до 21:00',
+      },
+      {
+        id: 'msk-589',
+        name: 'Пункт СДЭК MSK589',
+        address: 'Москва, Волгоградский проспект, 32, корпус 2',
+        type: 'Пункт выдачи',
+        weight: 'до 25 кг',
+        hours: 'с 10:00 до 21:00',
+      },
+      {
+        id: 'msk-2360',
+        name: 'Пункт СДЭК MSK2360',
+        address: 'Москва, ул. Таганская, 25-27',
+        type: 'Постомат',
+        weight: 'до 15 кг',
+        hours: 'круглосуточно',
+      },
+    ],
+  },
+  saint_petersburg: {
+    label: 'Санкт-Петербург',
+    courierAvailable: false,
+    pickupFee: 250,
+    courierFee: 0,
+    pickupProvider: 'СДЭК',
+    pickupPoints: [
+      {
+        id: 'spb-102',
+        name: 'Пункт СДЭК SPB102',
+        address: 'Санкт-Петербург, Лиговский проспект, 50',
+        type: 'Пункт выдачи',
+        weight: 'до 25 кг',
+        hours: 'с 10:00 до 21:00',
+      },
+      {
+        id: 'spb-103',
+        name: 'Пункт СДЭК SPB103',
+        address: 'Санкт-Петербург, Невский проспект, 98',
+        type: 'Постомат',
+        weight: 'до 15 кг',
+        hours: 'круглосуточно',
+      },
+    ],
+  },
+  elista: {
+    label: 'Элиста',
+    courierAvailable: true,
+    pickupFee: 250,
+    courierFee: 600,
+    pickupProvider: 'KOKOSSIMO',
+    pickupPoints: [
+      {
+        id: 'elista-store',
+        name: 'Магазин KOKOSSIMO',
+        address: 'Элиста, улица А. Сусеева, 13',
+        type: 'Самовывоз из магазина',
+        weight: 'без ограничений',
+        hours: 'с 9:00 до 20:00',
+      },
+    ],
+  },
+};
+
+const PAYMENT_OPTIONS = [
+  { value: 'card', label: 'Оплата картой' },
+  { value: 'sbp', label: 'СБП' },
+  { value: 'tpay', label: 'T-Pay' },
+];
+
+const DELIVERY_TIME_SLOTS = [
+  { value: '10:00 - 12:00', label: '10:00 - 12:00' },
+  { value: '13:00 - 16:00', label: '13:00 - 16:00' },
+  { value: '17:00 - 19:00', label: '17:00 - 19:00' },
+];
+
+const emptyCourierDraft = {
+  streetHouse: '',
+  entrance: '',
+  floor: '',
+  apartmentOffice: '',
+  intercom: '',
+  comment: '',
+};
+
+const CheckoutStep = ({
+  step,
+  title,
+  subtitle,
+  expanded,
+  locked,
+  onToggle,
+  children,
+}) => (
+  <section className={`checkout-step ${expanded ? 'checkout-step--expanded' : ''} ${locked ? 'checkout-step--locked' : ''}`}>
+    <button
+      type="button"
+      className="checkout-step__header"
+      onClick={onToggle}
+      disabled={locked}
+      aria-expanded={expanded}
+    >
+      <span className="checkout-step__number">{step}</span>
+      <span className="checkout-step__heading">
+        <span className="checkout-step__title">{title}</span>
+        {subtitle ? <span className="checkout-step__subtitle">{subtitle}</span> : null}
+      </span>
+      <span className="checkout-step__icon" aria-hidden="true">
+        {expanded ? <ChevronUp size={22} strokeWidth={1.6} /> : <ChevronDown size={22} strokeWidth={1.6} />}
+      </span>
+    </button>
+    {expanded ? <div className="checkout-step__content">{children}</div> : null}
+  </section>
+);
+
+const buildDeliveryDays = () => {
+  const formatter = new Intl.DateTimeFormat('ru-RU', { weekday: 'short' });
+  return Array.from({ length: 5 }, (_, index) => {
+    const date = new Date();
+    date.setDate(date.getDate() + index);
+    const weekday = formatter.format(date).replace('.', '');
+    return {
+      value: date.toISOString().slice(0, 10),
+      day: String(date.getDate()).padStart(2, '0'),
+      weekday,
+    };
+  });
+};
+
+const splitStreetAndHouse = (rawValue) => {
+  const value = String(rawValue || '').trim();
+  if (!value) {
+    return { street: '', house: '' };
+  }
+  const parts = value.split(',').map((part) => part.trim()).filter(Boolean);
+  if (parts.length <= 1) {
+    return { street: value, house: '' };
+  }
+  return {
+    street: parts.slice(0, -1).join(', '),
+    house: parts.slice(-1)[0],
+  };
+};
+
+const getFirstKnownCityKey = (value) => {
+  const normalized = String(value || '').trim().toLowerCase();
+  return (
+    Object.entries(CITY_CONFIG).find(([, config]) => config.label.toLowerCase() === normalized)?.[0] || ''
+  );
+};
+
+const formatPrice = (value) => `${Number(value || 0).toLocaleString('ru-RU')} ₽`;
+
+const PaymentPage = ({ modalMode = false }) => {
   const { cartItems, getTotalPrice, clearCart } = useCart();
   const navigate = useNavigate();
-  const [form, setForm] = useState({
-    name: '',
+
+  const [authToken] = useState(() => localStorage.getItem('authToken') || '');
+  const [expandedStep, setExpandedStep] = useState('address');
+  const [delivery, setDelivery] = useState({
+    city: '',
+    method: '',
+    pickupPointId: '',
+    courierAddress: null,
+    deliveryDate: '',
+    deliveryTime: '',
+  });
+  const [recipient, setRecipient] = useState({
     phone: '+7',
     email: '',
-    city: '',
-    street: '',
-    house: '',
-    apartment: '',
-    postal_code: '',
-    comment: '',
-    deliveryMethod: 'courier',
-    paymentMethod: 'cash_on_delivery',
-    agreement: false,
+    firstName: '',
+    lastName: '',
+    middleName: '',
+    consentData: false,
+    consentMarketing: false,
   });
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [paymentOption, setPaymentOption] = useState('');
+  const [pickupModalOpen, setPickupModalOpen] = useState(false);
+  const [pickupDraftId, setPickupDraftId] = useState('');
+  const [courierDrawerOpen, setCourierDrawerOpen] = useState(false);
+  const [courierDraft, setCourierDraft] = useState(emptyCourierDraft);
   const [status, setStatus] = useState({ type: '', message: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const extractErrorMessage = (data) => {
-    if (!data) return '';
-    if (typeof data === 'string') return data;
-    if (Array.isArray(data)) {
-      for (const item of data) {
-        const nested = extractErrorMessage(item);
-        if (nested) return nested;
-      }
-      return '';
+  const subtotal = Number(getTotalPrice()) || 0;
+  const deliveryDays = useMemo(() => buildDeliveryDays(), []);
+  const currentCity = delivery.city ? CITY_CONFIG[delivery.city] : null;
+  const pickupPoints = currentCity?.pickupPoints || [];
+  const selectedPickupPoint = pickupPoints.find((point) => point.id === delivery.pickupPointId) || null;
+  const pickupDraftPoint = pickupPoints.find((point) => point.id === pickupDraftId) || null;
+
+  const deliveryFee = useMemo(() => {
+    if (!currentCity || !delivery.method) return 0;
+    return delivery.method === 'pickup' ? currentCity.pickupFee : currentCity.courierFee;
+  }, [currentCity, delivery.method]);
+
+  const total = subtotal + deliveryFee;
+
+  const courierDraftComplete = useMemo(() => {
+    if (!currentCity || delivery.method !== 'courier') return false;
+    return (
+      String(courierDraft.streetHouse).trim() &&
+      String(courierDraft.entrance).trim() &&
+      String(courierDraft.floor).trim() &&
+      String(courierDraft.apartmentOffice).trim() &&
+      String(courierDraft.intercom).trim()
+    );
+  }, [courierDraft, currentCity, delivery.method]);
+
+  const recipientComplete = useMemo(() => {
+    return (
+      String(recipient.phone).trim().length > 3 &&
+      String(recipient.email).trim() &&
+      String(recipient.firstName).trim() &&
+      String(recipient.lastName).trim() &&
+      recipient.consentData
+    );
+  }, [recipient]);
+
+  const addressComplete = useMemo(() => {
+    if (!currentCity || !delivery.method) return false;
+    if (delivery.method === 'pickup') {
+      return Boolean(selectedPickupPoint);
     }
-    if (typeof data === 'object') {
-      if (typeof data.detail === 'string' && data.detail) return data.detail;
-      for (const value of Object.values(data)) {
-        const nested = extractErrorMessage(value);
-        if (nested) return nested;
-      }
-    }
-    return '';
-  };
+    return Boolean(delivery.courierAddress && delivery.deliveryDate && delivery.deliveryTime);
+  }, [currentCity, delivery, selectedPickupPoint]);
+
+  const readyToPay = addressComplete && recipientComplete && Boolean(paymentOption);
 
   useEffect(() => {
-    const token = localStorage.getItem('authToken');
-    if (!token) return;
+    if (!authToken) return;
 
-    getCurrentUser(token)
+    getCurrentUser(authToken)
       .then((response) => {
         const data = response.data || {};
-        const fullName = `${data.first_name || ''} ${data.last_name || ''}`.trim();
-        setForm((prev) => ({
+        const matchedCityKey = getFirstKnownCityKey(data.city);
+        setRecipient((prev) => ({
           ...prev,
-          name: fullName || prev.name,
           phone: formatRuPhone(data.phone || prev.phone),
-          email: data.email || prev.email,
-          city: data.city || prev.city,
-          street: data.street || prev.street,
-          house: data.house || prev.house,
-          apartment: data.apartment || prev.apartment,
-          postal_code: data.postal_code || prev.postal_code,
+          email: data.email || '',
+          firstName: data.first_name || '',
+          lastName: data.last_name || '',
+        }));
+        if (matchedCityKey) {
+          setDelivery((prev) => ({
+            ...prev,
+            city: prev.city || matchedCityKey,
+            method: prev.method || (CITY_CONFIG[matchedCityKey].courierAvailable ? '' : 'pickup'),
+          }));
+        }
+        const profileStreet = [data.street, data.house].filter(Boolean).join(', ');
+        setCourierDraft((prev) => ({
+          ...prev,
+          streetHouse: profileStreet || prev.streetHouse,
+          apartmentOffice: data.apartment || prev.apartmentOffice,
         }));
       })
       .catch(() => {});
-  }, []);
+  }, [authToken]);
 
-  const itemsCount = useMemo(
-    () => cartItems.reduce((sum, item) => sum + item.quantity, 0),
-    [cartItems]
-  );
+  useEffect(() => {
+    if (modalMode || pickupModalOpen || courierDrawerOpen) {
+      const previousOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = previousOverflow;
+      };
+    }
+    return undefined;
+  }, [courierDrawerOpen, modalMode, pickupModalOpen]);
 
-  const handleChange = (field) => (event) => {
+  useEffect(() => {
+    if (addressComplete && expandedStep === 'address') {
+      setExpandedStep('recipient');
+    }
+  }, [addressComplete, expandedStep]);
+
+  useEffect(() => {
+    if (recipientComplete && expandedStep === 'recipient') {
+      setExpandedStep('payment');
+    }
+  }, [expandedStep, recipientComplete]);
+
+  const closeCheckout = () => {
+    if (modalMode) {
+      navigate(-1);
+      return;
+    }
+    navigate('/cart');
+  };
+
+  const handleCityChange = (event) => {
+    const nextCity = event.target.value;
+    const nextCityConfig = nextCity ? CITY_CONFIG[nextCity] : null;
+
+    setDelivery({
+      city: nextCity,
+      method: nextCityConfig ? (nextCityConfig.courierAvailable ? '' : 'pickup') : '',
+      pickupPointId: '',
+      courierAddress: null,
+      deliveryDate: '',
+      deliveryTime: '',
+    });
+    setPickupDraftId('');
+    setExpandedStep('address');
+    setPaymentOption('');
+    setStatus({ type: '', message: '' });
+  };
+
+  const handleDeliveryMethodChange = (method) => {
+    if (!currentCity) return;
+    if (method === 'courier' && !currentCity.courierAvailable) return;
+    setDelivery((prev) => ({
+      ...prev,
+      method,
+      pickupPointId: '',
+      courierAddress: null,
+      deliveryDate: '',
+      deliveryTime: '',
+    }));
+    setExpandedStep('address');
+    setStatus({ type: '', message: '' });
+  };
+
+  const openPickupModal = () => {
+    setPickupDraftId(delivery.pickupPointId || pickupPoints[0]?.id || '');
+    setPickupModalOpen(true);
+  };
+
+  const confirmPickupAddress = () => {
+    if (!pickupDraftId) return;
+    setDelivery((prev) => ({
+      ...prev,
+      pickupPointId: pickupDraftId,
+      courierAddress: null,
+      deliveryDate: '',
+      deliveryTime: '',
+    }));
+    setPickupModalOpen(false);
+    setExpandedStep('recipient');
+  };
+
+  const openCourierDrawer = () => {
+    setCourierDraft(delivery.courierAddress || courierDraft);
+    setCourierDrawerOpen(true);
+  };
+
+  const handleCourierDraftChange = (field) => (event) => {
+    const value = event.target.value;
+    setCourierDraft((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const confirmCourierAddress = () => {
+    if (!courierDraftComplete) return;
+    setDelivery((prev) => ({
+      ...prev,
+      courierAddress: { ...courierDraft },
+      pickupPointId: '',
+      deliveryDate: '',
+      deliveryTime: '',
+    }));
+    setCourierDrawerOpen(false);
+  };
+
+  const handleRecipientChange = (field) => (event) => {
     const value =
-      event.target.type === 'checkbox' ? event.target.checked : event.target.value;
-    setForm((prev) => ({ ...prev, [field]: value }));
+      event.target.type === 'checkbox'
+        ? event.target.checked
+        : event.target.value;
+    setRecipient((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+    setStatus({ type: '', message: '' });
   };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (cartItems.length === 0) {
-      setStatus({ type: 'error', message: 'Корзина пуста.' });
+
+    if (!authToken) {
+      navigate('/auth');
       return;
     }
 
-    const token = localStorage.getItem('authToken');
-    if (!token) {
-      setStatus({ type: 'error', message: 'Сначала зарегистрируйтесь или войдите в аккаунт.' });
-      navigate('/auth');
+    if (!readyToPay) {
+      setStatus({ type: 'error', message: 'Заполните обязательные поля и выберите способ оплаты.' });
       return;
     }
 
     setIsSubmitting(true);
     setStatus({ type: '', message: '' });
 
+    const fullName = [recipient.lastName, recipient.firstName, recipient.middleName]
+      .map((part) => String(part || '').trim())
+      .filter(Boolean)
+      .join(' ');
+
+    const commentParts = [];
+    let orderStreet = '';
+    let orderHouse = '';
+    let orderApartment = '';
+
+    if (delivery.method === 'pickup' && selectedPickupPoint) {
+      orderStreet = selectedPickupPoint.address;
+      orderHouse = selectedPickupPoint.name;
+      orderApartment = selectedPickupPoint.type;
+      commentParts.push(`Самовывоз: ${selectedPickupPoint.address}`);
+      commentParts.push(`${currentCity?.pickupProvider || 'Пункт выдачи'}: ${selectedPickupPoint.name}`);
+    }
+
+    if (delivery.method === 'courier' && delivery.courierAddress) {
+      const splitAddress = splitStreetAndHouse(delivery.courierAddress.streetHouse);
+      orderStreet = splitAddress.street || delivery.courierAddress.streetHouse;
+      orderHouse = splitAddress.house || `подъезд ${delivery.courierAddress.entrance}`;
+      orderApartment = delivery.courierAddress.apartmentOffice;
+      commentParts.push(`Подъезд: ${delivery.courierAddress.entrance}`);
+      commentParts.push(`Этаж: ${delivery.courierAddress.floor}`);
+      commentParts.push(`Домофон: ${delivery.courierAddress.intercom}`);
+      if (delivery.courierAddress.comment) {
+        commentParts.push(delivery.courierAddress.comment);
+      }
+      if (delivery.deliveryDate && delivery.deliveryTime) {
+        commentParts.push(`Доставка: ${delivery.deliveryDate}, ${delivery.deliveryTime}`);
+      }
+    }
+
     try {
-      updateProfile(token, {
-        first_name: form.name.split(' ')[0] || '',
-        last_name: form.name.split(' ').slice(1).join(' ') || '',
-        email: form.email,
-        phone: form.phone,
-        city: form.city,
-        street: form.street,
-        house: form.house,
-        apartment: form.apartment,
-        postal_code: form.postal_code,
+      updateProfile(authToken, {
+        first_name: recipient.firstName,
+        last_name: recipient.lastName,
+        email: recipient.email,
+        phone: recipient.phone,
+        city: currentCity?.label || '',
+        street: orderStreet,
+        house: orderHouse,
+        apartment: orderApartment,
       }).catch(() => {});
 
-      const payload = {
-        full_name: form.name,
-        phone: form.phone,
-        email: form.email,
-        city: form.city,
-        street: form.street,
-        house: form.house,
-        apartment: form.apartment,
-        postal_code: form.postal_code,
-        comment: form.comment,
-        delivery_method: form.deliveryMethod,
-        payment_method: form.paymentMethod,
-        items: cartItems.map((item) =>
-          item.is_gift_certificate || (typeof item.id === 'string' && item.id.startsWith('gift-'))
-            ? {
-                gift_certificate_amount: item.price,
-                gift_certificate_name: item.name,
-                quantity: item.quantity,
-              }
-            : {
-                product_id: item.id,
-                quantity: item.quantity,
-              }
-        ),
-      };
+      const response = await createOrder(
+        {
+          full_name: fullName,
+          phone: recipient.phone,
+          email: recipient.email,
+          city: currentCity?.label || '',
+          street: orderStreet || 'Уточняется',
+          house: orderHouse || '—',
+          apartment: orderApartment,
+          postal_code: '',
+          comment: commentParts.filter(Boolean).join('. '),
+          delivery_method: delivery.method === 'pickup' ? 'pickup' : 'courier',
+          payment_method: 'card_online',
+          items: cartItems.map((item) =>
+            item.is_gift_certificate || (typeof item.id === 'string' && item.id.startsWith('gift-'))
+              ? {
+                  gift_certificate_amount: item.price,
+                  gift_certificate_name: item.name,
+                  quantity: item.quantity,
+                }
+              : {
+                  product_id: item.id,
+                  quantity: item.quantity,
+                }
+          ),
+        },
+        authToken
+      );
 
-      const response = await createOrder(payload, token);
       const orderId = response?.data?.id;
-
-      if (form.paymentMethod === 'card_online') {
-        const paymentResponse = await createYooKassaPayment(orderId, token);
-        const confirmationUrl = paymentResponse?.data?.confirmation_url;
-        if (!confirmationUrl) {
-          throw new Error('Не удалось получить ссылку на оплату.');
-        }
-        clearCart();
-        window.location.href = confirmationUrl;
-        return;
+      const paymentResponse = await createYooKassaPayment(orderId, authToken);
+      const confirmationUrl = paymentResponse?.data?.confirmation_url;
+      if (!confirmationUrl) {
+        throw new Error('Не удалось получить ссылку на оплату.');
       }
 
       clearCart();
-      navigate(`/checkout/success?order=${orderId}`);
+      window.location.href = confirmationUrl;
     } catch (error) {
-      const message =
-        extractErrorMessage(error?.response?.data) ||
-        'Не удалось создать заказ. Проверьте данные и попробуйте снова.';
-      setStatus({ type: 'error', message });
+      const apiMessage =
+        error?.response?.data?.detail ||
+        error?.message ||
+        'Не удалось создать заказ. Проверьте введённые данные.';
+      setStatus({ type: 'error', message: apiMessage });
     } finally {
       setIsSubmitting(false);
     }
@@ -163,20 +512,17 @@ const PaymentPage = () => {
 
   if (cartItems.length === 0) {
     return (
-      <div className="payment-page page-animation">
-        <div className="container">
-          <div className="breadcrumbs">
-            <Link to="/">ГЛАВНАЯ</Link> <span>— </span>
-            <Link to="/cart">КОРЗИНА</Link> <span>— ОПЛАТА</span>
-          </div>
-
-          <h1 className="page-title">ОПЛАТА</h1>
-
+      <div className="payment-page payment-page--empty">
+        <div className="payment-shell payment-shell--empty page-animation">
+          <button type="button" className="payment-shell__close" onClick={closeCheckout} aria-label="Закрыть оформление заказа">
+            <X size={24} strokeWidth={1.7} />
+          </button>
           <div className="payment-empty">
-            <p>Корзина пуста. Добавьте товары, чтобы перейти к оплате.</p>
-            <Link to="/catalog" className="btn-primary">
+            <h1>Корзина пуста</h1>
+            <p>Добавьте товары в корзину, чтобы перейти к оформлению заказа.</p>
+            <button type="button" className="payment-primary-button payment-primary-button--active" onClick={() => navigate('/catalog')}>
               Перейти в каталог
-            </Link>
+            </button>
           </div>
         </div>
       </div>
@@ -184,243 +530,418 @@ const PaymentPage = () => {
   }
 
   return (
-    <div className="payment-page page-animation">
-      <div className="container">
-        <div className="breadcrumbs">
-          <Link to="/">ГЛАВНАЯ</Link> <span>— </span>
-          <Link to="/cart">КОРЗИНА</Link> <span>— ОПЛАТА</span>
+    <div className={`payment-page ${modalMode ? 'payment-page--modal' : ''}`}>
+      <div className={`payment-shell page-animation ${modalMode ? 'payment-shell--modal' : ''}`}>
+        <div className="payment-shell__top">
+          <h1 className="payment-shell__title">ОФОРМЛЕНИЕ ЗАКАЗА</h1>
+          <button type="button" className="payment-shell__close" onClick={closeCheckout} aria-label="Закрыть оформление заказа">
+            <X size={24} strokeWidth={1.7} />
+          </button>
         </div>
 
-        <h1 className="page-title">ОФОРМЛЕНИЕ ЗАКАЗА</h1>
-
-        <div className="payment-layout">
-          <form className="payment-form" onSubmit={handleSubmit}>
-            <div className="payment-card">
-              <h2>Контактные данные</h2>
-              <div className="payment-grid">
-                <label className="payment-field">
-                  <span>Имя и фамилия</span>
-                  <input
-                    type="text"
-                    value={form.name}
-                    onChange={handleChange('name')}
-                    placeholder="Ваше имя"
-                    required
-                  />
-                </label>
-                <label className="payment-field">
-                  <span>Телефон</span>
-                  <input
-                    type="tel"
-                    value={form.phone}
-                    onChange={(event) =>
-                      setForm((prev) => ({ ...prev, phone: formatRuPhone(event.target.value) }))
-                    }
-                    onKeyDown={(event) => {
-                      if (!isPhoneInputKeyAllowed(event)) {
-                        event.preventDefault();
-                      }
-                    }}
-                    placeholder="+7 (999) 000-00-00"
-                    required
-                  />
-                </label>
-                <label className="payment-field">
-                  <span>Email</span>
-                  <input
-                    type="email"
-                    value={form.email}
-                    onChange={handleChange('email')}
-                    placeholder="name@example.com"
-                  />
-                </label>
+        <form className="payment-shell__layout" onSubmit={handleSubmit}>
+          <div className="payment-shell__main">
+            <CheckoutStep
+              step={1}
+              title="АДРЕС ДОСТАВКИ"
+              subtitle={addressComplete ? '' : 'выбрать способ доставки'}
+              expanded={expandedStep === 'address'}
+              locked={false}
+              onToggle={() => setExpandedStep('address')}
+            >
+              <div className="payment-field-row">
+                <div className="payment-field-row__label">Населённый пункт</div>
+                <div className="payment-field-row__control">
+                  <label className="payment-select">
+                    <select value={delivery.city} onChange={handleCityChange}>
+                      <option value="">Выберите город</option>
+                      {Object.entries(CITY_CONFIG).map(([key, config]) => (
+                        <option key={key} value={key}>
+                          {config.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
               </div>
-            </div>
 
-            <div className="payment-card">
-              <h2>Доставка</h2>
-              <div className="payment-grid">
-                <label className="payment-field">
-                  <span>Город</span>
-                  <input
-                    type="text"
-                    value={form.city}
-                    onChange={handleChange('city')}
-                    placeholder="Город"
-                    required
-                  />
-                </label>
-                <label className="payment-field">
-                  <span>Улица</span>
-                  <input
-                    type="text"
-                    value={form.street}
-                    onChange={handleChange('street')}
-                    placeholder="Улица"
-                    required
-                  />
-                </label>
-                <label className="payment-field">
-                  <span>Дом</span>
-                  <input
-                    type="text"
-                    value={form.house}
-                    onChange={handleChange('house')}
-                    placeholder="Дом"
-                    required
-                  />
-                </label>
-                <label className="payment-field">
-                  <span>Квартира</span>
-                  <input
-                    type="text"
-                    value={form.apartment}
-                    onChange={handleChange('apartment')}
-                    placeholder="Квартира"
-                  />
-                </label>
-                <label className="payment-field">
-                  <span>Индекс</span>
-                  <input
-                    type="text"
-                    value={form.postal_code}
-                    onChange={handleChange('postal_code')}
-                    placeholder="Индекс"
-                  />
-                </label>
-                <label className="payment-field payment-field--full">
-                  <span>Комментарий к заказу</span>
-                  <textarea
-                    value={form.comment}
-                    onChange={handleChange('comment')}
-                    placeholder="Пожелания по доставке"
-                    rows={3}
-                  />
-                </label>
+              <div className="payment-field-row">
+                <div className="payment-field-row__label">Способ доставки</div>
+                <div className="payment-field-row__control">
+                  <div className="payment-radio-row">
+                    <label className="payment-radio">
+                      <input
+                        type="radio"
+                        checked={delivery.method === 'pickup'}
+                        onChange={() => handleDeliveryMethodChange('pickup')}
+                        disabled={!currentCity}
+                      />
+                      <span>Самовывоз</span>
+                      {currentCity?.pickupFee ? <small>{formatPrice(currentCity.pickupFee)}</small> : null}
+                    </label>
+
+                    <label className={`payment-radio ${currentCity && !currentCity.courierAvailable ? 'payment-radio--disabled' : ''}`}>
+                      <input
+                        type="radio"
+                        checked={delivery.method === 'courier'}
+                        onChange={() => handleDeliveryMethodChange('courier')}
+                        disabled={!currentCity || !currentCity.courierAvailable}
+                      />
+                      <span>Курьер</span>
+                      {currentCity?.courierAvailable ? <small>{formatPrice(currentCity.courierFee)}</small> : null}
+                    </label>
+
+                    {currentCity && !currentCity.courierAvailable ? (
+                      <span className="payment-inline-note">
+                        <Info size={14} strokeWidth={1.8} />
+                        Пока недоступно в Вашем регионе
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
               </div>
-            </div>
 
-            <div className="payment-card">
-              <h2>Способ доставки</h2>
-              <div className="payment-options">
-                <label className="payment-option">
-                  <input
-                    type="radio"
-                    name="delivery"
-                    value="courier"
-                    checked={form.deliveryMethod === 'courier'}
-                    onChange={(event) => {
-                      setForm((prev) => ({
-                        ...prev,
-                        deliveryMethod: event.target.value,
-                        paymentMethod:
-                          prev.paymentMethod === 'cash_pickup' ? 'cash_on_delivery' : prev.paymentMethod,
-                      }));
-                    }}
-                  />
-                  <span>Курьерская доставка</span>
-                </label>
-                <label className="payment-option">
-                  <input
-                    type="radio"
-                    name="delivery"
-                    value="pickup"
-                    checked={form.deliveryMethod === 'pickup'}
-                    onChange={(event) => {
-                      setForm((prev) => ({
-                        ...prev,
-                        deliveryMethod: event.target.value,
-                        paymentMethod:
-                          prev.paymentMethod === 'cash_on_delivery' ? 'cash_pickup' : prev.paymentMethod,
-                      }));
-                    }}
-                  />
-                  <span>Самовывоз</span>
-                </label>
+              <div className="payment-field-row">
+                <div className="payment-field-row__label">Адрес доставки</div>
+                <div className="payment-field-row__control">
+                  {!delivery.method ? (
+                    <button type="button" className="payment-secondary-button payment-secondary-button--disabled" disabled>
+                      ВЫБРАТЬ
+                    </button>
+                  ) : delivery.method === 'pickup' ? (
+                    selectedPickupPoint ? (
+                      <div className="payment-address-block">
+                        <span className="payment-address-block__provider">{currentCity?.pickupProvider}</span>
+                        <div className="payment-address-block__actions">
+                          <div className="payment-address-block__value">{selectedPickupPoint.address}</div>
+                          <button type="button" className="payment-secondary-button" onClick={openPickupModal}>
+                            ИЗМЕНИТЬ
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button type="button" className="payment-secondary-button" onClick={openPickupModal}>
+                        ВЫБРАТЬ
+                      </button>
+                    )
+                  ) : delivery.courierAddress ? (
+                    <div className="payment-address-block">
+                      <div className="payment-address-block__actions">
+                        <div className="payment-address-block__value">{delivery.courierAddress.streetHouse}</div>
+                        <button type="button" className="payment-secondary-button" onClick={openCourierDrawer}>
+                          ИЗМЕНИТЬ
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button type="button" className="payment-secondary-button" onClick={openCourierDrawer}>
+                      ВЫБРАТЬ
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
 
-            <div className="payment-card">
-              <h2>Способ оплаты</h2>
-              <div className="payment-options">
-                <label className="payment-option">
-                  <input
-                    type="radio"
-                    name="payment"
-                    value="cash_on_delivery"
-                    checked={form.paymentMethod === 'cash_on_delivery'}
-                    onChange={handleChange('paymentMethod')}
-                    disabled={form.deliveryMethod !== 'courier'}
-                  />
-                  <span>Наличными курьеру при доставке</span>
-                </label>
-                <label className="payment-option">
-                  <input
-                    type="radio"
-                    name="payment"
-                    value="cash_pickup"
-                    checked={form.paymentMethod === 'cash_pickup'}
-                    onChange={handleChange('paymentMethod')}
-                    disabled={form.deliveryMethod !== 'pickup'}
-                  />
-                  <span>На кассе при самовывозе</span>
-                </label>
-                <label className="payment-option">
-                  <input
-                    type="radio"
-                    name="payment"
-                    value="card_online"
-                    checked={form.paymentMethod === 'card_online'}
-                    onChange={handleChange('paymentMethod')}
-                  />
-                  <span>Карта онлайн (ЮKassa)</span>
-                </label>
+              {delivery.method === 'courier' && delivery.courierAddress ? (
+                <div className="payment-field-row payment-field-row--delivery-time">
+                  <div className="payment-field-row__label">Дата и время доставки</div>
+                  <div className="payment-field-row__control">
+                    <div className="payment-delivery-days">
+                      {deliveryDays.map((day) => (
+                        <button
+                          key={day.value}
+                          type="button"
+                          className={`payment-day-pill ${delivery.deliveryDate === day.value ? 'payment-day-pill--active' : ''}`}
+                          onClick={() => setDelivery((prev) => ({ ...prev, deliveryDate: day.value }))}
+                        >
+                          <span>{day.day}</span>
+                          <small>{day.weekday}</small>
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="payment-time-slots">
+                      {DELIVERY_TIME_SLOTS.map((slot) => (
+                        <button
+                          key={slot.value}
+                          type="button"
+                          className={`payment-time-pill ${delivery.deliveryTime === slot.value ? 'payment-time-pill--active' : ''}`}
+                          onClick={() => setDelivery((prev) => ({ ...prev, deliveryTime: slot.value }))}
+                        >
+                          {slot.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+            </CheckoutStep>
+
+            <CheckoutStep
+              step={2}
+              title="ПОЛУЧАТЕЛЬ"
+              subtitle={recipientComplete ? '' : 'уточните данные'}
+              expanded={expandedStep === 'recipient'}
+              locked={!addressComplete}
+              onToggle={() => {
+                if (!addressComplete) return;
+                setExpandedStep('recipient');
+              }}
+            >
+              <div className="payment-recipient">
+                <div className="payment-recipient__group">
+                  <h2>КОНТАКТЫ</h2>
+                  <div className="payment-recipient__grid">
+                    <label className="payment-input">
+                      <span>Номер телефона <b>*</b></span>
+                      <input
+                        type="tel"
+                        value={recipient.phone}
+                        onChange={(event) =>
+                          setRecipient((prev) => ({ ...prev, phone: formatRuPhone(event.target.value) }))
+                        }
+                        onKeyDown={(event) => {
+                          if (!isPhoneInputKeyAllowed(event)) {
+                            event.preventDefault();
+                          }
+                        }}
+                        placeholder="Введите номер"
+                      />
+                    </label>
+
+                    <label className="payment-input">
+                      <span>Контактная почта <b>*</b></span>
+                      <input
+                        type="email"
+                        value={recipient.email}
+                        onChange={handleRecipientChange('email')}
+                        placeholder="Введите почту"
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                <div className="payment-recipient__group">
+                  <h2>ДАННЫЕ</h2>
+                  <div className="payment-recipient__grid">
+                    <label className="payment-input">
+                      <span>Имя <b>*</b></span>
+                      <input
+                        type="text"
+                        value={recipient.firstName}
+                        onChange={handleRecipientChange('firstName')}
+                        placeholder="Введите Ваше имя"
+                      />
+                    </label>
+
+                    <label className="payment-input">
+                      <span>Фамилия <b>*</b></span>
+                      <input
+                        type="text"
+                        value={recipient.lastName}
+                        onChange={handleRecipientChange('lastName')}
+                        placeholder="Введите Вашу фамилию"
+                      />
+                    </label>
+
+                    <label className="payment-input">
+                      <span>Отчество</span>
+                      <input
+                        type="text"
+                        value={recipient.middleName}
+                        onChange={handleRecipientChange('middleName')}
+                        placeholder="Введите Ваше отчество"
+                      />
+                    </label>
+                  </div>
+
+                  <label className="payment-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={recipient.consentData}
+                      onChange={handleRecipientChange('consentData')}
+                    />
+                    <span>Я даю согласие на передачу моих персональных данных с целью осуществления доставки товара третьим лицам <b>*</b></span>
+                  </label>
+
+                  <label className="payment-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={recipient.consentMarketing}
+                      onChange={handleRecipientChange('consentMarketing')}
+                    />
+                    <span>Я даю согласие на получение рекламных рассылок в виде sms, email или в мессенджерах</span>
+                  </label>
+                </div>
               </div>
-            </div>
+            </CheckoutStep>
 
-            <label className="payment-agreement">
-              <input
-                type="checkbox"
-                checked={form.agreement}
-                onChange={handleChange('agreement')}
-                required
-              />
-              <span>Я согласен с условиями обработки персональных данных</span>
-            </label>
-
-            <button className="btn-primary btn-primary--full" type="submit">
-              {isSubmitting ? 'Создание заказа...' : 'Готово!'}
-            </button>
-            {status.message && (
-              <div className={`payment-status payment-status--${status.type}`}>
-                {status.message}
+            <CheckoutStep
+              step={3}
+              title="СПОСОБЫ ОПЛАТЫ"
+              subtitle={paymentOption ? '' : 'выберите вариант'}
+              expanded={expandedStep === 'payment'}
+              locked={!recipientComplete}
+              onToggle={() => {
+                if (!recipientComplete) return;
+                setExpandedStep('payment');
+              }}
+            >
+              <div className="payment-payments">
+                <h2>ВЫБЕРИТЕ ВАРИАНТ ОПЛАТЫ</h2>
+                <div className="payment-payments__list">
+                  {PAYMENT_OPTIONS.map((option) => (
+                    <label key={option.value} className="payment-radio payment-radio--payment">
+                      <input
+                        type="radio"
+                        name="payment-option"
+                        checked={paymentOption === option.value}
+                        onChange={() => setPaymentOption(option.value)}
+                      />
+                      <span>{option.label}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
-            )}
-          </form>
+            </CheckoutStep>
+          </div>
 
           <aside className="payment-summary">
-            <h2>Ваш заказ</h2>
+            <h2>СУММА ЗАКАЗА</h2>
             <div className="payment-summary__row">
-              <span>Товаров:</span>
-              <span>{itemsCount} шт.</span>
+              <span>Стоимость товаров:</span>
+              <span>{formatPrice(subtotal)}</span>
             </div>
-            <div className="payment-summary__row">
-              <span>Сумма:</span>
-              <span>{getTotalPrice().toLocaleString('ru-RU')} ₽</span>
+            {delivery.method ? (
+              <div className="payment-summary__row">
+                <span>{delivery.method === 'pickup' ? 'Самовывоз:' : 'Курьер:'}</span>
+                <span>{formatPrice(deliveryFee)}</span>
+              </div>
+            ) : null}
+            <div className="payment-summary__divider" />
+            <div className="payment-summary__row payment-summary__row--total">
+              <span>ИТОГО:</span>
+              <span>{formatPrice(total)}</span>
             </div>
-            <div className="payment-summary__row payment-summary__total">
-              <span>К оплате:</span>
-              <span>{getTotalPrice().toLocaleString('ru-RU')} ₽</span>
+            <button
+              type="submit"
+              className={`payment-primary-button ${readyToPay ? 'payment-primary-button--active' : ''}`}
+              disabled={!readyToPay || isSubmitting}
+            >
+              {isSubmitting ? 'ПЕРЕХОД...' : 'ОПЛАТИТЬ'}
+            </button>
+            {status.message ? (
+              <div className={`payment-status payment-status--${status.type || 'error'}`}>
+                {status.message}
+              </div>
+            ) : null}
+          </aside>
+        </form>
+      </div>
+
+      {pickupModalOpen ? (
+        <div className="payment-pickup-modal" role="dialog" aria-modal="true" aria-label="Выбор пункта самовывоза">
+          <div className="payment-pickup-modal__map" />
+          <div className="payment-pickup-modal__panel">
+            <button type="button" className="payment-shell__close payment-pickup-modal__close" onClick={() => setPickupModalOpen(false)} aria-label="Закрыть выбор пункта самовывоза">
+              <X size={24} strokeWidth={1.7} />
+            </button>
+            <h2>САМОВЫВОЗ</h2>
+            <div className="payment-input">
+              <span>Пункт выдачи</span>
+              <label className="payment-select payment-select--light">
+                <select value={pickupDraftId} onChange={(event) => setPickupDraftId(event.target.value)}>
+                  <option value="">Выберите вариант</option>
+                  {pickupPoints.map((point) => (
+                    <option key={point.id} value={point.id}>
+                      {point.address}
+                    </option>
+                  ))}
+                </select>
+              </label>
             </div>
-            <p className="payment-summary__note">
-              При выборе "Карта онлайн" вы будете перенаправлены на защищенную страницу оплаты ЮKassa.
-            </p>
-            <Link to="/cart" className="btn-link btn-link--center">
-              Вернуться в корзину
-            </Link>
+
+            {pickupDraftPoint ? (
+              <div className="payment-pickup-modal__details">
+                <p>Тип: {pickupDraftPoint.type}</p>
+                <p>Вес: {pickupDraftPoint.weight}</p>
+                <p>Время работы: {pickupDraftPoint.hours}</p>
+              </div>
+            ) : null}
+
+            <button
+              type="button"
+              className={`payment-primary-button ${pickupDraftId ? 'payment-primary-button--active' : ''}`}
+              disabled={!pickupDraftId}
+              onClick={confirmPickupAddress}
+            >
+              ПОДТВЕРДИТЬ АДРЕС
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {courierDrawerOpen ? (
+        <div className="payment-drawer-layer" role="dialog" aria-modal="true" aria-label="Курьерский адрес">
+          <button type="button" className="payment-drawer-layer__backdrop" onClick={() => setCourierDrawerOpen(false)} aria-label="Закрыть форму адреса доставки" />
+          <aside className="payment-drawer">
+            <button type="button" className="payment-shell__close payment-drawer__close" onClick={() => setCourierDrawerOpen(false)} aria-label="Закрыть форму адреса доставки">
+              <X size={24} strokeWidth={1.7} />
+            </button>
+            <h2>АДРЕС ДОСТАВКИ</h2>
+            <p className="payment-drawer__city">{currentCity?.label || ''}</p>
+
+            <div className="payment-drawer__fields">
+              <input
+                type="text"
+                value={courierDraft.streetHouse}
+                onChange={handleCourierDraftChange('streetHouse')}
+                placeholder="Улица и дом"
+              />
+              <div className="payment-drawer__grid">
+                <input
+                  type="text"
+                  value={courierDraft.entrance}
+                  onChange={handleCourierDraftChange('entrance')}
+                  placeholder="Подъезд"
+                />
+                <input
+                  type="text"
+                  value={courierDraft.floor}
+                  onChange={handleCourierDraftChange('floor')}
+                  placeholder="Этаж"
+                />
+                <input
+                  type="text"
+                  value={courierDraft.apartmentOffice}
+                  onChange={handleCourierDraftChange('apartmentOffice')}
+                  placeholder="Кв./офис"
+                />
+                <input
+                  type="text"
+                  value={courierDraft.intercom}
+                  onChange={handleCourierDraftChange('intercom')}
+                  placeholder="Домофон"
+                />
+              </div>
+              <input
+                type="text"
+                value={courierDraft.comment}
+                onChange={handleCourierDraftChange('comment')}
+                placeholder="Комментарий"
+              />
+            </div>
+
+            <button
+              type="button"
+              className={`payment-primary-button ${courierDraftComplete ? 'payment-primary-button--active' : ''}`}
+              disabled={!courierDraftComplete}
+              onClick={confirmCourierAddress}
+            >
+              ПОДТВЕРДИТЬ АДРЕС
+            </button>
           </aside>
         </div>
-      </div>
+      ) : null}
     </div>
   );
 };

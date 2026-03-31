@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Trash2, Plus, Minus, ShoppingBag } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { resolveMediaUrl } from '../utils/media';
@@ -7,6 +7,7 @@ import './CartPage.css';
 
 const CartPage = () => {
   const { cartItems, removeFromCart, updateQuantity, clearCart, getTotalPrice } = useCart();
+  const location = useLocation();
 
   const handleQuantityChange = (productId, newQuantity) => {
     if (newQuantity < 1) {
@@ -182,6 +183,7 @@ const CartPage = () => {
 
               <Link
                 to={isAuthenticated ? '/checkout' : '/auth'}
+                state={isAuthenticated ? { backgroundLocation: location } : undefined}
                 className="cart-summary__submit"
               >
                 К ОФОРМЛЕНИЮ

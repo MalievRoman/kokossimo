@@ -33,16 +33,20 @@ const ScrollToTop = () => {
 };
 
 function App() {
-  const { pathname } = useLocation();
+  const location = useLocation();
+  const { pathname } = location;
+  const backgroundLocation = location.state?.backgroundLocation;
+  const displayLocation = backgroundLocation || location;
+  const isCheckoutFullscreen = pathname === '/checkout' && !backgroundLocation;
 
   return (
     <div className="app">
       <ScrollToTop />
-      <Header />
+      {!isCheckoutFullscreen ? <Header /> : null}
       
       <main>
-        <div className="page-animation" key={pathname}>
-          <Routes>
+        <div className="page-animation" key={displayLocation.pathname}>
+          <Routes location={displayLocation}>
             {/* 1. Сначала самые важные и конкретные страницы */}
             <Route path="/" element={<HomePage />} />
             <Route path="/catalog" element={<CatalogPage />} />
@@ -65,9 +69,15 @@ function App() {
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </div>
+
+        {backgroundLocation ? (
+          <Routes>
+            <Route path="/checkout" element={<PaymentPage modalMode />} />
+          </Routes>
+        ) : null}
       </main>
       
-      <Footer />
+      {!isCheckoutFullscreen ? <Footer /> : null}
     </div>
   );
 }
