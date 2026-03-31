@@ -227,6 +227,7 @@ MOYSKLAD_USE_FOLDER_TREE_FILTER = os.getenv('MOYSKLAD_USE_FOLDER_TREE_FILTER', '
 MOYSKLAD_RELAX_FOLDER_FILTER = os.getenv('MOYSKLAD_RELAX_FOLDER_FILTER', 'true').lower() in ('1', 'true', 'yes')
 MOYSKLAD_STRICT_CATEGORY_ONLY = os.getenv('MOYSKLAD_STRICT_CATEGORY_ONLY', 'true').lower() in ('1', 'true', 'yes')
 MOYSKLAD_IMAGE_META_FETCH = os.getenv('MOYSKLAD_IMAGE_META_FETCH', 'true').lower() in ('1', 'true', 'yes')
+MOYSKLAD_IMAGE_PROXY_REDIRECT_ONLY = os.getenv('MOYSKLAD_IMAGE_PROXY_REDIRECT_ONLY', 'false').lower() in ('1', 'true', 'yes')
 MOYSKLAD_SYNC_PAGE_SIZE = int(os.getenv('MOYSKLAD_SYNC_PAGE_SIZE', '50'))
 MOYSKLAD_USE_SEARCH_FILTER = os.getenv('MOYSKLAD_USE_SEARCH_FILTER', 'true').lower() in ('1', 'true', 'yes')
 MOYSKLAD_SITE_SEARCH_QUERY = os.getenv('MOYSKLAD_SITE_SEARCH_QUERY', '')

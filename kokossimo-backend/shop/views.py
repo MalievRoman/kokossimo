@@ -16,7 +16,7 @@ from django.db.models import Q, Avg, Count, Min, Max
 from django.db import transaction
 from decimal import Decimal, InvalidOperation
 from django.shortcuts import get_object_or_404
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponse, HttpResponseRedirect
 import base64
 import logging
 import uuid
@@ -1165,6 +1165,8 @@ def _product_image_proxy_impl(request, product_id):
         return _placeholder_or_debug(request, "product_not_found")
     if not product.external_image_url:
         return _placeholder_or_debug(request, "no_external_image_url")
+    if getattr(settings, "MOYSKLAD_IMAGE_PROXY_REDIRECT_ONLY", False):
+        return HttpResponseRedirect(product.external_image_url)
 
     def _image_response(binary_payload, mime_type):
         response = HttpResponse(binary_payload, content_type=mime_type)
