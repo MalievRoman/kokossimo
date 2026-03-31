@@ -35,6 +35,23 @@ def _sanitize_text(value):
     return str(value).replace("\x00", "").strip()
 
 
+def _sanitize_for_db(value):
+    """Рекурсивно очищает NUL-байты из структур, сохраняемых в БД/JSONField."""
+    if isinstance(value, str):
+        return value.replace("\x00", "")
+    if isinstance(value, list):
+        return [_sanitize_for_db(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_sanitize_for_db(item) for item in value)
+    if isinstance(value, dict):
+        cleaned = {}
+        for key, item in value.items():
+            clean_key = _sanitize_for_db(key) if isinstance(key, str) else key
+            cleaned[clean_key] = _sanitize_for_db(item)
+        return cleaned
+    return value
+
+
 def _extract_id_from_href(href):
     if not href:
         return ""
@@ -315,8 +332,8 @@ def _finish_sync_log(sync_log, status, stats=None, error=""):
     sync_log.status = status
     sync_log.finished_at = finished_at
     sync_log.duration_ms = duration_ms
-    sync_log.stats = stats or {}
-    sync_log.error = (error or "")[:5000]
+    sync_log.stats = _sanitize_for_db(stats or {})
+    sync_log.error = _sanitize_text(error)[:5000]
     sync_log.save(update_fields=["status", "finished_at", "duration_ms", "stats", "error"])
 
 
