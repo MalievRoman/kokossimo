@@ -33,15 +33,13 @@ const ScrollToTop = () => {
 };
 
 function App() {
-  const { pathname } = useLocation();
-
   return (
     <div className="app">
       <ScrollToTop />
       <Header />
       
       <main>
-        <div className="page-animation" key={pathname}>
+        <div className="page-animation">
           <Routes>
             {/* 1. Сначала самые важные и конкретные страницы */}
             <Route path="/" element={<HomePage />} />
