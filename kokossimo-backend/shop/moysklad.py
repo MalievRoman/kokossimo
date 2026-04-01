@@ -157,6 +157,16 @@ class MoySkladClient:
         query = {"limit": max(1, min(int(limit), 1000)), "offset": max(0, int(offset))}
         return self._request("GET", "/entity/productfolder", query=query)
 
+    def get_customer_orders(self, limit=100, offset=0, filter_expr="", expand="", order_by=""):
+        query = {"limit": max(1, min(int(limit), 1000)), "offset": max(0, int(offset))}
+        if filter_expr:
+            query["filter"] = filter_expr.strip()
+        if expand:
+            query["expand"] = expand.strip()
+        if order_by:
+            query["order"] = order_by.strip()
+        return self._request("GET", "/entity/customerorder", query=query)
+
     def _path_from_href(self, href):
         parsed = urlparse(href)
         path = parsed.path
