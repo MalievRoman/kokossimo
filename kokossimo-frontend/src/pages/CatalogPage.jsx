@@ -7,10 +7,18 @@ import { useCatalogFilters } from '../context/CatalogFiltersContext';
 import './CatalogPage.css';
 
 const CATALOG_PAGE_SIZE = 30;
+const CATALOG_STATE_STORAGE_KEY = 'catalog_state_v1';
+const CATALOG_SORT_STORAGE_KEY = 'catalog_sort_v1';
 
 const CatalogPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [sortBy, setSortBy] = useState('popular');
+  const [sortBy, setSortBy] = useState(() => {
+    try {
+      return sessionStorage.getItem(CATALOG_SORT_STORAGE_KEY) || 'popular';
+    } catch {
+      return 'popular';
+    }
+  });
   const [catalogProducts, setCatalogProducts] = useState([]);
   const [totalProducts, setTotalProducts] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
@@ -33,7 +41,53 @@ const CatalogPage = () => {
   const mobileCategoryDetailsRef = useRef(null);
   const priceFilterButtonRef = useRef(null);
   const productsRequestIdRef = useRef(0);
+  const skipInitialPageResetRef = useRef(true);
+  const skipFirstFetchRef = useRef(false);
   const catalogFiltersContext = useCatalogFilters();
+  const queryKey = `${searchParams.toString()}::${sortBy}`;
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(CATALOG_SORT_STORAGE_KEY, sortBy);
+    } catch {
+      // noop
+    }
+  }, [sortBy]);
+
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(CATALOG_STATE_STORAGE_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      if (!saved || saved.queryKey !== queryKey) return;
+      setCatalogProducts(Array.isArray(saved.catalogProducts) ? saved.catalogProducts : []);
+      setTotalProducts(Number(saved.totalProducts) || 0);
+      setTotalPages(Number(saved.totalPages) || 1);
+      setCurrentPage(Number(saved.currentPage) || 1);
+      setHasMore(Boolean(saved.hasMore));
+      setLoading(false);
+      setLoadingMore(false);
+      skipFirstFetchRef.current = true;
+    } catch {
+      // ignore corrupted session cache
+    }
+  }, [queryKey]);
+
+  useEffect(() => {
+    try {
+      const payload = {
+        queryKey,
+        catalogProducts,
+        totalProducts,
+        totalPages,
+        currentPage,
+        hasMore,
+      };
+      sessionStorage.setItem(CATALOG_STATE_STORAGE_KEY, JSON.stringify(payload));
+    } catch {
+      // noop
+    }
+  }, [queryKey, catalogProducts, totalProducts, totalPages, currentPage, hasMore]);
 
   // Синхронизация выбранных фильтров в контекст (без catalogFiltersContext в deps — иначе цикл ре-рендеров)
   useEffect(() => {
@@ -141,6 +195,10 @@ const CatalogPage = () => {
 
   // При изменении фильтров/поиска/сортировки заново грузим с первой страницы.
   useEffect(() => {
+    if (skipInitialPageResetRef.current) {
+      skipInitialPageResetRef.current = false;
+      return;
+    }
     setCurrentPage(1);
   }, [searchParams, selectedParents, selectedSubcategories, sortBy]);
 
@@ -203,6 +261,10 @@ const CatalogPage = () => {
 
   // Загрузка товаров
   useEffect(() => {
+    if (skipFirstFetchRef.current) {
+      skipFirstFetchRef.current = false;
+      return;
+    }
     if (currentPage === 1) {
       setLoading(true);
       setLoadingMore(false);
