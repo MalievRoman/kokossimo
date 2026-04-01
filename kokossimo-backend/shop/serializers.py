@@ -61,16 +61,16 @@ class ProductSerializer(serializers.ModelSerializer):
         ]
     
     def get_image(self, obj):
-        if getattr(obj, "external_image_url", ""):
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(f"/api/products/{obj.id}/image/")
-            return f"/api/products/{obj.id}/image/"
         if obj.image:
             request = self.context.get('request')
             if request:
                 return request.build_absolute_uri(obj.image.url)
             return f"{settings.MEDIA_URL}{obj.image}"
+        if getattr(obj, "external_image_url", ""):
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(f"/api/products/{obj.id}/image/")
+            return f"/api/products/{obj.id}/image/"
         return None
 
     def get_product_subcategory_code(self, obj):
@@ -328,13 +328,15 @@ class OrderSerializer(serializers.ModelSerializer):
                     else ""
                 ),
                 'product_image': (
-                    self.context.get('request').build_absolute_uri(f"/api/products/{item.product_id}/image/")
-                    if item.product and item.product.external_image_url
-                    else
                     self.context.get('request').build_absolute_uri(item.product.image.url)
                     if item.product and item.product.image and self.context.get('request')
                     else f"{settings.MEDIA_URL}{item.product.image}"
                     if item.product and item.product.image
+                    else
+                    self.context.get('request').build_absolute_uri(f"/api/products/{item.product_id}/image/")
+                    if item.product and item.product.external_image_url and self.context.get('request')
+                    else f"/api/products/{item.product_id}/image/"
+                    if item.product and item.product.external_image_url
                     else None
                 ),
                 'is_gift_certificate': item.is_gift_certificate,
