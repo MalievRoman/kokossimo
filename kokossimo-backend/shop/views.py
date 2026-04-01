@@ -11,7 +11,7 @@ from django.core.mail import send_mail
 from django.utils import timezone
 from datetime import timedelta
 import secrets
-from django.db.models import Q, Avg, Count, Min, Max
+from django.db.models import Q, Avg, Count, Min, Max, Prefetch
 from django.db import transaction
 from decimal import Decimal, InvalidOperation
 from django.shortcuts import get_object_or_404
@@ -457,6 +457,19 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = ProductSerializer
     pagination_class = CatalogPagination
 
+    def _with_user_rating_prefetch(self, queryset):
+        if not self.request.user.is_authenticated:
+            return queryset
+        user_ratings_qs = ProductRating.objects.filter(user_id=self.request.user.id).only(
+            "id",
+            "product_id",
+            "rating",
+            "user_id",
+        )
+        return queryset.prefetch_related(
+            Prefetch("ratings", queryset=user_ratings_qs, to_attr="current_user_ratings")
+        )
+
     def get_queryset(self):
         subcategory_codes = self.request.query_params.getlist('subcategory')
         parent_codes = self.request.query_params.getlist('parent')
@@ -531,6 +544,7 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
                 )
             queryset = _apply_price_filters(queryset)
             queryset = _apply_ordering(queryset)
+            queryset = self._with_user_rating_prefetch(queryset)
             return queryset
 
         # Фильтрация товаров через параметры URL
@@ -566,6 +580,7 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
 
         queryset = _apply_price_filters(queryset)
         queryset = _apply_ordering(queryset)
+        queryset = self._with_user_rating_prefetch(queryset)
         return queryset
 
     @action(detail=False, methods=["get"], url_path="price-range")

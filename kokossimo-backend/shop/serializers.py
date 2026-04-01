@@ -87,6 +87,9 @@ class ProductSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if not request or not request.user.is_authenticated:
             return None
+        prefetched = getattr(obj, "current_user_ratings", None)
+        if prefetched is not None:
+            return prefetched[0].rating if prefetched else None
         rating = obj.ratings.filter(user=request.user).first()
         return rating.rating if rating else None
 
