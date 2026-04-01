@@ -43,15 +43,15 @@ function App() {
     <div className="app">
       <ScrollToTop />
       {!isCheckoutFullscreen ? <Header /> : null}
-      
+
       <main>
-        <div className="page-animation" key={displayLocation.pathname}>
+        <div className="page-animation">
           <Routes location={displayLocation}>
             {/* 1. Сначала самые важные и конкретные страницы */}
             <Route path="/" element={<HomePage />} />
             <Route path="/catalog" element={<CatalogPage />} />
             <Route path="/certificates" element={<CertificatesPage />} />
-            
+
             {/* 2. Потом страницы "В разработке" */}
             <Route path="/about" element={<AboutPage />} />
             <Route path="/contacts" element={<ContactsPage />} />
@@ -64,7 +64,7 @@ function App() {
             <Route path="/checkout" element={<PaymentPage />} />
             <Route path="/checkout/success" element={<CheckoutSuccessPage />} />
             <Route path="/product/:id" element={<ProductPage />} />
-            
+
             {/* 3. И ТОЛЬКО В САМОМ КОНЦЕ - заглушка для всего остального */}
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
@@ -76,7 +76,7 @@ function App() {
           </Routes>
         ) : null}
       </main>
-      
+
       {!isCheckoutFullscreen ? <Footer /> : null}
     </div>
   );

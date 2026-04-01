@@ -3,6 +3,7 @@ from decimal import Decimal
 import json
 import logging
 from urllib.parse import urlparse
+from django.core.files.base import ContentFile
 
 from django.conf import settings
 from django.utils import timezone
@@ -26,6 +27,68 @@ def _normalize(value):
     if not value:
         return ""
     return " ".join(str(value).strip().lower().replace("ё", "е").split())
+
+
+def _sanitize_text(value):
+    """PostgreSQL TEXT не принимает NUL-байт (\x00)."""
+    if value is None:
+        return ""
+    return str(value).replace("\x00", "").strip()
+
+
+def _sanitize_for_db(value):
+    """Рекурсивно очищает NUL-байты из структур, сохраняемых в БД/JSONField."""
+    if isinstance(value, str):
+        return value.replace("\x00", "")
+    if isinstance(value, list):
+        return [_sanitize_for_db(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_sanitize_for_db(item) for item in value)
+    if isinstance(value, dict):
+        cleaned = {}
+        for key, item in value.items():
+            clean_key = _sanitize_for_db(key) if isinstance(key, str) else key
+            cleaned[clean_key] = _sanitize_for_db(item)
+        return cleaned
+    return value
+
+
+def _file_extension(content_type, source_url):
+    ct = (content_type or "").split(";")[0].strip().lower()
+    if ct == "image/jpeg":
+        return "jpg"
+    if ct == "image/png":
+        return "png"
+    if ct == "image/webp":
+        return "webp"
+    if ct == "image/gif":
+        return "gif"
+    path = urlparse(source_url or "").path or ""
+    if "." in path:
+        ext = path.rsplit(".", 1)[-1].lower().strip()
+        if ext in {"jpg", "jpeg", "png", "webp", "gif"}:
+            return "jpg" if ext == "jpeg" else ext
+    return "jpg"
+
+
+def _save_local_product_image(product, client, image_url, force=False):
+    if not bool(getattr(settings, "MOYSKLAD_SYNC_SAVE_LOCAL_IMAGES", False)):
+        return False
+    if not product or not client or not image_url:
+        return False
+    if product.image and not force:
+        return False
+    try:
+        payload, content_type = client.download_binary(image_url)
+    except Exception as exc:
+        logger.warning("Failed to download product image for %s: %s", product.moysklad_id or product.id, exc)
+        return False
+    if not payload:
+        return False
+    ext = _file_extension(content_type, image_url)
+    filename = f"moysklad/{product.moysklad_id or product.id}.{ext}"
+    product.image.save(filename, ContentFile(payload), save=False)
+    return True
 
 
 def _extract_id_from_href(href):
@@ -254,8 +317,8 @@ def _resolve_description_for_update(current_description, incoming_description):
     """
     Не даем пустому описанию из МойСклад затирать уже заполненное описание на сайте.
     """
-    incoming = (incoming_description or "").strip()
-    current = current_description or ""
+    incoming = _sanitize_text(incoming_description)
+    current = _sanitize_text(current_description)
     if incoming:
         return incoming
     return current
@@ -308,8 +371,8 @@ def _finish_sync_log(sync_log, status, stats=None, error=""):
     sync_log.status = status
     sync_log.finished_at = finished_at
     sync_log.duration_ms = duration_ms
-    sync_log.stats = stats or {}
-    sync_log.error = (error or "")[:5000]
+    sync_log.stats = _sanitize_for_db(stats or {})
+    sync_log.error = _sanitize_text(error)[:5000]
     sync_log.save(update_fields=["status", "finished_at", "duration_ms", "stats", "error"])
 
 
@@ -363,7 +426,7 @@ def sync_single_product(
             _finish_sync_log(sync_log, status="error", stats=result, error=result["detail"])
             return result
 
-        name = (row.get("name") or "").strip()
+        name = _sanitize_text(row.get("name"))
         if not name:
             result = {"updated": False, "detail": "В МойСклад у товара нет названия."}
             _finish_sync_log(sync_log, status="error", stats=result, error=result["detail"])
@@ -404,12 +467,17 @@ def sync_single_product(
             product.stock = stock
             fields_to_update.append("stock")
 
+        image_url_changed = product.external_image_url != image_url
         if product.external_image_url != image_url:
             product.external_image_url = image_url
             fields_to_update.append("external_image_url")
 
-        if product.image is not None:
-            product.image = None
+        if _save_local_product_image(
+            product,
+            client,
+            image_url,
+            force=image_url_changed or not bool(product.image),
+        ):
             fields_to_update.append("image")
 
         if fields_to_update:
@@ -555,6 +623,7 @@ def sync_site_products(
             "categorize_skipped": 0,
             "descriptions_generated": 0,
             "descriptions_skipped": 0,
+            "local_images_saved": 0,
         }
         _finish_sync_log(sync_log, status="success", stats=skipped_stats)
         return skipped_stats
@@ -620,6 +689,7 @@ def sync_site_products(
         "categorize_skipped": 0,
         "descriptions_generated": 0,
         "descriptions_skipped": 0,
+        "local_images_saved": 0,
     }
 
     try:
@@ -766,7 +836,7 @@ def sync_site_products(
                             continue
 
                 external_id = row.get("id")
-                name = (row.get("name") or "").strip()
+                name = _sanitize_text(row.get("name"))
                 if not external_id or not name:
                     stats["skipped_no_id_or_name"] += 1
                     continue
@@ -783,7 +853,7 @@ def sync_site_products(
                     {
                         "moysklad_id": external_id,
                         "name": name,
-                        "description": (row.get("description") or "").strip(),
+                        "description": _sanitize_text(row.get("description")),
                         "price": product_price,
                         "stock": _extract_stock(row),
                         "external_image_url": _extract_image_url(
@@ -802,6 +872,8 @@ def sync_site_products(
                 existing_map = Product.objects.filter(moysklad_id__in=external_ids).in_bulk(
                     field_name="moysklad_id"
                 )
+                image_url_map = {item["moysklad_id"]: item["external_image_url"] or "" for item in prepared_rows}
+                external_image_changed_ids = set()
 
                 to_create = []
                 to_update = []
@@ -817,12 +889,12 @@ def sync_site_products(
                                 price=item["price"],
                                 stock=item["stock"],
                                 external_image_url=item["external_image_url"] or None,
-                                image=None,
                                 is_bestseller=False,
                                 is_new=False,
                                 discount=0,
                             )
                         )
+                        external_image_changed_ids.add(item["moysklad_id"])
                     else:
                         existing.category = category
                         existing.name = item["name"]
@@ -832,8 +904,10 @@ def sync_site_products(
                         )
                         existing.price = item["price"]
                         existing.stock = item["stock"]
-                        existing.external_image_url = item["external_image_url"] or None
-                        existing.image = None
+                        new_external_url = item["external_image_url"] or None
+                        if existing.external_image_url != new_external_url:
+                            external_image_changed_ids.add(item["moysklad_id"])
+                        existing.external_image_url = new_external_url
                         # Важно: эти поля редактируются вручную в админке.
                         # Синк должен обновлять данные МойСклада, но не перетирать ручные пометки.
                         to_update.append(existing)
@@ -851,11 +925,34 @@ def sync_site_products(
                             "price",
                             "stock",
                             "external_image_url",
-                            "image",
                         ],
                         batch_size=200,
                     )
                     stats["updated"] += len(to_update)
+                if bool(getattr(settings, "MOYSKLAD_SYNC_SAVE_LOCAL_IMAGES", False)):
+                    page_products = Product.objects.filter(moysklad_id__in=external_ids).only(
+                        "id",
+                        "moysklad_id",
+                        "image",
+                        "external_image_url",
+                    )
+                    for page_product in page_products:
+                        if should_stop and should_stop():
+                            raise SyncStoppedError("Операция остановлена пользователем.")
+                        target_image_url = image_url_map.get(page_product.moysklad_id, "")
+                        if not target_image_url:
+                            continue
+                        if _save_local_product_image(
+                            page_product,
+                            client,
+                            target_image_url,
+                            force=(
+                                page_product.moysklad_id in external_image_changed_ids
+                                or not bool(page_product.image)
+                            ),
+                        ):
+                            page_product.save(update_fields=["image"])
+                            stats["local_images_saved"] += 1
                 synced_ids.update(external_ids)
             _progress(
                 f"Страница {stats['processed_pages']}: получено {len(rows)}, "
