@@ -38,11 +38,13 @@ function App() {
   const backgroundLocation = location.state?.backgroundLocation;
   const displayLocation = backgroundLocation || location;
   const isCheckoutFullscreen = pathname === '/checkout' && !backgroundLocation;
+  const isAuthFullscreen = pathname === '/auth';
+  const hideChrome = isCheckoutFullscreen || isAuthFullscreen;
 
   return (
     <div className="app">
       <ScrollToTop />
-      {!isCheckoutFullscreen ? <Header /> : null}
+      {!hideChrome ? <Header /> : null}
 
       <main>
         <div className="page-animation">
@@ -77,7 +79,7 @@ function App() {
         ) : null}
       </main>
 
-      {!isCheckoutFullscreen ? <Footer /> : null}
+      {!hideChrome ? <Footer /> : null}
     </div>
   );
 }
