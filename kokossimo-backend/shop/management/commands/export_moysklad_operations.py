@@ -126,7 +126,26 @@ class Command(BaseCommand):
 
     def _extract_positions(self, row):
         positions = row.get("positions") or {}
-        return positions.get("rows") or []
+        rows = positions.get("rows") or []
+        if rows:
+            return rows
+
+        meta = (positions or {}).get("meta") or {}
+        href = _as_str(meta.get("href"))
+        if not href:
+            return []
+
+        if href in self._positions_cache:
+            return self._positions_cache[href]
+
+        try:
+            payload = self._client.get_entity_by_href(href)
+            resolved_rows = (payload or {}).get("rows") or []
+        except MoySkladError:
+            resolved_rows = []
+
+        self._positions_cache[href] = resolved_rows
+        return resolved_rows
 
     def _id_from_meta_href(self, assortment):
         meta = (assortment or {}).get("meta") or {}
@@ -219,6 +238,7 @@ class Command(BaseCommand):
             raise CommandError(str(exc))
         self._client = client
         self._assortment_cache = {}
+        self._positions_cache = {}
 
         backend_dir = Path(__file__).resolve().parents[3]
         repo_dir = backend_dir.parent
