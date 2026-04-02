@@ -167,6 +167,46 @@ class MoySkladClient:
             query["order"] = order_by.strip()
         return self._request("GET", "/entity/customerorder", query=query)
 
+    def _get_entity_rows(self, entity_name, limit=100, offset=0, filter_expr="", expand="", order_by=""):
+        query = {"limit": max(1, min(int(limit), 1000)), "offset": max(0, int(offset))}
+        if filter_expr:
+            query["filter"] = filter_expr.strip()
+        if expand:
+            query["expand"] = expand.strip()
+        if order_by:
+            query["order"] = order_by.strip()
+        return self._request("GET", f"/entity/{entity_name}", query=query)
+
+    def get_demands(self, limit=100, offset=0, filter_expr="", expand="", order_by=""):
+        return self._get_entity_rows(
+            "demand",
+            limit=limit,
+            offset=offset,
+            filter_expr=filter_expr,
+            expand=expand,
+            order_by=order_by,
+        )
+
+    def get_retail_demands(self, limit=100, offset=0, filter_expr="", expand="", order_by=""):
+        return self._get_entity_rows(
+            "retaildemand",
+            limit=limit,
+            offset=offset,
+            filter_expr=filter_expr,
+            expand=expand,
+            order_by=order_by,
+        )
+
+    def get_sales_returns(self, limit=100, offset=0, filter_expr="", expand="", order_by=""):
+        return self._get_entity_rows(
+            "salesreturn",
+            limit=limit,
+            offset=offset,
+            filter_expr=filter_expr,
+            expand=expand,
+            order_by=order_by,
+        )
+
     def _path_from_href(self, href):
         parsed = urlparse(href)
         path = parsed.path

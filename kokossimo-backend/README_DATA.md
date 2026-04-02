@@ -135,3 +135,16 @@ MOYSKLAD_IMAGE_META_FETCH=false
 ```powershell
 python manage.py sync_moysklad_site_products
 ```
+
+### Выгрузка операций для аналитики/лояльности
+
+Для единого журнала операций по товарам (заказы, продажи, розничные продажи, возвраты):
+
+```powershell
+python manage.py export_moysklad_operations --from-date 2026-04-01 --to-date 2026-04-30
+```
+
+Результат сохраняется в `analytics/moysklad_operations_<timestamp>/`:
+- `operations_all.csv` — плоский файл операций (1 строка = 1 товарная позиция документа)
+- `operations_raw.jsonl` — сырые документы API
+- `manifest.json` — статистика и пути к файлам
