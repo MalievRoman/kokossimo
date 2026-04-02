@@ -112,16 +112,51 @@ class Command(BaseCommand):
 
         return start_date, end_date
 
+    def _meta_href(self, entity):
+        return _as_str(((entity or {}).get("meta") or {}).get("href"))
+
     def _get_row_timestamp(self, row):
         return _as_str(row.get("moment") or row.get("updated") or row.get("created"))
 
+    def _resolve_entity_by_href(self, href):
+        if not href:
+            return {}
+        if href in self._meta_entity_cache:
+            return self._meta_entity_cache[href]
+        try:
+            resolved = self._client.get_entity_by_href(href)
+        except MoySkladError:
+            resolved = {}
+        self._meta_entity_cache[href] = resolved or {}
+        return self._meta_entity_cache[href]
+
+    def _entity_id(self, entity):
+        direct_id = _as_str((entity or {}).get("id"))
+        if direct_id:
+            return direct_id
+        return self._id_from_meta_href(entity)
+
     def _agent_data(self, row):
         agent = row.get("agent") or {}
+        agent_id = self._entity_id(agent)
+        agent_name = _as_str(agent.get("name"))
+        agent_email = _as_str(agent.get("email"))
+        agent_phone = _as_str(agent.get("phone"))
+
+        # Для некоторых документов МойСклад возвращает agent только как meta.href.
+        if not agent_name or not agent_email or not agent_phone:
+            resolved_agent = self._resolve_entity_by_href(self._meta_href(agent))
+            agent_name = agent_name or _as_str(resolved_agent.get("name"))
+            agent_email = agent_email or _as_str(resolved_agent.get("email"))
+            agent_phone = agent_phone or _as_str(resolved_agent.get("phone"))
+            if not agent_id:
+                agent_id = self._entity_id(resolved_agent)
+
         return {
-            "customer_id": _as_str(agent.get("id")),
-            "customer_name": _as_str(agent.get("name")),
-            "customer_email": _as_str(agent.get("email")),
-            "customer_phone": _as_str(agent.get("phone")),
+            "customer_id": agent_id,
+            "customer_name": agent_name,
+            "customer_email": agent_email,
+            "customer_phone": agent_phone,
         }
 
     def _extract_positions(self, row):
@@ -179,8 +214,17 @@ class Command(BaseCommand):
         document_id = _as_str(row.get("id"))
         document_number = _as_str(row.get("name"))
         document_moment = self._get_row_timestamp(row)
-        state = _as_str((row.get("state") or {}).get("name"))
-        organization_name = _as_str((row.get("organization") or {}).get("name"))
+        state_obj = row.get("state") or {}
+        state = _as_str(state_obj.get("name"))
+        if not state:
+            state = _as_str(self._resolve_entity_by_href(self._meta_href(state_obj)).get("name"))
+
+        organization_obj = row.get("organization") or {}
+        organization_name = _as_str(organization_obj.get("name"))
+        if not organization_name:
+            organization_name = _as_str(
+                self._resolve_entity_by_href(self._meta_href(organization_obj)).get("name")
+            )
         customer = self._agent_data(row)
 
         result = []
@@ -239,6 +283,7 @@ class Command(BaseCommand):
         self._client = client
         self._assortment_cache = {}
         self._positions_cache = {}
+        self._meta_entity_cache = {}
 
         backend_dir = Path(__file__).resolve().parents[3]
         repo_dir = backend_dir.parent
