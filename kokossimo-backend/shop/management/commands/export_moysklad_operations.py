@@ -3,6 +3,7 @@ import json
 from datetime import date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
+from urllib.parse import urlparse
 
 from django.core.management.base import BaseCommand, CommandError
 
@@ -127,6 +128,29 @@ class Command(BaseCommand):
         positions = row.get("positions") or {}
         return positions.get("rows") or []
 
+    def _id_from_meta_href(self, assortment):
+        meta = (assortment or {}).get("meta") or {}
+        href = _as_str(meta.get("href"))
+        if not href:
+            return ""
+        parsed = urlparse(href)
+        parts = [part for part in (parsed.path or "").split("/") if part]
+        return parts[-1] if parts else ""
+
+    def _resolve_assortment(self, assortment):
+        meta = (assortment or {}).get("meta") or {}
+        href = _as_str(meta.get("href"))
+        if not href:
+            return {}
+        if href in self._assortment_cache:
+            return self._assortment_cache[href]
+        try:
+            entity = self._client.get_entity_by_href(href)
+        except MoySkladError:
+            entity = {}
+        self._assortment_cache[href] = entity or {}
+        return self._assortment_cache[href]
+
     def _line_total(self, position, qty):
         if position.get("sum") is not None:
             return _to_money(position.get("sum"))
@@ -151,6 +175,15 @@ class Command(BaseCommand):
             line_total = (line_total * Decimal(sign)).quantize(Decimal("0.01"))
 
             assortment = position.get("assortment") or {}
+            product_id = _as_str(assortment.get("id")) or self._id_from_meta_href(assortment)
+            product_name = _as_str(assortment.get("name"))
+            if not product_name or not product_id:
+                resolved_assortment = self._resolve_assortment(assortment)
+                if not product_id:
+                    product_id = _as_str(resolved_assortment.get("id")) or product_id
+                if not product_name:
+                    product_name = _as_str(resolved_assortment.get("name"))
+
             result.append(
                 {
                     "event_datetime": document_moment,
@@ -165,8 +198,8 @@ class Command(BaseCommand):
                     "customer_email": customer["customer_email"],
                     "customer_phone": customer["customer_phone"],
                     "item_id": _as_str(position.get("id")),
-                    "product_id": _as_str(assortment.get("id")),
-                    "product_name": _as_str(assortment.get("name")),
+                    "product_id": product_id,
+                    "product_name": product_name,
                     "quantity": str(qty),
                     "price": str(price),
                     "discount": discount,
@@ -184,6 +217,8 @@ class Command(BaseCommand):
             client = MoySkladClient()
         except MoySkladConfigError as exc:
             raise CommandError(str(exc))
+        self._client = client
+        self._assortment_cache = {}
 
         backend_dir = Path(__file__).resolve().parents[3]
         repo_dir = backend_dir.parent
