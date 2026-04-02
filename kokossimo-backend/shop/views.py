@@ -11,8 +11,7 @@ from django.core.mail import send_mail
 from django.utils import timezone
 from datetime import timedelta
 import secrets
-import time
-from django.db.models import Q, Avg, Count, Min, Max
+from django.db.models import Q, Avg, Count, Min, Max, Prefetch
 from django.db import transaction
 from decimal import Decimal, InvalidOperation
 from django.shortcuts import get_object_or_404
@@ -51,7 +50,6 @@ def _placeholder_image_response(reason=""):
         resp["X-Image-Proxy-Reason"] = reason
     return resp
 from .moysklad import MoySkladClient, MoySkladError, MoySkladConfigError
-from .moysklad_sync import _extract_image_url
 from .serializers import (
     ProductSerializer,
     CategorySerializer,
@@ -138,14 +136,14 @@ def _create_yookassa_payment(order, request):
 def _cart_item_image_url(product, request):
     if not product:
         return None
-    if getattr(product, "external_image_url", ""):
-        if request:
-            return request.build_absolute_uri(f"/api/products/{product.id}/image/")
-        return f"/api/products/{product.id}/image/"
     if product.image:
         if request:
             return request.build_absolute_uri(product.image.url)
         return f"{settings.MEDIA_URL}{product.image}"
+    if getattr(product, "external_image_url", ""):
+        if request:
+            return request.build_absolute_uri(f"/api/products/{product.id}/image/")
+        return f"/api/products/{product.id}/image/"
     return None
 
 
@@ -459,6 +457,19 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = ProductSerializer
     pagination_class = CatalogPagination
 
+    def _with_user_rating_prefetch(self, queryset):
+        if not self.request.user.is_authenticated:
+            return queryset
+        user_ratings_qs = ProductRating.objects.filter(user_id=self.request.user.id).only(
+            "id",
+            "product_id",
+            "rating",
+            "user_id",
+        )
+        return queryset.prefetch_related(
+            Prefetch("ratings", queryset=user_ratings_qs, to_attr="current_user_ratings")
+        )
+
     def get_queryset(self):
         subcategory_codes = self.request.query_params.getlist('subcategory')
         parent_codes = self.request.query_params.getlist('parent')
@@ -533,6 +544,7 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
                 )
             queryset = _apply_price_filters(queryset)
             queryset = _apply_ordering(queryset)
+            queryset = self._with_user_rating_prefetch(queryset)
             return queryset
 
         # Фильтрация товаров через параметры URL
@@ -568,6 +580,7 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
 
         queryset = _apply_price_filters(queryset)
         queryset = _apply_ordering(queryset)
+        queryset = self._with_user_rating_prefetch(queryset)
         return queryset
 
     @action(detail=False, methods=["get"], url_path="price-range")
@@ -1163,143 +1176,11 @@ def _product_image_proxy_impl(request, product_id):
     product = Product.objects.filter(id=product_id).first()
     if not product:
         return _placeholder_or_debug(request, "product_not_found")
-    if not product.external_image_url:
-        return _placeholder_or_debug(request, "no_external_image_url")
-    if getattr(settings, "MOYSKLAD_IMAGE_PROXY_REDIRECT_ONLY", False):
+    if product.image:
+        return HttpResponseRedirect(product.image.url)
+    if getattr(product, "external_image_url", ""):
         return HttpResponseRedirect(product.external_image_url)
-
-    def _image_response(binary_payload, mime_type):
-        response = HttpResponse(binary_payload, content_type=mime_type)
-        response["Cache-Control"] = "public, max-age=3600"
-        response["Access-Control-Allow-Origin"] = "*"
-        return response
-
-    def _extract_image_url_candidates(row):
-        candidates = []
-        images_data = (row or {}).get("images") or {}
-
-        def add_original_then_miniature(item):
-            meta = (item or {}).get("meta") or {}
-            miniature = (item or {}).get("miniature") or {}
-            original = meta.get("downloadHref")
-            if not original and meta.get("href"):
-                try:
-                    full = client.get_image_by_href(meta.get("href"))
-                    original = (full.get("meta") or {}).get("downloadHref")
-                except Exception:
-                    pass
-            if original:
-                candidates.append(original)
-            if miniature.get("downloadHref"):
-                candidates.append(miniature.get("downloadHref"))
-
-        if isinstance(images_data, list):
-            for image_item in images_data:
-                add_original_then_miniature(image_item)
-        else:
-            rows = images_data.get("rows") or []
-            for image_row in rows:
-                add_original_then_miniature(image_row)
-
-            images_meta = images_data.get("meta") or {}
-            if images_meta:
-                try:
-                    fetched_rows = client.get_images_rows_from_meta(images_meta, limit=5)
-                except Exception:
-                    fetched_rows = []
-                for fetched in fetched_rows:
-                    add_original_then_miniature(fetched)
-
-        uniq = []
-        seen = set()
-        for url in candidates:
-            if not url:
-                continue
-            if url in seen:
-                continue
-            seen.add(url)
-            uniq.append(url)
-        return uniq
-
-    def _row_to_image_candidates(row):
-        """Кандидаты из строки ассортимента; для варианта — подгружаем товар по product.meta.href."""
-        candidates = _extract_image_url_candidates(row)
-        if not candidates and row.get("product"):
-            product_meta = (row.get("product") or {}).get("meta") or {}
-            product_href = product_meta.get("href")
-            if product_href:
-                try:
-                    product_entity = client.get_entity_by_href(product_href, expand="images")
-                    candidates = _extract_image_url_candidates(product_entity)
-                except Exception:
-                    pass
-        if not candidates and row.get("meta", {}).get("href"):
-            try:
-                entity = client.get_entity_by_href(row["meta"]["href"], expand="images")
-                candidates = _extract_image_url_candidates(entity)
-            except Exception:
-                pass
-        return candidates
-
-    try:
-        client = MoySkladClient()
-    except MoySkladConfigError:
-        return _placeholder_or_debug(request, "moysklad_not_configured")
-
-    def _refresh_image_url_and_download(current_url, reason_detail=""):
-        if not product.moysklad_id:
-            return None
-        try:
-            row = client.get_assortment_item(product.moysklad_id)
-            candidates = _row_to_image_candidates(row)
-            if not candidates:
-                fresh_image_url = _extract_image_url(
-                    row,
-                    client,
-                    # Для восстановления ссылки всегда пробуем дочитать images.meta->rows.
-                    allow_meta_fetch=True,
-                )
-                if fresh_image_url:
-                    candidates = [fresh_image_url]
-            for candidate_url in candidates:
-                try:
-                    payload, content_type = client.download_binary(candidate_url)
-                except MoySkladError:
-                    continue
-                if candidate_url != current_url:
-                    product.external_image_url = candidate_url
-                    product.save(update_fields=["external_image_url"])
-                return _image_response(payload, content_type)
-            return None
-        except (MoySkladError, MoySkladConfigError):
-            return None
-
-    # В бою сначала пробуем уже сохраненную ссылку:
-    # так мы не делаем extra-запрос в МойСклад на каждый <img>.
-    # К API за "освежением" обращаемся только если скачивание не удалось.
-    last_error = None
-    for attempt in range(2):  # две попытки на случай временного сбоя (таймаут, сеть)
-        try:
-            payload, content_type = client.download_binary(product.external_image_url)
-            return _image_response(payload, content_type)
-        except MoySkladError as exc:
-            last_error = exc
-            if attempt == 0:
-                time.sleep(0.5)
-                continue
-        break
-    if last_error:
-        detail = str(last_error)
-        # При любой ошибке скачивания пробуем взять свежую ссылку из API (истёкшие/неверные URL).
-        if product.moysklad_id:
-            refreshed = _refresh_image_url_and_download(product.external_image_url, detail)
-            if refreshed is not None:
-                return refreshed
-        reason = "download_failed"
-        if detail:
-            sanitized = (detail.replace("\r", " ").replace("\n", " ").strip())[:80]
-            reason = f"{reason}: {sanitized}"
-        return _placeholder_or_debug(request, reason)
+    return _placeholder_or_debug(request, "no_image_available")
 
 
 @api_view(['GET'])
