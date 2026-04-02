@@ -284,12 +284,8 @@ const AuthPage = () => {
 
   return (
     <div className="auth-page">
+      <div className="auth-page__overlay" />
       <div className="auth-layout">
-        <div className="auth-brand">
-          <div className="auth-brand-logo-wrap">
-            <img src="/assets/full_logo.png" alt="Кокоссимо" className="auth-brand-logo" />
-          </div>
-        </div>
         <div className="auth-panel">
           <div className="auth-panel-inner page-animation" key={screen}>
             {screen === 'intro' && (
@@ -300,6 +296,9 @@ const AuthPage = () => {
                 </button>
                 <button type="button" className="auth-btn auth-btn--ghost auth-btn--intro-register" onClick={() => goToScreen('register')}>
                   Зарегистрироваться
+                </button>
+                <button type="button" className="auth-link auth-link--forgot auth-link--intro-forgot" onClick={() => goToScreen('restoreRequest')}>
+                  Забыли пароль?
                 </button>
                 <button type="button" className="auth-back-link auth-back-link--site" onClick={() => navigate('/')}>
                   <span aria-hidden="true">‹</span> Обратно на сайт
@@ -358,7 +357,7 @@ const AuthPage = () => {
               <form className="auth-content auth-form auth-form--register" onSubmit={handleRegisterStart}>
                 <h1 className="auth-title auth-title--register">Регистрация</h1>
                 <label className="auth-field">
-                  <span>Почта</span>
+                  <span>Почта <em className="auth-required">*</em></span>
                   <input
                     type="email"
                     placeholder="Введите Ваш email"
@@ -367,7 +366,7 @@ const AuthPage = () => {
                   />
                 </label>
                 <label className="auth-field">
-                  <span>Пароль</span>
+                  <span>Пароль <em className="auth-required">*</em></span>
                   <div className="auth-password-wrap">
                     <input
                       type={passwordVisibility.registerPassword ? 'text' : 'password'}
@@ -390,7 +389,7 @@ const AuthPage = () => {
                   </div>
                 </label>
                 <label className="auth-field">
-                  <span>Пароль</span>
+                  <span>Пароль <em className="auth-required">*</em></span>
                   <div className="auth-password-wrap">
                     <input
                       type={passwordVisibility.registerPasswordRepeat ? 'text' : 'password'}
