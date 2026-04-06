@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { ChevronDown, ChevronUp, Info, X } from 'lucide-react';
 import { createOrder, createYooKassaPayment, getCurrentUser, updateProfile } from '../services/api';
@@ -203,6 +204,8 @@ const PaymentPage = ({ modalMode = false }) => {
   const [courierDraft, setCourierDraft] = useState(emptyCourierDraft);
   const [status, setStatus] = useState({ type: '', message: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const prevAddressCompleteRef = useRef(false);
+  const prevRecipientCompleteRef = useRef(false);
 
   const subtotal = Number(getTotalPrice()) || 0;
   const deliveryDays = useMemo(() => buildDeliveryDays(), []);
@@ -281,26 +284,72 @@ const PaymentPage = ({ modalMode = false }) => {
   }, [authToken]);
 
   useEffect(() => {
-    if (modalMode || pickupModalOpen || courierDrawerOpen) {
-      const previousOverflow = document.body.style.overflow;
-      document.body.style.overflow = 'hidden';
-      return () => {
-        document.body.style.overflow = previousOverflow;
-      };
+    if (!modalMode && !pickupModalOpen && !courierDrawerOpen) {
+      return undefined;
     }
-    return undefined;
+
+    const html = document.documentElement;
+    const body = document.body;
+    const scrollY = window.scrollY;
+
+    const previousHtmlOverflow = html.style.overflow;
+    const previousHtmlHeight = html.style.height;
+    const previousHtmlOverscroll = html.style.overscrollBehavior;
+
+    const previousBodyOverflow = body.style.overflow;
+    const previousBodyPosition = body.style.position;
+    const previousBodyTop = body.style.top;
+    const previousBodyLeft = body.style.left;
+    const previousBodyRight = body.style.right;
+    const previousBodyWidth = body.style.width;
+    const previousBodyHeight = body.style.height;
+    const previousBodyOverscroll = body.style.overscrollBehavior;
+
+    html.style.overflow = 'hidden';
+    html.style.height = '100%';
+    html.style.overscrollBehavior = 'none';
+
+    body.style.overflow = 'hidden';
+    body.style.position = 'fixed';
+    body.style.top = `-${scrollY}px`;
+    body.style.left = '0';
+    body.style.right = '0';
+    body.style.width = '100%';
+    body.style.height = '100%';
+    body.style.overscrollBehavior = 'none';
+
+    return () => {
+      html.style.overflow = previousHtmlOverflow;
+      html.style.height = previousHtmlHeight;
+      html.style.overscrollBehavior = previousHtmlOverscroll;
+
+      body.style.overflow = previousBodyOverflow;
+      body.style.position = previousBodyPosition;
+      body.style.top = previousBodyTop;
+      body.style.left = previousBodyLeft;
+      body.style.right = previousBodyRight;
+      body.style.width = previousBodyWidth;
+      body.style.height = previousBodyHeight;
+      body.style.overscrollBehavior = previousBodyOverscroll;
+
+      window.scrollTo(0, scrollY);
+    };
   }, [courierDrawerOpen, modalMode, pickupModalOpen]);
 
   useEffect(() => {
-    if (addressComplete && expandedStep === 'address') {
+    const justCompletedAddress = addressComplete && !prevAddressCompleteRef.current;
+    if (justCompletedAddress && expandedStep === 'address') {
       setExpandedStep('recipient');
     }
+    prevAddressCompleteRef.current = addressComplete;
   }, [addressComplete, expandedStep]);
 
   useEffect(() => {
-    if (recipientComplete && expandedStep === 'recipient') {
+    const justCompletedRecipient = recipientComplete && !prevRecipientCompleteRef.current;
+    if (justCompletedRecipient && expandedStep === 'recipient') {
       setExpandedStep('payment');
     }
+    prevRecipientCompleteRef.current = recipientComplete;
   }, [expandedStep, recipientComplete]);
 
   const closeCheckout = () => {
@@ -838,110 +887,120 @@ const PaymentPage = ({ modalMode = false }) => {
         </form>
       </div>
 
-      {pickupModalOpen ? (
-        <div className="payment-pickup-modal" role="dialog" aria-modal="true" aria-label="Выбор пункта самовывоза">
-          <div className="payment-pickup-modal__map" />
-          <div className="payment-pickup-modal__panel">
-            <button type="button" className="payment-shell__close payment-pickup-modal__close" onClick={() => setPickupModalOpen(false)} aria-label="Закрыть выбор пункта самовывоза">
-              <X size={24} strokeWidth={1.7} />
-            </button>
-            <h2>САМОВЫВОЗ</h2>
-            <div className="payment-input">
-              <span>Пункт выдачи</span>
-              <label className="payment-select payment-select--light">
-                <select value={pickupDraftId} onChange={(event) => setPickupDraftId(event.target.value)}>
-                  <option value="">Выберите вариант</option>
-                  {pickupPoints.map((point) => (
-                    <option key={point.id} value={point.id}>
-                      {point.address}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-
-            {pickupDraftPoint ? (
-              <div className="payment-pickup-modal__details">
-                <p>Тип: {pickupDraftPoint.type}</p>
-                <p>Вес: {pickupDraftPoint.weight}</p>
-                <p>Время работы: {pickupDraftPoint.hours}</p>
+      {pickupModalOpen
+        ? createPortal(
+            <div className="payment-pickup-modal" role="dialog" aria-modal="true" aria-label="Выбор пункта самовывоза">
+              <div className="payment-pickup-modal__map" aria-hidden="true">
+                <div className="payment-pickup-modal__map-placeholder">
+                  <span>ЗАГЛУШКА</span>
+                </div>
               </div>
-            ) : null}
+              <div className="payment-pickup-modal__panel">
+                <button type="button" className="payment-shell__close payment-pickup-modal__close" onClick={() => setPickupModalOpen(false)} aria-label="Закрыть выбор пункта самовывоза">
+                  <X size={24} strokeWidth={1.7} />
+                </button>
+                <h2>САМОВЫВОЗ</h2>
+                <div className="payment-input">
+                  <span>Пункт выдачи</span>
+                  <label className="payment-select payment-select--light">
+                    <select value={pickupDraftId} onChange={(event) => setPickupDraftId(event.target.value)}>
+                      <option value="">Выберите вариант</option>
+                      {pickupPoints.map((point) => (
+                        <option key={point.id} value={point.id}>
+                          {point.address}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
 
-            <button
-              type="button"
-              className={`payment-primary-button ${pickupDraftId ? 'payment-primary-button--active' : ''}`}
-              disabled={!pickupDraftId}
-              onClick={confirmPickupAddress}
-            >
-              ПОДТВЕРДИТЬ АДРЕС
-            </button>
-          </div>
-        </div>
-      ) : null}
+                {pickupDraftPoint ? (
+                  <div className="payment-pickup-modal__details">
+                    <p>Тип: {pickupDraftPoint.type}</p>
+                    <p>Вес: {pickupDraftPoint.weight}</p>
+                    <p>Время работы: {pickupDraftPoint.hours}</p>
+                  </div>
+                ) : null}
 
-      {courierDrawerOpen ? (
-        <div className="payment-drawer-layer" role="dialog" aria-modal="true" aria-label="Курьерский адрес">
-          <button type="button" className="payment-drawer-layer__backdrop" onClick={() => setCourierDrawerOpen(false)} aria-label="Закрыть форму адреса доставки" />
-          <aside className="payment-drawer">
-            <button type="button" className="payment-shell__close payment-drawer__close" onClick={() => setCourierDrawerOpen(false)} aria-label="Закрыть форму адреса доставки">
-              <X size={24} strokeWidth={1.7} />
-            </button>
-            <h2>АДРЕС ДОСТАВКИ</h2>
-            <p className="payment-drawer__city">{currentCity?.label || ''}</p>
-
-            <div className="payment-drawer__fields">
-              <input
-                type="text"
-                value={courierDraft.streetHouse}
-                onChange={handleCourierDraftChange('streetHouse')}
-                placeholder="Улица и дом"
-              />
-              <div className="payment-drawer__grid">
-                <input
-                  type="text"
-                  value={courierDraft.entrance}
-                  onChange={handleCourierDraftChange('entrance')}
-                  placeholder="Подъезд"
-                />
-                <input
-                  type="text"
-                  value={courierDraft.floor}
-                  onChange={handleCourierDraftChange('floor')}
-                  placeholder="Этаж"
-                />
-                <input
-                  type="text"
-                  value={courierDraft.apartmentOffice}
-                  onChange={handleCourierDraftChange('apartmentOffice')}
-                  placeholder="Кв./офис"
-                />
-                <input
-                  type="text"
-                  value={courierDraft.intercom}
-                  onChange={handleCourierDraftChange('intercom')}
-                  placeholder="Домофон"
-                />
+                <button
+                  type="button"
+                  className={`payment-primary-button ${pickupDraftId ? 'payment-primary-button--active' : ''}`}
+                  disabled={!pickupDraftId}
+                  onClick={confirmPickupAddress}
+                >
+                  ПОДТВЕРДИТЬ АДРЕС
+                </button>
               </div>
-              <input
-                type="text"
-                value={courierDraft.comment}
-                onChange={handleCourierDraftChange('comment')}
-                placeholder="Комментарий"
-              />
-            </div>
+            </div>,
+            document.body
+          )
+        : null}
 
-            <button
-              type="button"
-              className={`payment-primary-button ${courierDraftComplete ? 'payment-primary-button--active' : ''}`}
-              disabled={!courierDraftComplete}
-              onClick={confirmCourierAddress}
-            >
-              ПОДТВЕРДИТЬ АДРЕС
-            </button>
-          </aside>
-        </div>
-      ) : null}
+      {courierDrawerOpen
+        ? createPortal(
+            <div className="payment-drawer-layer" role="dialog" aria-modal="true" aria-label="Курьерский адрес">
+              <button type="button" className="payment-drawer-layer__backdrop" onClick={() => setCourierDrawerOpen(false)} aria-label="Закрыть форму адреса доставки" />
+              <aside className="payment-drawer">
+                <button type="button" className="payment-shell__close payment-drawer__close" onClick={() => setCourierDrawerOpen(false)} aria-label="Закрыть форму адреса доставки">
+                  <X size={24} strokeWidth={1.7} />
+                </button>
+                <h2>АДРЕС ДОСТАВКИ</h2>
+                <p className="payment-drawer__city">{currentCity?.label || ''}</p>
+
+                <div className="payment-drawer__fields">
+                  <input
+                    type="text"
+                    value={courierDraft.streetHouse}
+                    onChange={handleCourierDraftChange('streetHouse')}
+                    placeholder="Улица и дом"
+                  />
+                  <div className="payment-drawer__grid">
+                    <input
+                      type="text"
+                      value={courierDraft.entrance}
+                      onChange={handleCourierDraftChange('entrance')}
+                      placeholder="Подъезд"
+                    />
+                    <input
+                      type="text"
+                      value={courierDraft.floor}
+                      onChange={handleCourierDraftChange('floor')}
+                      placeholder="Этаж"
+                    />
+                    <input
+                      type="text"
+                      value={courierDraft.apartmentOffice}
+                      onChange={handleCourierDraftChange('apartmentOffice')}
+                      placeholder="Кв./офис"
+                    />
+                    <input
+                      type="text"
+                      value={courierDraft.intercom}
+                      onChange={handleCourierDraftChange('intercom')}
+                      placeholder="Домофон"
+                    />
+                  </div>
+                  <input
+                    type="text"
+                    value={courierDraft.comment}
+                    onChange={handleCourierDraftChange('comment')}
+                    placeholder="Комментарий"
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  className={`payment-primary-button ${courierDraftComplete ? 'payment-primary-button--active' : ''}`}
+                  disabled={!courierDraftComplete}
+                  onClick={confirmCourierAddress}
+                >
+                  ПОДТВЕРДИТЬ АДРЕС
+                </button>
+              </aside>
+            </div>,
+            document.body
+          )
+        : null}
     </div>
   );
 };
