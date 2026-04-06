@@ -160,7 +160,7 @@
   border: 1px solid #e5d8d4;
   border-radius: 4px;
   background: #fff;
-  color: #740400;
+  color: #240100;
   cursor: pointer;
   font-size: 16px;
   line-height: 24px;
@@ -178,7 +178,7 @@
 
 @media (hover: hover) {
   .profile-shortcut:hover {
-    color: #740400;
+    color: #240100;
     border-color: #d8c7c3;
   }
 }
@@ -187,6 +187,7 @@
   width: 24px;
   height: 24px;
   object-fit: contain;
+  filter: brightness(0) saturate(100%) invert(6%) sepia(43%) saturate(1990%) hue-rotate(4deg) brightness(95%) contrast(115%);
 }
 
 .profile-latest-order {
@@ -436,14 +437,29 @@
 }
 
 .profile-btn--primary {
-  background: #6f0808;
-  color: #fff;
+  border-color: #460200;
+  background: #460200;
+  color: #FCF8F7;
+}
+
+.profile-btn--primary:active {
+  background: #330200;
+  border-color: #330200;
+  color: #FCF8F7;
+}
+
+@media (hover: hover) {
+  .profile-btn--primary:hover {
+    background: #330200;
+    border-color: #330200;
+    color: #FCF8F7;
+  }
 }
 
 .profile-settings .profile-btn--primary:disabled {
-  border-color: #ddd2cf;
-  background: #fbf9f9;
-  color: #d4c8c5;
+  border-color: transparent;
+  background: #7f6a6b;
+  color: #c8b6b4;
   cursor: not-allowed;
 }
 
@@ -481,9 +497,23 @@
 }
 
 .profile-btn--outline {
-  background: #fff;
-  color: #9b514e;
-  border-color: #c99d99;
+  background: transparent;
+  color: #8f4b45;
+  border-color: #cb9d9a;
+}
+
+.profile-btn--outline:active {
+  background: #650400;
+  border-color: #650400;
+  color: #fcf8f7;
+}
+
+@media (hover: hover) {
+  .profile-btn--outline:hover {
+    background: #650400;
+    border-color: #650400;
+    color: #fcf8f7;
+  }
 }
 
 .profile-btn--details {
@@ -492,11 +522,32 @@
   width: 140px;
 }
 
-.profile-btn--disabled {
-  border-color: #ddd2cf;
-  color: #d4c8c5;
-  background: #fbf9f9;
+.profile-btn--support {
+  background: transparent;
+  color: #b4928a;
+  border-color: #b4928a;
+  margin-top: 14px;
+}
+
+.profile-btn--support:active:not(:disabled) {
+  background: #b4928a;
+  border-color: #b4928a;
+  color: #6c5550;
+}
+
+.profile-btn--support:disabled {
+  background: transparent;
+  color: #c5b8b5;
+  border-color: #c5b8b5;
   cursor: not-allowed;
+}
+
+@media (hover: hover) {
+  .profile-btn--support:hover:not(:disabled) {
+    background: #b4928a;
+    border-color: #b4928a;
+    color: #6c5550;
+  }
 }
 
 .profile-btn--full {
@@ -542,9 +593,11 @@
   margin: 8px 0 0;
   display: block;
   text-align: center;
-  color: #6f0808;
-  font-size: 16px;
-  font-family: "Bebas Neue", "Open Sans", sans-serif;
+  color: #240100;
+  font-size: 12px;
+  line-height: 16px;
+  font-family: "Open Sans", sans-serif;
+  font-weight: 400;
   text-decoration: none;
 }
 
@@ -572,6 +625,7 @@
 
 @media (hover: hover) {
   .profile-support:hover {
+    color: #240100;
     text-decoration: underline;
   }
 }
