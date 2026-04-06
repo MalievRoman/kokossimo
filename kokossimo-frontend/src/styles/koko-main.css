@@ -1279,9 +1279,9 @@ body {
 }
 
 .product-card__btn:disabled {
-  border-color: #ddd2cf;
-  background: #fbf9f9;
-  color: #d4c8c5;
+  border-color: #a17270;
+  background: transparent;
+  color: #a17270;
   cursor: not-allowed;
 }
 
@@ -1298,9 +1298,9 @@ body {
     color: #fcf8f7;
   }
   .product-card__btn:disabled:hover {
-    border-color: #ddd2cf;
-    background: #fbf9f9;
-    color: #d4c8c5;
+    border-color: #a17270;
+    background: transparent;
+    color: #a17270;
   }
 }
 
