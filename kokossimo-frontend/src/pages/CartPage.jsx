@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Trash2, Plus, Minus, ShoppingBag } from 'lucide-react';
 import { useCart } from '../context/CartContext';
@@ -6,8 +6,21 @@ import { resolveMediaUrl } from '../utils/media';
 import './CartPage.css';
 
 const CartPage = () => {
-  const { cartItems, removeFromCart, updateQuantity, clearCart, getTotalPrice } = useCart();
+  const { cartItems, removeFromCart, updateQuantity, clearCart, getTotalItems, getTotalPrice, refreshCart } = useCart();
   const location = useLocation();
+  const [syncError, setSyncError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    setSyncError('');
+    Promise.resolve(refreshCart()).catch(() => {
+      if (cancelled) return;
+      setSyncError('Не удалось обновить корзину. Проверьте подключение и попробуйте ещё раз.');
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshCart]);
 
   const handleQuantityChange = (productId, newQuantity) => {
     if (newQuantity < 1) {
@@ -26,6 +39,17 @@ const CartPage = () => {
 
   const getProductLink = (item) => (!item.is_gift_certificate ? `/product/${item.id}` : null);
   const formatRub = (value) => `${Number(value).toLocaleString('ru-RU')} ₽`;
+
+  const unavailableItems = useMemo(
+    () => cartItems.filter((item) => item.stock != null && Number(item.stock) <= 0),
+    [cartItems]
+  );
+  const hasUnavailable = unavailableItems.length > 0;
+  const unavailableHint = hasUnavailable
+    ? `Некоторые товары недоступны: ${unavailableItems.map((i) => i.name).filter(Boolean).slice(0, 2).join(', ')}${
+        unavailableItems.length > 2 ? '…' : ''
+      }`
+    : '';
 
   return (
     <div className="cart-page page-animation">
@@ -49,9 +73,15 @@ const CartPage = () => {
         ) : (
           <div className="cart-layout">
             <div className="cart-layout__left">
+              {syncError ? <div className="cart-sync-error">{syncError}</div> : null}
+              {hasUnavailable ? (
+                <div className="cart-sync-warning" role="status">
+                  {unavailableHint || 'Некоторые товары сейчас нет в наличии. Удалите их, чтобы оформить заказ.'}
+                </div>
+              ) : null}
               <div className="cart-items__top">
                 <h2 className="cart-items__count">
-                  ТОВАРОВ В КОРЗИНЕ: {cartItems.reduce((sum, item) => sum + item.quantity, 0)}
+                  ТОВАРОВ В КОРЗИНЕ: {getTotalItems()}
                 </h2>
                 <button
                   type="button"
@@ -66,6 +96,7 @@ const CartPage = () => {
               <div className="cart-items">
                 <div className="cart-items__list">
               {cartItems.map((item) => {
+                const isUnavailable = item.stock != null && Number(item.stock) <= 0;
                 const hasDiscount =
                   Number.isFinite(Number(item.discount)) &&
                   Number(item.discount) > 0 &&
@@ -81,7 +112,12 @@ const CartPage = () => {
                 const itemWrapperProps = productUrl ? { to: productUrl, className: 'cart-item cart-item--clickable' } : { className: 'cart-item' };
 
                 return (
-                  <ItemWrapper key={item.id} {...itemWrapperProps}>
+                  <ItemWrapper
+                    key={item.id}
+                    {...itemWrapperProps}
+                    aria-disabled={isUnavailable || undefined}
+                    className={`${itemWrapperProps.className}${isUnavailable ? ' cart-item--unavailable' : ''}`}
+                  >
                     {item.image ? (
                       <div className="cart-item__image">
                         <img src={getImageUrl(item.image)} alt={item.name} />
@@ -94,6 +130,7 @@ const CartPage = () => {
 
                     <div className="cart-item__info">
                       <h3 className="cart-item__name">{item.name}</h3>
+                      {isUnavailable ? <div className="cart-item__badge">Нет в наличии</div> : null}
                       <div className="cart-item__price">
                         {hasDiscount && oldUnitPrice ? (
                           <>
@@ -120,6 +157,7 @@ const CartPage = () => {
                       <button
                         type="button"
                         className="quantity-btn"
+                        disabled={isUnavailable}
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
@@ -132,6 +170,7 @@ const CartPage = () => {
                       <button
                         type="button"
                         className="quantity-btn"
+                        disabled={isUnavailable}
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
@@ -143,7 +182,9 @@ const CartPage = () => {
                     </div>
 
                     <div className="cart-item__total">
-                      <div className="cart-item__total-current">{formatRub(item.price * item.quantity)}</div>
+                      <div className="cart-item__total-current">
+                        {isUnavailable ? '—' : formatRub(item.price * item.quantity)}
+                      </div>
                       {hasDiscount && oldTotalPrice ? (
                         <div className="cart-item__total-old">{formatRub(oldTotalPrice)}</div>
                       ) : null}
@@ -157,7 +198,7 @@ const CartPage = () => {
                         e.stopPropagation();
                         removeFromCart(item.id);
                       }}
-                      aria-label="Удалить товар"
+                      aria-label={isUnavailable ? 'Удалить недоступный товар' : 'Удалить товар'}
                     >
                       <Trash2 size={18} />
                     </button>
@@ -173,7 +214,7 @@ const CartPage = () => {
               <h2 className="cart-summary__title">СУММА ЗАКАЗА</h2>
               <div className="cart-summary__row">
                 <span>Товаров:</span>
-                <span>{cartItems.reduce((sum, item) => sum + item.quantity, 0)} шт</span>
+                <span>{getTotalItems()} шт</span>
               </div>
               <div className="cart-summary__divider" />
               <div className="cart-summary__row cart-summary__total">
@@ -181,13 +222,19 @@ const CartPage = () => {
                 <span>{formatRub(getTotalPrice())}</span>
               </div>
 
-              <Link
-                to={isAuthenticated ? '/checkout' : '/auth'}
-                state={isAuthenticated ? { backgroundLocation: location } : undefined}
-                className="cart-summary__submit"
-              >
-                К ОФОРМЛЕНИЮ
-              </Link>
+              {hasUnavailable ? (
+                <button type="button" className="cart-summary__submit cart-summary__submit--disabled" disabled>
+                  К ОФОРМЛЕНИЮ
+                </button>
+              ) : (
+                <Link
+                  to={isAuthenticated ? '/checkout' : '/auth'}
+                  state={isAuthenticated ? { backgroundLocation: location } : undefined}
+                  className="cart-summary__submit"
+                >
+                  К ОФОРМЛЕНИЮ
+                </Link>
+              )}
             </div>
           </div>
         )}
