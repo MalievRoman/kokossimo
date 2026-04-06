@@ -16,7 +16,9 @@ from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-load_dotenv(BASE_DIR / '.env')
+REPO_ROOT = BASE_DIR.parent
+load_dotenv(REPO_ROOT / '.env')
+load_dotenv(BASE_DIR / '.env', override=True)
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
@@ -27,7 +29,12 @@ SECRET_KEY = 'django-insecure-r6&_l&vez*epdjzqwack4j9&m@g8@+!tu*t$9u-1eir^ns$zfs
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DJANGO_DEBUG', 'false').lower() in ('1', 'true', 'yes')
 
-ALLOWED_HOSTS = [host.strip() for host in os.getenv('DJANGO_ALLOWED_HOSTS', '').split(',') if host.strip()]
+default_allowed_hosts = '127.0.0.1,localhost' if DEBUG else ''
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.getenv('DJANGO_ALLOWED_HOSTS', default_allowed_hosts).split(',')
+    if host.strip()
+]
 
 
 # Application definition

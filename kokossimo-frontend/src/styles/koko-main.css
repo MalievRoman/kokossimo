@@ -1465,6 +1465,10 @@ body {
   padding-top: var(--header-h);
 }
 
+body.body--without-header {
+  padding-top: 0;
+}
+
 /* Catalog: always 6 items in one row on desktop */
 @media (min-width: 961px) {
   .cataloggrid,
@@ -1863,7 +1867,7 @@ body {
 
 .product-card__media {
   position: relative;
-  width: 200px;
+  width: 100%;
 }
 
 .product-card__badges {
