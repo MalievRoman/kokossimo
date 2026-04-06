@@ -1,13 +1,61 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Trash2, Plus, Minus, ShoppingBag } from 'lucide-react';
+import { Trash2, Plus, Minus } from 'lucide-react';
 import { useCart } from '../context/CartContext';
+import ProductSlider from '../components/product/ProductSlider';
+import { getBestsellers, getNewProducts, getProducts } from '../services/api';
 import { resolveMediaUrl } from '../utils/media';
 import './CartPage.css';
 
 const CartPage = () => {
   const { cartItems, removeFromCart, updateQuantity, clearCart, getTotalPrice } = useCart();
   const location = useLocation();
+  const [recommendationPool, setRecommendationPool] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const extractProducts = (response) => {
+      const payload = response?.data;
+      if (Array.isArray(payload)) return payload;
+      if (Array.isArray(payload?.results)) return payload.results;
+      return [];
+    };
+
+    const loadRecommendations = async () => {
+      const collected = [];
+      const seen = new Set();
+      const sources = [
+        () => getBestsellers(),
+        () => getNewProducts(),
+        () => getProducts({ page: 1, page_size: 12, in_stock: 'true' }),
+      ];
+
+      for (const load of sources) {
+        try {
+          const response = await load();
+          const products = extractProducts(response);
+          for (const product of products) {
+            if (!product?.id || seen.has(product.id)) continue;
+            seen.add(product.id);
+            collected.push(product);
+          }
+          if (collected.length >= 12) break;
+        } catch {
+          // ignore source errors and continue with next recommendation feed
+        }
+      }
+
+      if (!cancelled) {
+        setRecommendationPool(collected.slice(0, 12));
+      }
+    };
+
+    loadRecommendations();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleQuantityChange = (productId, newQuantity) => {
     if (newQuantity < 1) {
@@ -23,6 +71,14 @@ const CartPage = () => {
   };
 
   const isAuthenticated = Boolean(localStorage.getItem('authToken'));
+  const cartProductIds = useMemo(
+    () => new Set(cartItems.filter((item) => !item.is_gift_certificate).map((item) => item.id)),
+    [cartItems]
+  );
+  const recommendedProducts = useMemo(() => {
+    const filtered = recommendationPool.filter((product) => !cartProductIds.has(product.id));
+    return filtered.length > 0 ? filtered : recommendationPool;
+  }, [recommendationPool, cartProductIds]);
 
   const getProductLink = (item) => (!item.is_gift_certificate ? `/product/${item.id}` : null);
   const formatRub = (value) => `${Number(value).toLocaleString('ru-RU')} ₽`;
@@ -39,12 +95,15 @@ const CartPage = () => {
 
         {cartItems.length === 0 ? (
           <div className="cart-empty">
-            <ShoppingBag size={64} />
-            <h2>Ваша корзина пуста</h2>
-            <p>Добавьте товары из каталога</p>
-            <Link to="/catalog" className="btn-primary">
-              Перейти в каталог
-            </Link>
+            <div className="cart-empty__content">
+              <h2 className="cart-empty__title">Ваша корзина пока пуста</h2>
+              <p className="cart-empty__text">
+                Воспользуйтесь поиском, или перейдите сразу в каталог
+              </p>
+              <Link to="/catalog" className="cart-empty__button">
+                ПЕРЕЙТИ В КАТАЛОГ
+              </Link>
+            </div>
           </div>
         ) : (
           <div className="cart-layout">
@@ -186,9 +245,20 @@ const CartPage = () => {
                 state={isAuthenticated ? { backgroundLocation: location } : undefined}
                 className="cart-summary__submit"
               >
-                К ОФОРМЛЕНИЮ
+                {isAuthenticated ? 'К ОФОРМЛЕНИЮ' : 'АВТОРИЗОВАТЬСЯ'}
               </Link>
             </div>
+          </div>
+        )}
+
+        {recommendedProducts.length > 0 && (
+          <div className="cart-recommendations">
+            <ProductSlider
+              title="ВАМ МОЖЕТ ПОНРАВИТЬСЯ"
+              products={recommendedProducts}
+              showLinks={false}
+              withContainer={false}
+            />
           </div>
         )}
       </div>

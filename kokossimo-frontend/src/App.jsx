@@ -41,6 +41,13 @@ function App() {
   const isAuthFullscreen = pathname === '/auth';
   const hideChrome = isCheckoutFullscreen || isAuthFullscreen;
 
+  useEffect(() => {
+    document.body.classList.toggle('body--without-header', hideChrome);
+    return () => {
+      document.body.classList.remove('body--without-header');
+    };
+  }, [hideChrome]);
+
   return (
     <div className="app">
       <ScrollToTop />

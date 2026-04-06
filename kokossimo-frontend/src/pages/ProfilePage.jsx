@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
@@ -270,6 +270,10 @@ const ProfilePage = () => {
     setStatus({ type, message });
     setTimeout(() => setStatus({ type: '', message: '' }), 3000);
   };
+
+  if (!isAuthenticated) {
+    return <Navigate to="/auth" replace />;
+  }
 
   const handleTabChange = (tabKey) => {
     setActiveTab(tabKey);

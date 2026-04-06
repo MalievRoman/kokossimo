@@ -5,54 +5,80 @@
 }
 
 .cart-empty {
+  display: flex;
+  justify-content: center;
   text-align: center;
-  padding: 4rem 2rem;
-  margin-top: 24px;
+  margin-top: 72px;
   font-family: "Open Sans", sans-serif;
   color: #240100;
 }
 
-.cart-empty svg {
-  margin-bottom: 1.5rem;
-  color: #c2c2c2;
+.cart-empty__content {
+  width: min(100%, 460px);
 }
 
-.cart-empty h2 {
+.cart-empty__title {
+  margin: 0;
   font-family: "Open Sans", sans-serif;
-  font-weight: 500;
-  font-size: 18px;
-  line-height: 28px;
+  font-weight: 600;
+  font-size: 20px;
+  line-height: 30px;
   letter-spacing: 0;
-  color: #240100;
-  margin: 0 0 0.5rem;
-  text-transform: uppercase;
+  color: #3c201b;
 }
 
-.cart-empty p {
+.cart-empty__text {
+  margin: 18px 0 0;
   font-family: "Open Sans", sans-serif;
   font-weight: 400;
   font-size: 16px;
   line-height: 24px;
   letter-spacing: 0;
-  color: #240100;
-  margin: 0 0 2rem;
+  color: #9e9291;
 }
 
-.cart-empty .btn-primary {
-  background: none;
-  color: #740400;
-  text-decoration: underline;
-  border: none;
-  padding: 0;
+.cart-empty__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 164px;
+  height: 40px;
+  padding: 0 16px;
+  margin-top: 24px;
+  border-radius: 4px;
+  background: #460200;
+  color: #fcf8f7;
+  text-decoration: none;
   font-family: "Open Sans", sans-serif;
   font-weight: 400;
-  font-size: 16px;
+  font-size: 14px;
+  line-height: 20px;
+  text-transform: uppercase;
+  transition: background 0.2s ease;
 }
 
-.cart-empty .btn-primary:hover {
-  background: none;
+@media (hover: hover) {
+  .cart-empty__button:hover {
+    background: #330200;
+    color: #fcf8f7;
+  }
+}
+
+.cart-recommendations {
+  margin-top: 76px;
+}
+
+.cart-recommendations .bestsellers.block {
+  margin: 0;
+}
+
+.cart-recommendations .bestsellers__title {
   color: #240100;
-  text-decoration: underline;
+  font-family: "Open Sans", sans-serif;
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 30px;
+  letter-spacing: 0;
 }
 
 .cart-page .page-title {
@@ -452,6 +478,31 @@
 @media (max-width: 768px) {
   .cart-page {
     padding: 1.5rem 0 3rem;
+  }
+
+  .cart-empty {
+    margin-top: 52px;
+  }
+
+  .cart-empty__title {
+    font-size: 18px;
+    line-height: 28px;
+  }
+
+  .cart-empty__text {
+    margin-top: 14px;
+    font-size: 15px;
+    line-height: 22px;
+  }
+
+  .cart-empty__button {
+    width: 100%;
+    max-width: 260px;
+    margin-top: 20px;
+  }
+
+  .cart-recommendations {
+    margin-top: 56px;
   }
 
   .cart-page .page-title {
