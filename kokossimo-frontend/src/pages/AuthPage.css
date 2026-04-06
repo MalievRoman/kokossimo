@@ -216,6 +216,12 @@
   border-color: #cb9d9a;
 }
 
+.auth-btn--ghost:disabled {
+  background: transparent;
+  color: #a17270;
+  border-color: #a17270;
+}
+
 .auth-link {
   background: none;
   border: 0;

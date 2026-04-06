@@ -247,6 +247,13 @@
   border-color: #cb9d9a;
 }
 
+.catalog-filter-action--ghost:disabled {
+  background: transparent;
+  color: #a17270;
+  border-color: #a17270;
+  cursor: not-allowed;
+}
+
 .catalog-filter-action--ghost:active {
   background: #650400;
   border-color: #650400;

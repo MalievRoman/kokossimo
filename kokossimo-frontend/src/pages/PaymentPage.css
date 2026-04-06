@@ -306,8 +306,9 @@
 }
 
 .payment-secondary-button--disabled {
-  border-color: #d2c6c3;
-  color: #c3b9b7;
+  background: transparent;
+  border-color: #a17270;
+  color: #a17270;
   cursor: not-allowed;
 }
 
