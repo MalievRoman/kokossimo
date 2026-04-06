@@ -188,13 +188,26 @@
 }
 
 .auth-btn:disabled {
-  opacity: 0.6;
+  opacity: 1;
   cursor: not-allowed;
 }
 
 .auth-btn--primary {
-  background: #650400;
-  color: #fcf8f7;
+  border-color: #460200;
+  background: #460200;
+  color: #FCF8F7;
+}
+
+.auth-btn--primary:active:not(:disabled) {
+  background: #330200;
+  border-color: #330200;
+  color: #FCF8F7;
+}
+
+.auth-btn--primary:disabled {
+  border-color: transparent;
+  background: #7f6a6b;
+  color: #c8b6b4;
 }
 
 .auth-btn--ghost {
@@ -334,7 +347,9 @@
 
 @media (hover: hover) {
   .auth-btn--primary:hover:not(:disabled) {
-    opacity: 0.92;
+    background: #330200;
+    border-color: #330200;
+    color: #FCF8F7;
   }
 
   .auth-btn--ghost:hover:not(:disabled) {

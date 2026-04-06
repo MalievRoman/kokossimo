@@ -709,7 +709,7 @@ const ProfilePage = () => {
                 </button>
                 <button
                   type="button"
-                  className="profile-btn profile-btn--disabled profile-btn--full"
+                  className="profile-btn profile-btn--support profile-btn--full"
                   disabled
                 >
                   УДАЛИТЬ АККАУНТ

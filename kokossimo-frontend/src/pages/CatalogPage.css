@@ -206,20 +206,59 @@
 
 .catalog-filter-action {
   width: 100%;
-  height: 38px;
-  border: 1px solid #740400;
+  height: 40px;
+  border: 1px solid #460200;
   border-radius: 4px;
-  background: #740400;
-  color: #fff;
-  font-size: 12px;
+  background: #460200;
+  color: #FCF8F7;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 400;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0;
   cursor: pointer;
+  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
+}
+
+.catalog-filter-action:not(.catalog-filter-action--ghost):active {
+  background: #330200;
+  border-color: #330200;
+  color: #FCF8F7;
+}
+
+.catalog-filter-action:not(.catalog-filter-action--ghost):disabled {
+  border-color: transparent;
+  background: #7f6a6b;
+  color: #c8b6b4;
+  cursor: not-allowed;
+}
+
+@media (hover: hover) {
+  .catalog-filter-action:not(.catalog-filter-action--ghost):hover {
+    background: #330200;
+    border-color: #330200;
+    color: #FCF8F7;
+  }
 }
 
 .catalog-filter-action--ghost {
   background: transparent;
-  color: #740400;
+  color: #8f4b45;
+  border-color: #cb9d9a;
+}
+
+.catalog-filter-action--ghost:active {
+  background: #650400;
+  border-color: #650400;
+  color: #fcf8f7;
+}
+
+@media (hover: hover) {
+  .catalog-filter-action--ghost:hover {
+    background: #650400;
+    border-color: #650400;
+    color: #fcf8f7;
+  }
 }
 
 .catalog-content {
