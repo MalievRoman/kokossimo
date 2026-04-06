@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
-import { getUserCart, mergeUserCart, replaceUserCart } from '../services/api';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { getProduct, getUserCart, mergeUserCart, replaceUserCart } from '../services/api';
 
 const CartContext = createContext();
 
@@ -51,14 +51,18 @@ export const CartProvider = ({ children }) => {
         ? normalizedDiscount
         : 0;
 
+    const isAvailable = stock == null ? true : stock > 0;
+    const safeQuantity = !isAvailable ? quantity : stock == null ? quantity : Math.min(quantity, stock);
+
     return {
       id,
       name: item?.name || '',
       price,
       discount,
       image: item?.image || null,
-      quantity: stock == null ? quantity : Math.min(quantity, stock),
+      quantity: safeQuantity,
       stock,
+      is_available: isAvailable,
       is_gift_certificate: Boolean(item?.is_gift_certificate),
     };
   };
@@ -273,13 +277,82 @@ export const CartProvider = ({ children }) => {
 
   // Получить общее количество товаров в корзине
   const getTotalItems = () => {
-    return cartItems.reduce((total, item) => total + item.quantity, 0);
+    return cartItems.reduce((total, item) => {
+      const stock = Number(item.stock);
+      const isFiniteStock = Number.isFinite(stock);
+      const effectiveQty = isFiniteStock ? Math.min(item.quantity, stock) : item.quantity;
+      return total + Math.max(0, effectiveQty);
+    }, 0);
   };
 
   // Получить общую стоимость корзины
   const getTotalPrice = () => {
-    return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+    return cartItems.reduce((total, item) => {
+      const stock = Number(item.stock);
+      const isFiniteStock = Number.isFinite(stock);
+      const effectiveQty = isFiniteStock ? Math.min(item.quantity, stock) : item.quantity;
+      return total + item.price * Math.max(0, effectiveQty);
+    }, 0);
   };
+
+  const refreshCart = useCallback(async () => {
+    if (!authToken) {
+      const guestItems = readGuestCart();
+      const productItems = guestItems.filter((item) => {
+        if (item?.is_gift_certificate) return false;
+        const rawId = item?.id;
+        return typeof rawId === 'number' || (typeof rawId === 'string' && rawId.trim() && !Number.isNaN(Number(rawId)));
+      });
+      if (productItems.length === 0) {
+        setCartItems(guestItems);
+        return;
+      }
+
+      const refreshed = await Promise.all(
+        productItems.map(async (item) => {
+          const id = typeof item.id === 'number' ? item.id : Number(item.id);
+          if (!Number.isFinite(id)) return item;
+          try {
+            const response = await getProduct(id);
+            const product = response?.data;
+            const stock = Number(product?.stock);
+            const isFiniteStock = Number.isFinite(stock) ? Math.max(0, Math.floor(stock)) : null;
+            return {
+              ...item,
+              name: product?.name || item.name,
+              price: Number(product?.price) || item.price,
+              discount: Number(product?.discount) || item.discount,
+              image: product?.image || item.image,
+              stock: isFiniteStock,
+              is_available: isFiniteStock == null ? true : isFiniteStock > 0,
+            };
+          } catch {
+            return item;
+          }
+        })
+      );
+
+      setCartItems((prev) => {
+        const refreshedMap = new Map(refreshed.map((i) => [String(i.id), i]));
+        return prev.map((item) => {
+          const next = refreshedMap.get(String(item.id));
+          return next ? { ...item, ...next } : item;
+        });
+      });
+      return;
+    }
+
+    try {
+      const serverResponse = await getUserCart(authToken);
+      const nextItems = Array.isArray(serverResponse?.data?.items)
+        ? serverResponse.data.items.map(normalizeServerItem)
+        : [];
+      skipNextServerSyncRef.current = true;
+      setCartItems(nextItems);
+    } catch {
+      // ignore refresh failures
+    }
+  }, [authToken]);
 
   const value = {
     cartItems,
@@ -288,7 +361,8 @@ export const CartProvider = ({ children }) => {
     updateQuantity,
     clearCart,
     getTotalItems,
-    getTotalPrice
+    getTotalPrice,
+    refreshCart,
   };
 
   return (
