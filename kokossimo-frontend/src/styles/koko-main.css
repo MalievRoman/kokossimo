@@ -487,7 +487,11 @@ body {
   background: var(--bg);
   transform: translateX(-105%);
   transition: transform 200ms ease;
-  padding: 34px 65px 24px 12px;
+  padding: 34px 12px 24px;
+  font-family: "Open Sans", sans-serif;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 500;
 }
 .mobile-menu.is-open .mobile-menu__panel {
   transform: translateX(0);
@@ -496,13 +500,19 @@ body {
 .mobile-menu__close {
   border: 0;
   background: transparent;
-  color: #b8aead;
-  font-size: 42px;
-  line-height: 1;
   padding: 0;
-  width: 34px;
-  height: 34px;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
+}
+
+.mobile-menu__close svg {
+  display: block;
+  width: 24px;
+  height: 24px;
 }
 
 .mobile-menu__nav {
@@ -513,10 +523,10 @@ body {
 .mobile-menu__nav a {
   color: #740400;
   text-decoration: none;
-  font-family: "Open Sans", sans-serif;
-  font-size: 16px;
-  line-height: 24px;
-  font-weight: 500;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  font-weight: inherit;
   letter-spacing: 0;
   text-transform: uppercase;
 }
@@ -533,11 +543,11 @@ body {
   border: 0;
   background: transparent;
   padding: 0;
-  font-family: "Open Sans", sans-serif;
+  font-family: inherit;
   color: #740400;
-  font-size: 16px;
-  line-height: 24px;
-  font-weight: 500;
+  font-size: inherit;
+  line-height: inherit;
+  font-weight: inherit;
   text-transform: uppercase;
   cursor: pointer;
   text-align: left;
@@ -565,9 +575,10 @@ body {
 }
 
 .mobile-menu__submenu a {
-  font-weight: 500;
-  font-size: 16px;
-  line-height: 24px;
+  font-family: inherit;
+  font-weight: inherit;
+  font-size: 14px;
+  line-height: 20px;
   text-decoration: none;
   color: #740400;
 }
@@ -575,7 +586,7 @@ body {
 .mobile-menu__account-wrap {
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px solid rgba(116, 4, 0, 0.45);
+  border-top: 1px solid #716A6A;
 }
 
 .mobile-menu__account {
@@ -584,10 +595,10 @@ body {
   gap: 10px;
   color: #240100;
   text-decoration: none;
-  font-family: "Open Sans", sans-serif;
-  font-size: 16px;
-  line-height: 24px;
-  font-weight: 500;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  font-weight: inherit;
   text-transform: uppercase;
   letter-spacing: 0;
 }
@@ -597,8 +608,30 @@ body {
   width: 100%;
 }
 
+.mobile-menu__account-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mobile-menu__account-main svg {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+}
+
 .mobile-menu__account--auth svg {
   flex: 0 0 auto;
+}
+
+.mobile-menu__account--guest span {
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.mobile-menu__account--auth span {
+  font-size: 12px;
+  line-height: 16px;
 }
 
 /* ===== BREAKPOINTS ===== */
@@ -627,7 +660,7 @@ body {
 
   .mobile-menu__panel {
     width: min(310px, calc(100vw - 65px));
-    padding-right: 65px;
+    padding: 34px 12px 24px;
   }
 }
 
@@ -1318,7 +1351,7 @@ body {
   width: 50px;
   height: 50px;
   border: 1.5px solid var(--accent);
-  border-radius: 4px;
+  border-radius: 50%;
   background: transparent;
   color: var(--accent);
   font-size: 22px;

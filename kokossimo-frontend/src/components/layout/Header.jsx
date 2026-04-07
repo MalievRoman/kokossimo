@@ -527,13 +527,20 @@ const Header = () => {
           onClick={closeMobileMenu}
         ></button>
         <aside className="mobile-menu__panel" role="dialog" aria-modal="true" aria-label="Меню">
-          <button
-            className="mobile-menu__close"
-            type="button"
-            aria-label="Закрыть"
-            onClick={closeMobileMenu}
-          >
-            ×
+            <button
+              className="mobile-menu__close"
+              type="button"
+              aria-label="Закрыть"
+              onClick={closeMobileMenu}
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path
+                  d="M6 6L18 18M18 6L6 18"
+                  stroke="#716A6A"
+                  strokeWidth="1.4"
+                  strokeLinecap="round"
+                />
+              </svg>
           </button>
 
           <nav className="mobile-menu__nav">
@@ -600,11 +607,18 @@ const Header = () => {
                 onClick={closeMobileMenu}
                 className="mobile-menu__account mobile-menu__account--auth"
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                   <path
-                    d="M12 12a4 4 0 100-8 4 4 0 000 8zM4 20a8 8 0 1116 0"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
+                    d="M7.99978 10.3066C5.5528 10.3066 3.37673 11.4881 1.99133 13.3217C1.69316 13.7162 1.54407 13.9135 1.54894 14.1802C1.55271 14.3863 1.68208 14.6461 1.84419 14.7734C2.054 14.938 2.34476 14.938 2.92627 14.938H13.0732C13.6547 14.938 13.9455 14.938 14.1553 14.7734C14.3174 14.6461 14.4468 14.3863 14.4506 14.1802C14.4554 13.9135 14.3064 13.7162 14.0082 13.3217C12.6228 11.4881 10.4467 10.3066 7.99978 10.3066Z"
+                    stroke="#240100"
+                    strokeWidth="1.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M7.99991 7.99001C9.9183 7.99001 11.4734 6.43486 11.4734 4.51649C11.4734 2.59812 9.9183 1.04297 7.99991 1.04297C6.08152 1.04297 4.52637 2.59812 4.52637 4.51649C4.52637 6.43486 6.08152 7.99001 7.99991 7.99001Z"
+                    stroke="#240100"
+                    strokeWidth="1.2"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   />
@@ -617,7 +631,25 @@ const Header = () => {
                 onClick={closeMobileMenu}
                 className="mobile-menu__account mobile-menu__account--guest"
               >
-                <span>ВОЙТИ В ЛИЧНЫЙ КАБИНЕТ</span>
+                <span className="mobile-menu__account-main">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                    <path
+                      d="M7.99978 10.3066C5.5528 10.3066 3.37673 11.4881 1.99133 13.3217C1.69316 13.7162 1.54407 13.9135 1.54894 14.1802C1.55271 14.3863 1.68208 14.6461 1.84419 14.7734C2.054 14.938 2.34476 14.938 2.92627 14.938H13.0732C13.6547 14.938 13.9455 14.938 14.1553 14.7734C14.3174 14.6461 14.4468 14.3863 14.4506 14.1802C14.4554 13.9135 14.3064 13.7162 14.0082 13.3217C12.6228 11.4881 10.4467 10.3066 7.99978 10.3066Z"
+                      stroke="#240100"
+                      strokeWidth="1.2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <path
+                      d="M7.99991 7.99001C9.9183 7.99001 11.4734 6.43486 11.4734 4.51649C11.4734 2.59812 9.9183 1.04297 7.99991 1.04297C6.08152 1.04297 4.52637 2.59812 4.52637 4.51649C4.52637 6.43486 6.08152 7.99001 7.99991 7.99001Z"
+                      stroke="#240100"
+                      strokeWidth="1.2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  <span>ВОЙТИ В ЛИЧНЫЙ КАБИНЕТ</span>
+                </span>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                   <path
                     d="M9 6l6 6-6 6"
