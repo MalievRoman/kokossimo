@@ -1318,6 +1318,30 @@ body {
   cursor: not-allowed;
 }
 
+.btn-secondary-outline {
+  border: 1px solid #240100;
+  border-radius: 4px;
+  background: transparent;
+  color: #240100;
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease;
+}
+
+.btn-secondary-outline:disabled {
+  border-color: #B0B0B0;
+  background: transparent;
+  color: #B0B0B0;
+  cursor: not-allowed;
+}
+
+.btn-secondary-outline:active:not(:disabled) {
+  background: #240100;
+  border-color: #240100;
+  color: #FCF8F7;
+}
+
 .product-card__btn:active:not(:disabled) {
   background: #650400;
   border-color: #650400;
@@ -1330,6 +1354,13 @@ body {
     border-color: #650400;
     color: #fcf8f7;
   }
+
+  .btn-secondary-outline:hover:not(:disabled) {
+    background: #240100;
+    border-color: #240100;
+    color: #FCF8F7;
+  }
+
   .product-card__btn:disabled:hover {
     border-color: #a17270;
     background: transparent;
