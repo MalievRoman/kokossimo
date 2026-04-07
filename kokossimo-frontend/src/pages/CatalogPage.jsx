@@ -10,6 +10,25 @@ const CATALOG_PAGE_SIZE = 30;
 const CATALOG_STATE_STORAGE_KEY = 'catalog_state_v1';
 const CATALOG_SORT_STORAGE_KEY = 'catalog_sort_v1';
 
+const CatalogChevron = ({ className = '' }) => (
+  <svg
+    width="12"
+    height="8"
+    viewBox="0 0 12 8"
+    fill="none"
+    aria-hidden="true"
+    className={className}
+  >
+    <path
+      d="M1 1L6 6L11 1"
+      stroke="currentColor"
+      strokeWidth="0.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
 const CatalogPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [sortBy, setSortBy] = useState(() => {
@@ -540,22 +559,17 @@ const CatalogPage = () => {
         <div className="catalog-layout">
           <aside className="catalog-sidebar">
             <section className="catalog-sidebar-section">
-              <h2 className="catalog-sidebar-title">КАТЕГОРИИ</h2>
+              <h2 className="catalog-sidebar-title catalog-sidebar-title--categories">КАТЕГОРИИ</h2>
               {categoryTree.length === 0 ? (
                 <div className="catalog-filter-empty">Категории не найдены</div>
               ) : (
                 <ul className="catalog-filter-list catalog-filter-tree">
-                  {categoryTree.map((parent) => (
-                    <li key={parent.code} className="catalog-filter-tree-parent">
-                      <div className="catalog-filter-tree-parent-row">
-                        <label className="catalog-filter-tree-parent-label">
-                          <input
-                            type="checkbox"
-                            checked={selectedParents.includes(parent.code)}
-                            onChange={() => handleParentChange(parent.code)}
-                          />
+                      {categoryTree.map((parent) => (
+                        <li key={parent.code} className="catalog-filter-tree-parent">
+                          <div className="catalog-filter-tree-parent-row">
+                        <div className="catalog-filter-tree-parent-label">
                           {parent.name}
-                        </label>
+                        </div>
                         <button
                           type="button"
                           className={`catalog-filter-tree-toggle ${expandedParents.has(parent.code) ? 'is-open' : ''}`}
@@ -563,7 +577,7 @@ const CatalogPage = () => {
                           aria-expanded={expandedParents.has(parent.code)}
                           aria-label={expandedParents.has(parent.code) ? 'Свернуть подкатегории' : 'Показать подкатегории'}
                         >
-                          ▼
+                          <CatalogChevron className="catalog-filter-tree-toggle__icon" />
                         </button>
                       </div>
                       {expandedParents.has(parent.code) && parent.children && parent.children.length > 0 && (
@@ -665,7 +679,10 @@ const CatalogPage = () => {
                 ref={mobileCategoryDetailsRef}
                 onToggle={(event) => setIsMobileCategoryOpen(event.currentTarget.open)}
               >
-                <summary className="catalog-mobile-filter__summary">КАТЕГОРИИ</summary>
+                <summary className="catalog-mobile-filter__summary">
+                  <span>КАТЕГОРИИ</span>
+                  <CatalogChevron className="catalog-mobile-filter__chevron" />
+                </summary>
                 <div className="catalog-mobile-filter__content">
                   {categoryTree.length === 0 ? (
                     <div className="catalog-filter-empty">Категории не найдены</div>
@@ -676,31 +693,27 @@ const CatalogPage = () => {
                           <div className="catalog-filter-tree-parent-row">
                             <button
                               type="button"
-                              className={`catalog-mobile-category-item ${selectedParents.includes(parent.code) ? 'is-active' : ''}`}
-                              onClick={() => handleParentChange(parent.code)}
-                            >
-                              {parent.name}
-                            </button>
-                            <button
-                              type="button"
-                              className={`catalog-filter-tree-toggle ${expandedParents.has(parent.code) ? 'is-open' : ''}`}
+                              className={`catalog-mobile-category-item catalog-mobile-category-item--parent ${expandedParents.has(parent.code) ? 'is-open' : ''}`}
                               onClick={() => toggleExpanded(parent.code)}
-                              aria-label={expandedParents.has(parent.code) ? 'Свернуть' : 'Подкатегории'}
+                              aria-expanded={expandedParents.has(parent.code)}
+                              aria-label={expandedParents.has(parent.code) ? 'Свернуть подкатегории' : 'Показать подкатегории'}
                             >
-                              ▼
+                              <span>{parent.name}</span>
+                              <CatalogChevron className="catalog-mobile-category-item__chevron" />
                             </button>
                           </div>
                           {expandedParents.has(parent.code) && parent.children && parent.children.length > 0 && (
                             <ul className="catalog-filter-tree-children">
                               {parent.children.map((child) => (
                                 <li key={child.code}>
-                                  <button
-                                    type="button"
-                                    className={`catalog-mobile-category-item ${selectedSubcategories.includes(child.code) ? 'is-active' : ''}`}
-                                    onClick={() => handleSubcategoryChange(child.code)}
-                                  >
+                                  <label>
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedSubcategories.includes(child.code)}
+                                      onChange={() => handleSubcategoryChange(child.code)}
+                                    />
                                     {child.name}
-                                  </button>
+                                  </label>
                                 </li>
                               ))}
                             </ul>
@@ -731,7 +744,8 @@ const CatalogPage = () => {
                     setIsMobilePriceOpen((prev) => !prev);
                   }}
                 >
-                  СТОИМОСТЬ
+                  <span>СТОИМОСТЬ</span>
+                  <CatalogChevron className={`catalog-mobile-filter__chevron ${isMobilePriceOpen ? 'is-open' : ''}`} />
                 </button>
 
                 {isMobilePriceOpen && createPortal(
@@ -762,15 +776,6 @@ const CatalogPage = () => {
                           transform: scale < 1 ? `scale(${scale})` : undefined,
                         }}
                       >
-                        <button
-                          type="button"
-                          className="catalog-mobile-price-modal__close"
-                          aria-label="Закрыть окно фильтра цены"
-                          onClick={() => setIsMobilePriceOpen(false)}
-                        >
-                          ×
-                        </button>
-
                         <div className="catalog-mobile-price-modal__row">
                           <label className="catalog-mobile-price-modal__field">
                             <span>ОТ</span>
