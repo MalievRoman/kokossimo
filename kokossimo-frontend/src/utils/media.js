@@ -1,5 +1,7 @@
 const getApiOrigin = () => {
-  const apiBase = import.meta.env.VITE_API_URL || '/api';
+  const apiBase = import.meta.env.PROD
+    ? '/api'
+    : (import.meta.env.VITE_API_URL || '/api');
   const apiUrl = new URL(apiBase, window.location.origin);
   return apiUrl.origin;
 };
