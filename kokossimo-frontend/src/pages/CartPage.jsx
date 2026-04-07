@@ -76,7 +76,7 @@ const CartPage = () => {
               {syncError ? <div className="cart-sync-error">{syncError}</div> : null}
               {hasUnavailable ? (
                 <div className="cart-sync-warning" role="status">
-                  {unavailableHint || 'Некоторые товары сейчас нет в наличии. Удалите их, чтобы оформить заказ.'}
+                  {unavailableHint || 'Некоторых товаров сейчас нет в наличии. Удалите их, чтобы оформить заказ.'}
                 </div>
               ) : null}
               <div className="cart-items__top">
