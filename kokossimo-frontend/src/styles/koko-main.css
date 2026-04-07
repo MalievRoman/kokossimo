@@ -929,7 +929,7 @@ body {
 .catalog-card__thumb {
   width: 160px;
   height: 120px;
-  border: 1.5px solid var(--accent);
+  border: 1.8px solid #740400;
   border-radius: 8px;
   overflow: hidden;
   background: transparent;
@@ -949,6 +949,7 @@ body {
   letter-spacing: 0.06em;
   text-align: center;
   width: 160px;
+  text-transform: uppercase;
 }
 
 @media (max-width: 960px) {
