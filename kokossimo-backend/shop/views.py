@@ -273,10 +273,9 @@ def _upsert_user_cart(user, incoming_items, merge=False):
             product = products.get(product_id)
             if not product:
                 continue
-            stock = max(0, int(product.stock or 0))
-            if stock <= 0:
-                continue
-            quantity = min(int(entry.get("quantity") or 0), stock)
+            # Не выбрасываем товары с нулевым остатком — сохраняем их в корзине,
+            # чтобы фронт мог явно показать "Нет в наличии" и предложить удалить.
+            quantity = int(entry.get("quantity") or 0)
             if quantity <= 0:
                 continue
             to_create.append(
@@ -324,14 +323,13 @@ def _get_user_cart_payload(user, request):
         if not row.product_id:
             continue
         stock = max(0, int(row.product.stock or 0))
-        if stock <= 0:
-            row.delete()
-            touched = True
-            continue
         if int(row.quantity or 0) > stock:
-            row.quantity = stock
-            row.save(update_fields=["quantity", "updated_at"])
-            touched = True
+            # Не удаляем позиции с нулевым остатком — UI должен подсветить их как недоступные.
+            # При частичном остатке корректируем количество, чтобы не превышало доступное.
+            if stock > 0:
+                row.quantity = stock
+                row.save(update_fields=["quantity", "updated_at"])
+                touched = True
 
     if touched:
         items = list(cart.items.select_related("product"))
