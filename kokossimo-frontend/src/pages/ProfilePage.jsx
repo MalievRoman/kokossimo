@@ -658,7 +658,7 @@ const ProfilePage = () => {
                     placeholder="Иванов Иван Иванович"
                     value={fullNameInput}
                     maxLength={FULL_NAME_MAX_LENGTH}
-                    className={fullNameError ? 'is-invalid' : ''}
+                    className={`profile-settings-input${fullNameError ? ' is-invalid' : ''}`}
                     aria-invalid={fullNameError ? 'true' : 'false'}
                     onChange={(event) => {
                       setSettingsStatus({ type: '', message: '' });
@@ -672,6 +672,7 @@ const ProfilePage = () => {
                   <input
                     type="tel"
                     placeholder="+7 (___) ___-__-__"
+                    className="profile-settings-input"
                     value={profile.phone}
                     onChange={(event) => {
                       setSettingsStatus({ type: '', message: '' });
@@ -689,6 +690,7 @@ const ProfilePage = () => {
                   <input
                     type="text"
                     placeholder="15.10.1998"
+                    className="profile-settings-input"
                     value={birthDate}
                     onChange={(event) => {
                       setSettingsStatus({ type: '', message: '' });
@@ -701,6 +703,7 @@ const ProfilePage = () => {
                   <input
                     type="email"
                     placeholder="email@example.com"
+                    className="profile-settings-input"
                     value={profile.email}
                     onChange={(event) => {
                       setSettingsStatus({ type: '', message: '' });
