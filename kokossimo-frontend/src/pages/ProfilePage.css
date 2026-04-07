@@ -151,9 +151,9 @@
 
 .profile-shortcuts {
   display: grid;
-  grid-template-rows: repeat(2, 1fr);
+  grid-template-rows: repeat(2, auto);
   gap: 14px;
-  min-height: 368px;
+  min-height: auto;
 }
 
 .profile-shortcut {
@@ -167,11 +167,12 @@
   font-family: "Open Sans", sans-serif;
   font-weight: 500;
   min-height: 0;
-  height: 100%;
+  height: auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
+  padding: 16px 24px;
   letter-spacing: 0;
   transition: color 0.2s ease, border-color 0.2s ease;
 }
@@ -184,14 +185,22 @@
 }
 
 .profile-shortcut-icon {
-  width: 24px;
-  height: 24px;
-  object-fit: contain;
-  filter: brightness(0) saturate(100%) invert(6%) sepia(43%) saturate(1990%) hue-rotate(4deg) brightness(95%) contrast(115%);
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  display: block;
 }
 
 .profile-latest-order {
   min-height: 368px;
+}
+
+.profile-latest-order--empty {
+  min-height: auto;
+}
+
+.profile-latest-order--empty .profile-muted {
+  margin: 0;
 }
 
 .profile-order-head {
@@ -872,13 +881,31 @@
 }
 
 @media (max-width: 768px) {
-  .profile-page {
-    padding: 28px 0 46px;
+  .profile-tabs {
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    gap: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+  }
+
+  .profile-tabs::-webkit-scrollbar {
+    display: none;
   }
 
   .profile-tab {
-    font-size: 16px;
-    line-height: 24px;
+    flex: 0 0 auto;
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 768px) {
+  .profile-page {
+    padding: 28px 0 46px;
   }
 
   .profile-panel {
