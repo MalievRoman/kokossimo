@@ -48,6 +48,24 @@
   color: #240100;
 }
 
+.catalog-sidebar-title--categories {
+  font-size: 18px;
+}
+
+.catalog-mobile-filter__chevron,
+.catalog-filter-tree-toggle__icon {
+  flex: 0 0 auto;
+  display: block;
+  color: currentColor;
+  transition: transform 0.2s ease;
+}
+
+.catalog-mobile-filter[open] .catalog-mobile-filter__chevron,
+.catalog-mobile-filter__chevron.is-open,
+.catalog-filter-tree-toggle.is-open .catalog-filter-tree-toggle__icon {
+  transform: rotate(-180deg);
+}
+
 .catalog-filter-list {
   list-style: none;
   margin: 0;
@@ -118,6 +136,11 @@
 .catalog-filter-tree-parent-label {
   flex: 1;
   min-width: 0;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 400;
+  text-transform: uppercase;
+  color: #240100;
 }
 
 .catalog-filter-tree-toggle {
@@ -128,35 +151,38 @@
   border: none;
   background: transparent;
   cursor: pointer;
-  font-size: 10px;
-  line-height: 1;
-  color: #6b5a58;
-  transition: transform 0.2s ease;
-}
-
-.catalog-filter-tree-toggle.is-open {
-  transform: rotate(-180deg);
+  color: #240100;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .catalog-filter-tree-children {
   list-style: none;
   margin: 4px 0 4px 16px;
   padding: 0;
-  border-left: 1px solid #e8e4e3;
-  padding-left: 10px;
+  border-left: none;
+  padding-left: 0;
   display: grid;
   gap: 6px;
 }
 
 .catalog-filter-tree-children label {
   font-size: 14px;
-  text-transform: none;
-  color: #6b5a58;
+  line-height: 20px;
+  font-weight: 400;
+  text-transform: uppercase;
+  color: #240100;
 }
 
 .catalog-filter-empty {
   font-size: 14px;
   color: #9f9796;
+}
+
+.catalog-sidebar-section:last-of-type .catalog-filter-list label {
+  font-size: 14px;
+  line-height: 20px;
 }
 
 .catalog-filter-price {
@@ -243,8 +269,8 @@
 
 .catalog-filter-action--ghost {
   background: transparent;
-  color: #8f4b45;
-  border-color: #cb9d9a;
+  color: #740400;
+  border-color: #740400;
 }
 
 .catalog-filter-action--ghost:disabled {
@@ -279,7 +305,7 @@
 }
 
 .catalog-mobile-filter {
-  border: 1px solid #eadfdb;
+  border: none;
   border-radius: 4px;
   background: #fff4f1;
 }
@@ -308,19 +334,10 @@
   display: none;
 }
 
-.catalog-mobile-filter__summary::after {
-  content: "▾";
-  font-size: 12px;
-}
-
 .catalog-mobile-filter__button {
   width: 100%;
   border: 0;
   background: transparent;
-}
-
-.catalog-mobile-filter[open] .catalog-mobile-filter__summary::after {
-  transform: rotate(180deg);
 }
 
 .catalog-mobile-filter__content {
@@ -347,8 +364,36 @@
   padding: 2px 0;
 }
 
-.catalog-mobile-category-item.is-active {
-  color: #740400;
+.catalog-mobile-category-item--parent {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.catalog-mobile-category-item__chevron {
+  flex: 0 0 auto;
+  display: block;
+  color: #240100;
+  transition: transform 0.2s ease;
+}
+
+.catalog-mobile-category-item--parent.is-open .catalog-mobile-category-item__chevron {
+  transform: rotate(-180deg);
+}
+
+.catalog-mobile-filter-list label {
+  width: 100%;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.catalog-mobile-filter-list .catalog-filter-tree-children label {
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 400;
+  text-transform: uppercase;
+  color: #240100;
 }
 
 .catalog-mobile-filter--price {
@@ -371,29 +416,15 @@
   background: #f5f2f1;
   border-radius: 4px;
   padding: 10px;
-  padding-right: 28px;
   box-sizing: border-box;
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
   z-index: 10000;
-}
-
-.catalog-mobile-price-modal__close {
-  position: absolute;
-  top: 4px;
-  right: 8px;
-  border: 0;
-  background: transparent;
-  color: #240100;
-  font-size: 24px;
-  line-height: 1;
-  cursor: pointer;
 }
 
 .catalog-mobile-price-modal__row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
-  margin-top: 20px;
 }
 
 .catalog-mobile-price-modal__field {
@@ -433,10 +464,10 @@
 .catalog-mobile-price-modal__submit {
   width: 100%;
   height: 34px;
-  border: 0;
+  border: 1px solid #460200;
   border-radius: 4px;
-  background: #740400;
-  color: #fff;
+  background: #460200;
+  color: #FCF8F7;
   font-family: "Open Sans", sans-serif;
   font-size: 12px;
   line-height: 18px;
@@ -444,6 +475,7 @@
   letter-spacing: 0;
   text-transform: uppercase;
   cursor: pointer;
+  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
 }
 
 .catalog-mobile-price-modal__reset {
@@ -451,7 +483,7 @@
   height: 34px;
   border: 1px solid #740400;
   border-radius: 4px;
-  background: #fff;
+  background: transparent;
   color: #740400;
   font-family: "Open Sans", sans-serif;
   font-size: 12px;
@@ -460,6 +492,47 @@
   letter-spacing: 0;
   text-transform: uppercase;
   cursor: pointer;
+  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
+}
+
+.catalog-mobile-price-modal__submit:disabled {
+  border-color: transparent;
+  background: #7f6a6b;
+  color: #c8b6b4;
+  cursor: not-allowed;
+}
+
+.catalog-mobile-price-modal__reset:disabled {
+  background: transparent;
+  color: #a17270;
+  border-color: #a17270;
+  cursor: not-allowed;
+}
+
+.catalog-mobile-price-modal__submit:active {
+  background: #330200;
+  border-color: #330200;
+  color: #FCF8F7;
+}
+
+.catalog-mobile-price-modal__reset:active {
+  background: #650400;
+  border-color: #650400;
+  color: #FCF8F7;
+}
+
+@media (hover: hover) {
+  .catalog-mobile-price-modal__submit:hover {
+    background: #330200;
+    border-color: #330200;
+    color: #FCF8F7;
+  }
+
+  .catalog-mobile-price-modal__reset:hover {
+    background: #650400;
+    border-color: #650400;
+    color: #FCF8F7;
+  }
 }
 
 .catalog-controls {
@@ -747,15 +820,29 @@
     position: absolute;
     top: calc(100% + 8px);
     left: 0;
-    width: min(320px, calc(100vw - 24px));
+    width: max-content;
+    max-width: calc(100vw - 24px);
     max-height: 300px;
     overflow-y: auto;
     padding: 10px 12px;
-    border: 1px solid #eadfdb;
+    border: none;
     border-radius: 4px;
-    background: #fff;
+    background: #FCF8F7;
+    box-sizing: border-box;
     box-shadow: 0 10px 24px rgba(0, 0, 0, 0.14);
     z-index: 55;
+  }
+
+  .catalog-mobile-filter-list .catalog-filter-tree-parent-row {
+    display: block;
+    min-height: 0;
+  }
+
+  .catalog-mobile-filter-list .catalog-filter-tree-children {
+    margin: 4px 0 4px 16px;
+    border-left: none;
+    padding-left: 0;
+    margin-right: 0;
   }
 
   .catalog-controls {
