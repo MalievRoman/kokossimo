@@ -10,17 +10,16 @@ const CategoryList = () => {
 
   const getCategoryImageUrl = (name) => {
     const normalized = String(name || '').trim().toLowerCase();
-    const basePath = `${import.meta.env.BASE_URL}assets/`;
+    const basePath = `${import.meta.env.BASE_URL}assets/home-categories/`;
 
-    // Жесткое соответствие под файлы в public/assets
-    if (normalized.includes('лиц')) return encodeURI(`${basePath}уход за лицом.jpg`);
-    if (normalized.includes('тел')) return encodeURI(`${basePath}уход за телом.jpg`);
-    if (normalized.includes('волос')) return encodeURI(`${basePath}уход за волосами.jpg`);
-    if (normalized.includes('парфюм')) return encodeURI(`${basePath}парфюмерия.jpg`);
-    if (normalized.includes('макияж')) return encodeURI(`${basePath}макияж.jpg`);
-    if (normalized.includes('бад')) return encodeURI(`${basePath}бады.jpg`);
+    if (normalized.includes('лиц')) return `${basePath}cosm.png`;
+    if (normalized.includes('тел')) return `${basePath}uhod.png`;
+    if (normalized.includes('волос')) return `${basePath}uhod2.png`;
+    if (normalized.includes('парфюм')) return `${basePath}parf.png`;
+    if (normalized.includes('макияж')) return `${basePath}make.png`;
+    if (normalized.includes('бад')) return `${basePath}bad.png`;
 
-    return `${basePath}beauty_elements.png`;
+    return `${import.meta.env.BASE_URL}assets/beauty_elements.png`;
   };
 
   useEffect(() => {

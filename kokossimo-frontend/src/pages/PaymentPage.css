@@ -299,23 +299,24 @@
   justify-content: center;
   min-width: 110px;
   padding: 0 16px;
-  border: 1px solid #9b7770;
+  border: 1px solid #740400;
   background: transparent;
-  color: #6b3730;
+  color: #740400;
   cursor: pointer;
 }
 
 .payment-secondary-button--disabled {
-  border-color: #d2c6c3;
-  color: #c3b9b7;
+  background: transparent;
+  border-color: #a17270;
+  color: #a17270;
   cursor: not-allowed;
 }
 
 .payment-primary-button {
   width: 100%;
   border: 0;
-  background: #8f7673;
-  color: rgba(252, 248, 247, 0.55);
+  background: #7f6a6b;
+  color: #c8b6b4;
   cursor: not-allowed;
 }
 

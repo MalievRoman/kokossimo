@@ -10,6 +10,44 @@ const CATALOG_PAGE_SIZE = 30;
 const CATALOG_STATE_STORAGE_KEY = 'catalog_state_v1';
 const CATALOG_SORT_STORAGE_KEY = 'catalog_sort_v1';
 
+const CatalogChevron = ({ className = '' }) => (
+  <svg
+    width="12"
+    height="8"
+    viewBox="0 0 12 8"
+    fill="none"
+    aria-hidden="true"
+    className={className}
+  >
+    <path
+      d="M1 1L6 6L11 1"
+      stroke="currentColor"
+      strokeWidth="0.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const CatalogFilterButtonIcon = ({ className = '' }) => (
+  <svg
+    width="10"
+    height="10"
+    viewBox="13 13 10 10"
+    fill="none"
+    aria-hidden="true"
+    className={className}
+  >
+    <path
+      d="M13.4048 14.9315C13.4048 14.6742 13.4048 14.5455 13.4549 14.4472C13.4989 14.3607 13.5692 14.2904 13.6557 14.2464C13.754 14.1963 13.8827 14.1963 14.14 14.1963H21.86C22.1174 14.1963 22.246 14.1963 22.3443 14.2464C22.4308 14.2904 22.5011 14.3607 22.5451 14.4472C22.5952 14.5455 22.5952 14.6742 22.5952 14.9315V15.2391C22.5952 15.3626 22.5952 15.4244 22.5801 15.4818C22.5667 15.5327 22.5447 15.5809 22.515 15.6244C22.4815 15.6734 22.4348 15.7138 22.3415 15.7947L19.4025 18.3419C19.3092 18.4227 19.2625 18.4632 19.229 18.5122C19.1993 18.5557 19.1773 18.6039 19.1639 18.6547C19.1488 18.7122 19.1488 18.7739 19.1488 18.8975V21.2998C19.1488 21.3896 19.1488 21.4345 19.1343 21.4734C19.1215 21.5077 19.1007 21.5385 19.0736 21.5631C19.0429 21.591 19.0012 21.6077 18.9177 21.6411L17.3553 22.266C17.1865 22.3336 17.102 22.3674 17.0342 22.3533C16.9749 22.3409 16.9229 22.3057 16.8895 22.2552C16.8512 22.1976 16.8512 22.1066 16.8512 21.9247V18.8975C16.8512 18.7739 16.8512 18.7122 16.8361 18.6547C16.8227 18.6039 16.8007 18.5557 16.771 18.5122C16.7375 18.4632 16.6908 18.4227 16.5975 18.3419L13.6585 15.7947C13.5651 15.7138 13.5185 15.6734 13.485 15.6244C13.4553 15.5809 13.4333 15.5327 13.4199 15.4818C13.4048 15.4244 13.4048 15.3626 13.4048 15.2391V14.9315Z"
+      stroke="#740400"
+      strokeWidth="0.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
 const CatalogPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [sortBy, setSortBy] = useState(() => {
@@ -37,9 +75,12 @@ const CatalogPage = () => {
   const [loading, setLoading] = useState(true);
   const [isMobilePriceOpen, setIsMobilePriceOpen] = useState(false);
   const [isMobileCategoryOpen, setIsMobileCategoryOpen] = useState(false);
+  const [isMobileSortOpen, setIsMobileSortOpen] = useState(false);
   const [priceModalPosition, setPriceModalPosition] = useState(null);
+  const [sortModalPosition, setSortModalPosition] = useState(null);
   const mobileCategoryDetailsRef = useRef(null);
   const priceFilterButtonRef = useRef(null);
+  const sortFilterButtonRef = useRef(null);
   const productsRequestIdRef = useRef(0);
   const skipInitialPageResetRef = useRef(true);
   const skipFirstFetchRef = useRef(false);
@@ -432,7 +473,7 @@ const CatalogPage = () => {
     }
   };
 
-  const applyFilters = () => {
+  const applyFilters = ({ inStockOverride = onlyInStock } = {}) => {
     setPriceError('');
     let fromVal = priceFrom.trim();
     let toVal = priceTo.trim();
@@ -453,29 +494,11 @@ const CatalogPage = () => {
     if (selectedSubcategories.length > 0) nextParams.subcategory = selectedSubcategories;
     if (fromVal) nextParams.price_min = fromVal;
     if (toVal) nextParams.price_max = toVal;
-    if (onlyInStock) nextParams.in_stock = 'true';
+    if (inStockOverride) nextParams.in_stock = 'true';
     if (searchParams.get('q')) {
       nextParams.q = searchParams.get('q');
     }
     setSearchParams(nextParams);
-  };
-
-  const resetFilters = () => {
-    setSelectedParents([]);
-    setSelectedSubcategories([]);
-    setPriceFrom('');
-    setPriceTo('');
-    setOnlyInStock(false);
-    setPriceError('');
-    const nextParams = new URLSearchParams(searchParams);
-    // Сбрасываем только фильтры, не трогаем поисковый запрос `q`
-    nextParams.delete('filter');
-    nextParams.delete('parent');
-    nextParams.delete('subcategory');
-    nextParams.delete('price_min');
-    nextParams.delete('price_max');
-    nextParams.delete('in_stock');
-    setSearchParams(nextParams, { replace: true });
   };
 
   const handlePriceFromChange = (event) => {
@@ -486,6 +509,17 @@ const CatalogPage = () => {
   const handlePriceToChange = (event) => {
     setPriceError('');
     setPriceTo(normalizePriceInput(event.target.value));
+  };
+
+  const handleDesktopPriceKeyDown = (event) => {
+    if (!isPriceKeyAllowed(event)) {
+      event.preventDefault();
+      return;
+    }
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      applyFilters();
+    }
   };
 
   const handleMobilePriceApply = () => {
@@ -510,6 +544,7 @@ const CatalogPage = () => {
 
   const closeMobileFiltersOverlay = () => {
     setIsMobilePriceOpen(false);
+    setIsMobileSortOpen(false);
     if (mobileCategoryDetailsRef.current?.open) {
       mobileCategoryDetailsRef.current.open = false;
     }
@@ -540,22 +575,17 @@ const CatalogPage = () => {
         <div className="catalog-layout">
           <aside className="catalog-sidebar">
             <section className="catalog-sidebar-section">
-              <h2 className="catalog-sidebar-title">КАТЕГОРИИ</h2>
+              <h2 className="catalog-sidebar-title catalog-sidebar-title--categories">КАТЕГОРИИ</h2>
               {categoryTree.length === 0 ? (
                 <div className="catalog-filter-empty">Категории не найдены</div>
               ) : (
                 <ul className="catalog-filter-list catalog-filter-tree">
-                  {categoryTree.map((parent) => (
-                    <li key={parent.code} className="catalog-filter-tree-parent">
-                      <div className="catalog-filter-tree-parent-row">
-                        <label className="catalog-filter-tree-parent-label">
-                          <input
-                            type="checkbox"
-                            checked={selectedParents.includes(parent.code)}
-                            onChange={() => handleParentChange(parent.code)}
-                          />
+                      {categoryTree.map((parent) => (
+                        <li key={parent.code} className="catalog-filter-tree-parent">
+                          <div className="catalog-filter-tree-parent-row">
+                        <div className="catalog-filter-tree-parent-label">
                           {parent.name}
-                        </label>
+                        </div>
                         <button
                           type="button"
                           className={`catalog-filter-tree-toggle ${expandedParents.has(parent.code) ? 'is-open' : ''}`}
@@ -563,7 +593,7 @@ const CatalogPage = () => {
                           aria-expanded={expandedParents.has(parent.code)}
                           aria-label={expandedParents.has(parent.code) ? 'Свернуть подкатегории' : 'Показать подкатегории'}
                         >
-                          ▼
+                          <CatalogChevron className="catalog-filter-tree-toggle__icon" />
                         </button>
                       </div>
                       {expandedParents.has(parent.code) && parent.children && parent.children.length > 0 && (
@@ -592,26 +622,26 @@ const CatalogPage = () => {
               <h2 className="catalog-sidebar-title">СТОИМОСТЬ</h2>
               <div className="catalog-filter-price">
                 <input
+                  className="catalog-price-input"
                   type="text"
                   inputMode="numeric"
                   pattern="[0-9]*"
                   placeholder={priceRange.min != null ? `от ${Math.floor(priceRange.min)}` : 'от'}
                   value={priceFrom}
                   onChange={handlePriceFromChange}
-                  onKeyDown={(event) => {
-                    if (!isPriceKeyAllowed(event)) event.preventDefault();
-                  }}
+                  onBlur={() => applyFilters()}
+                  onKeyDown={handleDesktopPriceKeyDown}
                 />
                 <input
+                  className="catalog-price-input"
                   type="text"
                   inputMode="numeric"
                   pattern="[0-9]*"
                   placeholder={priceRange.max != null ? `до ${Math.ceil(priceRange.max)}` : 'до'}
                   value={priceTo}
                   onChange={handlePriceToChange}
-                  onKeyDown={(event) => {
-                    if (!isPriceKeyAllowed(event)) event.preventDefault();
-                  }}
+                  onBlur={() => applyFilters()}
+                  onKeyDown={handleDesktopPriceKeyDown}
                 />
               </div>
               {priceError && (
@@ -628,29 +658,20 @@ const CatalogPage = () => {
                     <input
                       type="checkbox"
                       checked={onlyInStock}
-                      onChange={(event) => setOnlyInStock(event.target.checked)}
+                      onChange={(event) => {
+                        setOnlyInStock(event.target.checked);
+                        applyFilters({ inStockOverride: event.target.checked });
+                      }}
                     />
                     Только в наличии
                   </label>
                 </li>
               </ul>
             </section>
-
-            <div className="catalog-sidebar-actions">
-              <button className="catalog-filter-action" onClick={applyFilters}>
-                Применить
-              </button>
-              <button
-                className="catalog-filter-action catalog-filter-action--ghost"
-                onClick={resetFilters}
-              >
-                Сбросить
-              </button>
-            </div>
           </aside>
 
           <div className="catalog-content">
-            {(isMobilePriceOpen || isMobileCategoryOpen) && (
+            {(isMobilePriceOpen || isMobileCategoryOpen || isMobileSortOpen) && (
               <button
                 type="button"
                 className="catalog-mobile-price-backdrop"
@@ -665,7 +686,10 @@ const CatalogPage = () => {
                 ref={mobileCategoryDetailsRef}
                 onToggle={(event) => setIsMobileCategoryOpen(event.currentTarget.open)}
               >
-                <summary className="catalog-mobile-filter__summary">КАТЕГОРИИ</summary>
+                <summary className="catalog-mobile-filter__summary">
+                  <span>КАТЕГОРИИ</span>
+                  <CatalogChevron className="catalog-mobile-filter__chevron" />
+                </summary>
                 <div className="catalog-mobile-filter__content">
                   {categoryTree.length === 0 ? (
                     <div className="catalog-filter-empty">Категории не найдены</div>
@@ -676,31 +700,27 @@ const CatalogPage = () => {
                           <div className="catalog-filter-tree-parent-row">
                             <button
                               type="button"
-                              className={`catalog-mobile-category-item ${selectedParents.includes(parent.code) ? 'is-active' : ''}`}
-                              onClick={() => handleParentChange(parent.code)}
-                            >
-                              {parent.name}
-                            </button>
-                            <button
-                              type="button"
-                              className={`catalog-filter-tree-toggle ${expandedParents.has(parent.code) ? 'is-open' : ''}`}
+                              className={`catalog-mobile-category-item catalog-mobile-category-item--parent ${expandedParents.has(parent.code) ? 'is-open' : ''}`}
                               onClick={() => toggleExpanded(parent.code)}
-                              aria-label={expandedParents.has(parent.code) ? 'Свернуть' : 'Подкатегории'}
+                              aria-expanded={expandedParents.has(parent.code)}
+                              aria-label={expandedParents.has(parent.code) ? 'Свернуть подкатегории' : 'Показать подкатегории'}
                             >
-                              ▼
+                              <span>{parent.name}</span>
+                              <CatalogChevron className="catalog-mobile-category-item__chevron" />
                             </button>
                           </div>
                           {expandedParents.has(parent.code) && parent.children && parent.children.length > 0 && (
                             <ul className="catalog-filter-tree-children">
                               {parent.children.map((child) => (
                                 <li key={child.code}>
-                                  <button
-                                    type="button"
-                                    className={`catalog-mobile-category-item ${selectedSubcategories.includes(child.code) ? 'is-active' : ''}`}
-                                    onClick={() => handleSubcategoryChange(child.code)}
-                                  >
+                                  <label>
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedSubcategories.includes(child.code)}
+                                      onChange={() => handleSubcategoryChange(child.code)}
+                                    />
                                     {child.name}
-                                  </button>
+                                  </label>
                                 </li>
                               ))}
                             </ul>
@@ -722,6 +742,7 @@ const CatalogPage = () => {
                       mobileCategoryDetailsRef.current.open = false;
                       setIsMobileCategoryOpen(false);
                     }
+                    setIsMobileSortOpen(false);
                     const rect = priceFilterButtonRef.current?.getBoundingClientRect();
                     if (rect) {
                       setPriceModalPosition({ left: rect.left, top: rect.bottom + 4 });
@@ -731,7 +752,8 @@ const CatalogPage = () => {
                     setIsMobilePriceOpen((prev) => !prev);
                   }}
                 >
-                  СТОИМОСТЬ
+                  <span>СТОИМОСТЬ</span>
+                  <CatalogChevron className={`catalog-mobile-filter__chevron ${isMobilePriceOpen ? 'is-open' : ''}`} />
                 </button>
 
                 {isMobilePriceOpen && createPortal(
@@ -762,19 +784,11 @@ const CatalogPage = () => {
                           transform: scale < 1 ? `scale(${scale})` : undefined,
                         }}
                       >
-                        <button
-                          type="button"
-                          className="catalog-mobile-price-modal__close"
-                          aria-label="Закрыть окно фильтра цены"
-                          onClick={() => setIsMobilePriceOpen(false)}
-                        >
-                          ×
-                        </button>
-
                         <div className="catalog-mobile-price-modal__row">
                           <label className="catalog-mobile-price-modal__field">
                             <span>ОТ</span>
                             <input
+                              className="catalog-price-input"
                               type="text"
                               inputMode="numeric"
                               pattern="[0-9]*"
@@ -790,6 +804,7 @@ const CatalogPage = () => {
                           <label className="catalog-mobile-price-modal__field">
                             <span>ДО</span>
                             <input
+                              className="catalog-price-input"
                               type="text"
                               inputMode="numeric"
                               pattern="[0-9]*"
@@ -825,6 +840,116 @@ const CatalogPage = () => {
                             СБРОСИТЬ
                           </button>
                         </div>
+                      </div>
+                    );
+                  })(),
+                  document.body
+                )}
+              </div>
+
+              <div className="catalog-mobile-filter catalog-mobile-filter--sort">
+                <button
+                  ref={sortFilterButtonRef}
+                  type="button"
+                  className="catalog-mobile-filter__icon-button"
+                  aria-label="Открыть фильтры сортировки"
+                  onClick={() => {
+                    if (mobileCategoryDetailsRef.current?.open) {
+                      mobileCategoryDetailsRef.current.open = false;
+                      setIsMobileCategoryOpen(false);
+                    }
+                    setIsMobilePriceOpen(false);
+                    const rect = sortFilterButtonRef.current?.getBoundingClientRect();
+                    if (rect) {
+                      setSortModalPosition({
+                        right: Math.max(12, window.innerWidth - rect.right),
+                        top: rect.bottom + 4,
+                      });
+                    } else {
+                      setSortModalPosition(null);
+                    }
+                    setIsMobileSortOpen((prev) => !prev);
+                  }}
+                >
+                  <CatalogFilterButtonIcon className="catalog-mobile-filter__icon-svg" />
+                </button>
+
+                {isMobileSortOpen && createPortal(
+                  (() => {
+                    const pos = sortModalPosition || { right: 12, top: 0 };
+                    const pad = 12;
+                    const maxW = typeof window !== 'undefined'
+                      ? Math.min(260, window.innerWidth - pad * 2)
+                      : 260;
+                    return (
+                      <div
+                        className="catalog-mobile-sort-modal"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label="Фильтры сортировки"
+                        style={{
+                          right: pos.right,
+                          top: pos.top,
+                          maxWidth: maxW,
+                        }}
+                      >
+                        <button
+                          type="button"
+                          className={`catalog-mobile-sort-option ${sortBy === 'popular' ? 'is-active' : ''}`}
+                          onClick={() => {
+                            setSortBy('popular');
+                            setIsMobileSortOpen(false);
+                          }}
+                        >
+                          ПО ПОПУЛЯРНОСТИ
+                        </button>
+                        <button
+                          type="button"
+                          className={`catalog-mobile-sort-option ${sortBy === 'price_asc' ? 'is-active' : ''}`}
+                          onClick={() => {
+                            setSortBy('price_asc');
+                            setIsMobileSortOpen(false);
+                          }}
+                        >
+                          СНАЧАЛА ДЕШЕВЫЕ
+                        </button>
+                        <button
+                          type="button"
+                          className={`catalog-mobile-sort-option ${sortBy === 'price_desc' ? 'is-active' : ''}`}
+                          onClick={() => {
+                            setSortBy('price_desc');
+                            setIsMobileSortOpen(false);
+                          }}
+                        >
+                          СНАЧАЛА ДОРОГИЕ
+                        </button>
+                        <button
+                          type="button"
+                          className={`catalog-mobile-sort-option ${sortBy === 'new' ? 'is-active' : ''}`}
+                          onClick={() => {
+                            setSortBy('new');
+                            setIsMobileSortOpen(false);
+                          }}
+                        >
+                          НОВИНКИ
+                        </button>
+                        <label className="catalog-mobile-sort-stock">
+                          <input
+                            type="checkbox"
+                            checked={onlyInStock}
+                            onChange={(event) => {
+                              setOnlyInStock(event.target.checked);
+                              const nextParams = new URLSearchParams(searchParams);
+                              if (event.target.checked) {
+                                nextParams.set('in_stock', 'true');
+                              } else {
+                                nextParams.delete('in_stock');
+                              }
+                              setSearchParams(nextParams, { replace: true });
+                            }}
+                          />
+                          В НАЛИЧИИ
+                        </label>
                       </div>
                     );
                   })(),
@@ -990,7 +1115,7 @@ const CatalogPage = () => {
             {catalogProducts.length > 0 && hasMore && (
               <div className="pagination">
                 <button
-                  className="page-btn page-btn--load-more"
+                  className="page-btn page-btn--load-more btn-secondary-outline"
                   onClick={handleLoadMore}
                   disabled={loadingMore}
                 >

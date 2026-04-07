@@ -35,6 +35,13 @@
   color: #8B4513;
 }
 
+.btn-secondary--outline:disabled {
+  background: transparent;
+  color: #a17270;
+  border-color: #a17270;
+  cursor: not-allowed;
+}
+
 @media (hover: hover) {
   .btn-secondary--outline:hover {
     background: #8B4513;

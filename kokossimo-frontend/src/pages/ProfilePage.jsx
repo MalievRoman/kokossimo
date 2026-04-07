@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
@@ -271,6 +271,10 @@ const ProfilePage = () => {
     setTimeout(() => setStatus({ type: '', message: '' }), 3000);
   };
 
+  if (!isAuthenticated) {
+    return <Navigate to="/auth" replace />;
+  }
+
   const handleTabChange = (tabKey) => {
     setActiveTab(tabKey);
     navigate(`/profile?tab=${tabKey}`);
@@ -451,12 +455,23 @@ const ProfilePage = () => {
                     className="profile-shortcut"
                     onClick={() => handleTabChange('orders')}
                   >
-                    <img
-                      src={`${import.meta.env.BASE_URL}assets/cart.png`}
-                      alt=""
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 16 16"
+                      fill="none"
                       aria-hidden="true"
                       className="profile-shortcut-icon"
-                    />
+                    >
+                      <path
+                        d="M0.965332 0.977539H1.88092C2.05337 0.977539 2.1396 0.977539 2.20899 1.00925C2.27014 1.0372 2.32197 1.08214 2.35828 1.13873C2.39948 1.20293 2.41168 1.2883 2.43607 1.45901L2.76785 3.78145M2.76785 3.78145L3.5052 9.20098C3.59877 9.88871 3.64555 10.2326 3.80997 10.4914C3.95484 10.7195 4.16254 10.9008 4.40808 11.0137C4.68672 11.1417 5.03376 11.1417 5.72785 11.1417H11.7267C12.3874 11.1417 12.7178 11.1417 12.9878 11.0228C13.2258 10.918 13.43 10.749 13.5775 10.5348C13.7448 10.2918 13.8066 9.96736 13.9303 9.31832L14.8581 4.44716C14.9016 4.21872 14.9233 4.10451 14.8918 4.01522C14.8642 3.9369 14.8096 3.87095 14.7378 3.82913C14.656 3.78145 14.5398 3.78145 14.3072 3.78145H2.76785ZM6.57315 14.2961C6.57315 14.6833 6.25931 14.9971 5.87217 14.9971C5.48504 14.9971 5.17119 14.6833 5.17119 14.2961C5.17119 13.909 5.48504 13.5951 5.87217 13.5951C6.25931 13.5951 6.57315 13.909 6.57315 14.2961ZM12.181 14.2961C12.181 14.6833 11.8671 14.9971 11.48 14.9971C11.0928 14.9971 10.779 14.6833 10.779 14.2961C10.779 13.909 11.0928 13.5951 11.48 13.5951C11.8671 13.5951 12.181 13.909 12.181 14.2961Z"
+                        stroke="#240100"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <circle cx="11.5122" cy="14.3291" r="0.448242" fill="#240100" />
+                      <circle cx="5.86841" cy="14.3289" r="0.447998" fill="#240100" />
+                    </svg>
                     МОИ ЗАКАЗЫ
                   </button>
                   <button
@@ -464,19 +479,30 @@ const ProfilePage = () => {
                     className="profile-shortcut"
                     onClick={() => handleTabChange('favorites')}
                   >
-                    <img
-                      src={`${import.meta.env.BASE_URL}assets/heart.png`}
-                      alt=""
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 16 16"
+                      fill="none"
                       aria-hidden="true"
                       className="profile-shortcut-icon"
-                    />
+                    >
+                      <path
+                        d="M8.46112 14.5491C8.20837 14.6383 7.79208 14.6383 7.53933 14.5491C5.38352 13.8131 0.566406 10.743 0.566406 5.53929C0.566406 3.24224 2.41743 1.38379 4.69961 1.38379C6.05256 1.38379 7.24941 2.03796 8.00022 3.04896C8.75104 2.03796 9.95532 1.38379 11.3008 1.38379C13.583 1.38379 15.434 3.24224 15.434 5.53929C15.434 10.743 10.6169 13.8131 8.46112 14.5491Z"
+                        stroke="#240100"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
                     ИЗБРАННОЕ
                   </button>
                 </div>
 
-                <section className="profile-panel profile-latest-order">
+                <section
+                  className={`profile-panel profile-latest-order${!latestOrder ? ' profile-latest-order--empty' : ''}`}
+                >
                   {!latestOrder ? (
-                    <p className="profile-muted">Пока нет заказов.</p>
+                    <p className="profile-muted">Пока нет заказов</p>
                   ) : (
                     <>
                       <div className="profile-order-head">
@@ -632,7 +658,7 @@ const ProfilePage = () => {
                     placeholder="Иванов Иван Иванович"
                     value={fullNameInput}
                     maxLength={FULL_NAME_MAX_LENGTH}
-                    className={fullNameError ? 'is-invalid' : ''}
+                    className={`profile-settings-input${fullNameError ? ' is-invalid' : ''}`}
                     aria-invalid={fullNameError ? 'true' : 'false'}
                     onChange={(event) => {
                       setSettingsStatus({ type: '', message: '' });
@@ -646,6 +672,7 @@ const ProfilePage = () => {
                   <input
                     type="tel"
                     placeholder="+7 (___) ___-__-__"
+                    className="profile-settings-input"
                     value={profile.phone}
                     onChange={(event) => {
                       setSettingsStatus({ type: '', message: '' });
@@ -663,6 +690,7 @@ const ProfilePage = () => {
                   <input
                     type="text"
                     placeholder="15.10.1998"
+                    className="profile-settings-input"
                     value={birthDate}
                     onChange={(event) => {
                       setSettingsStatus({ type: '', message: '' });
@@ -675,6 +703,7 @@ const ProfilePage = () => {
                   <input
                     type="email"
                     placeholder="email@example.com"
+                    className="profile-settings-input"
                     value={profile.email}
                     onChange={(event) => {
                       setSettingsStatus({ type: '', message: '' });
@@ -705,7 +734,7 @@ const ProfilePage = () => {
                 </button>
                 <button
                   type="button"
-                  className="profile-btn profile-btn--disabled profile-btn--full"
+                  className="profile-btn profile-btn--support profile-btn--full"
                   disabled
                 >
                   УДАЛИТЬ АККАУНТ
