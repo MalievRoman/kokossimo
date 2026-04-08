@@ -7,7 +7,7 @@ import { resolveMediaUrl } from '../../utils/media';
 // Карточка товара в верстке под koko_website (main_page.html).
 // Разметка и классы совпадают с .product-card из koko-main.css.
 
-const ProductCard = ({ product }) => {
+const ProductCard = ({ product, className = '' }) => {
   if (!product) return null;
 
   const navigate = useNavigate();
@@ -84,7 +84,7 @@ const ProductCard = ({ product }) => {
     : `${import.meta.env.BASE_URL}assets/fav.svg`;
   const productLink = product.id != null ? `/product/${product.id}` : null;
 
-  const showQtyControls = quantity > 0;
+  const showQtyControls = quantity > 0 && isInStock;
   const canIncrease = stock == null ? true : quantity < stock;
 
   const openProductPage = () => {
@@ -110,7 +110,12 @@ const ProductCard = ({ product }) => {
 
   return (
     <div
-      className={`product-card ${productLink ? 'product-card--clickable' : ''}`}
+      className={[
+        'product-card',
+        productLink ? 'product-card--clickable' : '',
+        !isInStock ? 'product-card--unavailable' : '',
+        className,
+      ].filter(Boolean).join(' ')}
       data-product-id={product.id}
       role={productLink ? 'link' : undefined}
       tabIndex={productLink ? 0 : undefined}

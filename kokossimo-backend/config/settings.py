@@ -20,6 +20,14 @@ REPO_ROOT = BASE_DIR.parent
 load_dotenv(REPO_ROOT / '.env')
 load_dotenv(BASE_DIR / '.env', override=True)
 
+
+def env_list(name, default=''):
+    return [
+        item.strip()
+        for item in os.getenv(name, default).split(',')
+        if item.strip()
+    ]
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
@@ -30,11 +38,7 @@ SECRET_KEY = 'django-insecure-r6&_l&vez*epdjzqwack4j9&m@g8@+!tu*t$9u-1eir^ns$zfs
 DEBUG = os.getenv('DJANGO_DEBUG', 'false').lower() in ('1', 'true', 'yes')
 
 default_allowed_hosts = '127.0.0.1,localhost' if DEBUG else ''
-ALLOWED_HOSTS = [
-    host.strip()
-    for host in os.getenv('DJANGO_ALLOWED_HOSTS', default_allowed_hosts).split(',')
-    if host.strip()
-]
+ALLOWED_HOSTS = env_list('DJANGO_ALLOWED_HOSTS', default_allowed_hosts)
 
 
 # Application definition
@@ -162,21 +166,21 @@ STATICFILES_DIRS = [
 
 # ... конец файла ...
 
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173').rstrip('/')
+default_frontend_origins = ','.join(dict.fromkeys([
+    FRONTEND_URL,
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+]))
+
 # Разрешаем запросы с нашего React фронтенда
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost:5174",
-    "http://127.0.0.1:5174",
-]
+CORS_ALLOWED_ORIGINS = env_list('DJANGO_CORS_ALLOWED_ORIGINS', default_frontend_origins)
 
 # Чтобы форма входа в админку с localhost:5173 (через proxy) не давала 403 CSRF
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost:5174",
-    "http://127.0.0.1:5174",
-]
+CSRF_TRUSTED_ORIGINS = env_list(
+    'DJANGO_CSRF_TRUSTED_ORIGINS',
+    ','.join(CORS_ALLOWED_ORIGINS),
+)
 
 # Альтернативный вариант - разрешить все локальные порты (только для разработки!)
 # CORS_ALLOW_ALL_ORIGINS = True  # Раскомментируйте, если нужно разрешить все порты
@@ -208,7 +212,10 @@ EMAIL_CODE_TTL_MINUTES = int(os.getenv('EMAIL_CODE_TTL_MINUTES', '10'))
 # YooKassa (stage/prod keys are configured via .env)
 YOOKASSA_SHOP_ID = os.getenv('YOOKASSA_SHOP_ID', '')
 YOOKASSA_SECRET_KEY = os.getenv('YOOKASSA_SECRET_KEY', '')
-YOOKASSA_RETURN_URL = os.getenv('YOOKASSA_RETURN_URL', '')
+YOOKASSA_RETURN_URL = os.getenv(
+    'YOOKASSA_RETURN_URL',
+    f'{FRONTEND_URL}/checkout/success',
+)
 
 # Telegram-бот для обратной связи (отзывы, предложения, просьбы о связи)
 # Токен создаётся у @BotFather. Запуск: python manage.py run_telegram_bot
