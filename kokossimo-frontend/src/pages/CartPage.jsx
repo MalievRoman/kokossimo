@@ -96,16 +96,10 @@ const CartPage = () => {
   const getProductLink = (item) => (!item.is_gift_certificate ? `/product/${item.id}` : null);
   const formatRub = (value) => `${Number(value).toLocaleString('ru-RU')} ₽`;
 
-  const unavailableItems = useMemo(
-    () => cartItems.filter((item) => item.stock != null && Number(item.stock) <= 0),
+  const hasUnavailable = useMemo(
+    () => cartItems.some((item) => item.stock != null && Number(item.stock) <= 0),
     [cartItems]
   );
-  const hasUnavailable = unavailableItems.length > 0;
-  const unavailableHint = hasUnavailable
-    ? `Некоторые товары недоступны: ${unavailableItems.map((i) => i.name).filter(Boolean).slice(0, 2).join(', ')}${
-        unavailableItems.length > 2 ? '…' : ''
-      }`
-    : '';
 
   return (
     <div className="cart-page page-animation">
@@ -133,11 +127,6 @@ const CartPage = () => {
           <div className="cart-layout">
             <div className="cart-layout__left">
               {syncError ? <div className="cart-sync-error">{syncError}</div> : null}
-              {hasUnavailable ? (
-                <div className="cart-sync-warning" role="status">
-                  {unavailableHint || 'Некоторых товаров сейчас нет в наличии. Удалите их, чтобы оформить заказ.'}
-                </div>
-              ) : null}
               <div className="cart-items__top">
                 <h2 className="cart-items__count">
                   ТОВАРОВ В КОРЗИНЕ: {getTotalItems()}
@@ -192,7 +181,6 @@ const CartPage = () => {
 
                     <div className="cart-item__info">
                       <h3 className="cart-item__name">{item.name}</h3>
-                      {isUnavailable ? <div className="cart-item__badge">Нет в наличии</div> : null}
                       <div className="cart-item__price">
                         {hasDiscount && oldUnitPrice ? (
                           <>
@@ -203,6 +191,7 @@ const CartPage = () => {
                         ) : (
                           <span className="cart-item__price-current">{formatRub(item.price)} за шт.</span>
                         )}
+                        {isUnavailable ? <span className="cart-item__stock-status">Нет в наличии</span> : null}
                       </div>
                     </div>
 
@@ -243,14 +232,14 @@ const CartPage = () => {
                       </button>
                     </div>
 
-                    <div className="cart-item__total">
-                      <div className="cart-item__total-current">
-                        {isUnavailable ? '—' : formatRub(item.price * item.quantity)}
+                    {!isUnavailable ? (
+                      <div className="cart-item__total">
+                        <div className="cart-item__total-current">{formatRub(item.price * item.quantity)}</div>
+                        {hasDiscount && oldTotalPrice ? (
+                          <div className="cart-item__total-old">{formatRub(oldTotalPrice)}</div>
+                        ) : null}
                       </div>
-                      {hasDiscount && oldTotalPrice ? (
-                        <div className="cart-item__total-old">{formatRub(oldTotalPrice)}</div>
-                      ) : null}
-                    </div>
+                    ) : null}
 
                     <button
                       type="button"

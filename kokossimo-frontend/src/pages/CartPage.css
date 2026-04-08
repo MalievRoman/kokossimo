@@ -188,44 +188,14 @@
   min-height: 120px;
   box-sizing: border-box;
   background: #fcf8f7;
-  border: 1px solid #D2C1C1;
+  border: 1px solid #d2c1c1;
   border-radius: 4px;
   align-items: center;
 }
 
 .cart-item--unavailable {
-  border-color: #d8b1b1;
-  background: #fff7f7;
-}
-
-.cart-item__badge {
-  display: inline-flex;
-  align-items: center;
-  width: fit-content;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: rgba(220, 53, 69, 0.1);
-  color: #a1111c;
-  border: 1px solid rgba(220, 53, 69, 0.2);
-  font-family: "Open Sans", sans-serif;
-  font-size: 12px;
-  line-height: 16px;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-}
-
-.cart-sync-warning {
-  width: 100%;
-  max-width: 848px;
-  box-sizing: border-box;
-  padding: 12px 16px;
-  border-radius: 4px;
-  border: 1px solid rgba(220, 53, 69, 0.35);
-  background: rgba(220, 53, 69, 0.08);
-  color: #740400;
-  font-family: "Open Sans", sans-serif;
-  font-size: 14px;
-  line-height: 20px;
+  background: #fff;
+  border-color: #e5d8d4;
 }
 
 .cart-sync-error {
@@ -315,6 +285,14 @@
   color: #240100;
 }
 
+.cart-item__stock-status {
+  color: #740400;
+  font-size: 16px;
+  line-height: 24px;
+  font-family: "Open Sans", sans-serif;
+  font-weight: 400;
+}
+
 .cart-item__price-old {
   color: #999;
   text-decoration: line-through;
@@ -323,6 +301,12 @@
 .cart-item__price-discount {
   color: #740400;
   font-weight: 600;
+}
+
+.cart-item--unavailable .cart-item__name,
+.cart-item--unavailable .cart-item__price,
+.cart-item--unavailable .cart-item__price-current {
+  color: #716a6a;
 }
 
 /* Количество: круглые кнопки с рамкой акцентного цвета */
