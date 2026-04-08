@@ -40,11 +40,12 @@ const notifyAuthTokenChanged = () => {
   }
 };
 
-const isInvalidTokenDetail = (detail) => {
-  if (!detail) return false;
-  const text = String(detail).toLowerCase();
-  return text.includes('invalid token') || text.includes('token is invalid');
-};
+const AUTH_PUBLIC_ENDPOINTS = new Set([
+  '/auth/register/',
+  '/auth/login/',
+  '/auth/email/send/',
+  '/auth/email/verify/',
+]);
 
 const handleInvalidAuthToken = () => {
   const hadToken = Boolean(localStorage.getItem('authToken'));
@@ -63,11 +64,15 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     const status = error?.response?.status;
-    const detail = error?.response?.data?.detail;
+    const token = localStorage.getItem('authToken');
+    const requestUrl = String(error?.config?.url || '');
+    const isPublicAuthCall = AUTH_PUBLIC_ENDPOINTS.has(requestUrl);
 
-    if (status === 401 && isInvalidTokenDetail(detail)) {
+    // Если токен в стораже есть, но бэкенд ответил 401 на защищённый запрос —
+    // значит сессия больше не валидна (например, после смены пароля на другом устройстве).
+    if (status === 401 && token && !isPublicAuthCall) {
       handleInvalidAuthToken();
-      error.__authRedirect = true;
+      error.__kokoAuthRedirect = true;
     }
 
     return Promise.reject(error);
