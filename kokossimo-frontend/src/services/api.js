@@ -32,6 +32,48 @@ const api = axios.create({
   },
 });
 
+const notifyAuthTokenChanged = () => {
+  try {
+    window.dispatchEvent(new Event('auth-token-changed'));
+  } catch {
+    // ignore
+  }
+};
+
+const isInvalidTokenDetail = (detail) => {
+  if (!detail) return false;
+  const text = String(detail).toLowerCase();
+  return text.includes('invalid token') || text.includes('token is invalid');
+};
+
+const handleInvalidAuthToken = () => {
+  const hadToken = Boolean(localStorage.getItem('authToken'));
+  if (hadToken) {
+    localStorage.removeItem('authToken');
+    notifyAuthTokenChanged();
+  }
+
+  if (window.location.pathname !== '/auth') {
+    // Требование: без сообщения об ошибке, просто переводим на страницу входа.
+    window.location.assign('/auth');
+  }
+};
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error?.response?.status;
+    const detail = error?.response?.data?.detail;
+
+    if (status === 401 && isInvalidTokenDetail(detail)) {
+      handleInvalidAuthToken();
+      error.__authRedirect = true;
+    }
+
+    return Promise.reject(error);
+  }
+);
+
 export const getProducts = (params) => api.get('/products/', { params });
 export const getProductsPriceRange = (params) => api.get('/products/price-range/', { params });
 export const getProduct = (id) => api.get(`/products/${id}/`);
