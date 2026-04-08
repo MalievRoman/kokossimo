@@ -549,6 +549,9 @@ const PaymentPage = ({ modalMode = false }) => {
       clearCart();
       window.location.href = confirmationUrl;
     } catch (error) {
+      if (error?.__authRedirect) {
+        return;
+      }
       const apiMessage =
         error?.response?.data?.detail ||
         error?.message ||
