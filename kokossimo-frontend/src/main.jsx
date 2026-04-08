@@ -7,6 +7,8 @@ import { CatalogFiltersProvider } from './context/CatalogFiltersContext'
 import App from './App.jsx'
 import './index.css'
 import './styles/koko-main.css'
+import './styles/button-sizing.css'
+import './styles/input-sizing.css'
 
 const baseUrl = import.meta.env.BASE_URL || '/'
 const setIconVar = (name, file) => {

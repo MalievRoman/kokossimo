@@ -1,0 +1,69 @@
+:root {
+  --app-button-font-size: 14px;
+  --app-button-line-height: 20px;
+  --app-button-padding-y: 10px;
+  --app-button-padding-x: 14px;
+}
+
+@media (min-width: 720px) and (max-width: 1280px) {
+  :root {
+    --app-button-font-size: 14px;
+    --app-button-line-height: 20px;
+    --app-button-padding-y: 8px;
+    --app-button-padding-x: 12px;
+  }
+}
+
+@media (max-width: 719px) {
+  :root {
+    --app-button-font-size: 12px;
+    --app-button-line-height: 18px;
+    --app-button-padding-y: 6px;
+    --app-button-padding-x: 8px;
+  }
+}
+
+:where(
+  .btn-primary,
+  .btn-secondary,
+  .btn-secondary-outline,
+  .hero__btn,
+  .product-card__btn,
+  .subscribebtn,
+  .newsletter__btn,
+  .amount-button,
+  .payment-secondary-button,
+  .payment-primary-button,
+  .cart-empty__button,
+  .cart-summary__submit,
+  .not-found__button,
+  .certificate-form__purchase,
+  .add-to-cart-btn-large,
+  .auth-btn,
+  .catalog-filter-action,
+  .catalog-mobile-filter__button,
+  .catalog-mobile-price-modal__submit,
+  .catalog-mobile-price-modal__reset,
+  .page-btn--load-more,
+  .profile-btn,
+  .profile-modal__repeat-btn
+) {
+  font-size: var(--app-button-font-size) !important;
+  line-height: var(--app-button-line-height) !important;
+  font-weight: 400 !important;
+  padding: var(--app-button-padding-y) var(--app-button-padding-x) !important;
+  height: auto !important;
+  min-height: calc(var(--app-button-line-height) + (var(--app-button-padding-y) * 2)) !important;
+}
+
+:where(
+  .tab-btn,
+  .profile-tab,
+  .profile-shortcut,
+  .page-btn
+) {
+  font-size: var(--app-button-font-size) !important;
+  line-height: var(--app-button-line-height) !important;
+  font-weight: 400 !important;
+  padding: var(--app-button-padding-y) var(--app-button-padding-x) !important;
+}

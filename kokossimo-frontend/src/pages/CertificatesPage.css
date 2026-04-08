@@ -168,19 +168,29 @@
 }
 
 .certificate-form__custom input[type='number'] {
-  border: 0.5px solid #740400;
+  border: 1px solid #716A6A;
   border-radius: 4px;
-  padding: 8px 10px;
-  font-size: 14px;
-  color: #240100;
+  background: transparent;
+  font-family: "Open Sans", sans-serif;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 400;
+  color: #716A6A;
   min-width: 120px;
   max-width: 180px;
+  transition: border-color 180ms ease, box-shadow 180ms ease, color 180ms ease;
 }
 
 .certificate-form__custom input[type='number']:focus,
 .certificate-form__custom input[type='number']:focus-visible {
-  border-color: #240100;
+  border-color: #740400;
+  box-shadow: 0 0 4px rgba(116, 4, 0, 0.45);
   outline: none;
+  color: #240100;
+}
+
+.certificate-form__custom input[type='number']:not(:focus) {
+  color: #240100;
 }
 
 .certificate-form__slider {
@@ -224,18 +234,32 @@
 }
 
 .certificate-form__input {
-  border: 0.5px solid #740400;
+  border: 1px solid #716A6A;
   border-radius: 4px;
-  padding: 8px 10px;
-  font-size: 14px;
-  color: #240100;
+  background: transparent;
+  font-family: "Open Sans", sans-serif;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 400;
+  color: #716A6A;
   max-width: 240px;
+  transition: border-color 180ms ease, box-shadow 180ms ease, color 180ms ease;
 }
 
 .certificate-form__input:focus,
 .certificate-form__input:focus-visible {
-  border-color: #240100;
+  border-color: #740400;
+  box-shadow: 0 0 4px rgba(116, 4, 0, 0.45);
   outline: none;
+  color: #240100;
+}
+
+.certificate-form__input:not(:placeholder-shown):not(:focus) {
+  color: #240100;
+}
+
+.certificate-form__input::placeholder {
+  color: #716A6A;
 }
 
 .certificate-form__hint {
