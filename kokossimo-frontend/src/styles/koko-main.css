@@ -1392,10 +1392,23 @@ body {
   cursor: pointer;
 }
 
+.product-card__qty-btn:disabled {
+  border-color: #a17270;
+  background: transparent;
+  color: #a17270;
+  cursor: not-allowed;
+}
+
 @media (hover: hover) {
   .product-card__qty-btn:hover {
     background: var(--accent);
     color: var(--bg);
+  }
+
+  .product-card__qty-btn:disabled:hover {
+    background: transparent;
+    border-color: #a17270;
+    color: #a17270;
   }
 }
 

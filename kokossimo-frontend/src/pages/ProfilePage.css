@@ -288,8 +288,8 @@
 }
 
 .profile-favorite-row {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 20px;
 }
@@ -342,7 +342,7 @@
 .profile-favorite-actions {
   display: flex;
   gap: 10px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .profile-order-actions--list {
@@ -353,6 +353,8 @@
   display: flex;
   align-items: center;
   gap: 16px;
+  min-width: 0;
+  width: 100%;
 }
 
 .profile-favorite-text {
@@ -360,8 +362,15 @@
 }
 
 .profile-favorite-link {
+  display: block;
+  min-width: 0;
   text-decoration: none;
   color: inherit;
+}
+
+.profile-favorite-actions {
+  justify-self: end;
+  align-self: center;
 }
 
 @media (hover: hover) {
@@ -383,6 +392,8 @@
   line-height: 24px;
   font-family: "Open Sans", sans-serif;
   font-weight: 500;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .profile-favorite-price-row {
