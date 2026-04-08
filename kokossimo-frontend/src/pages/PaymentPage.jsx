@@ -11,14 +11,14 @@ const CITY_CONFIG = {
   moscow: {
     label: 'Москва',
     courierAvailable: false,
-    pickupFee: 250,
+    pickupFee: 0,
     courierFee: 0,
-    pickupProvider: 'СДЭК',
     pickupPoints: [
       {
         id: 'msk-537',
         name: 'Пункт СДЭК MSK537',
         address: 'Москва, 2-й Хвостов переулок, 12',
+        providerLabel: 'СДЭК',
         type: 'Пункт выдачи',
         weight: 'до 35 кг',
         hours: 'с 9:00 до 21:00',
@@ -27,6 +27,7 @@ const CITY_CONFIG = {
         id: 'msk-589',
         name: 'Пункт СДЭК MSK589',
         address: 'Москва, Волгоградский проспект, 32, корпус 2',
+        providerLabel: 'СДЭК',
         type: 'Пункт выдачи',
         weight: 'до 25 кг',
         hours: 'с 10:00 до 21:00',
@@ -35,6 +36,7 @@ const CITY_CONFIG = {
         id: 'msk-2360',
         name: 'Пункт СДЭК MSK2360',
         address: 'Москва, ул. Таганская, 25-27',
+        providerLabel: 'СДЭК',
         type: 'Постомат',
         weight: 'до 15 кг',
         hours: 'круглосуточно',
@@ -44,14 +46,14 @@ const CITY_CONFIG = {
   saint_petersburg: {
     label: 'Санкт-Петербург',
     courierAvailable: false,
-    pickupFee: 250,
+    pickupFee: 0,
     courierFee: 0,
-    pickupProvider: 'СДЭК',
     pickupPoints: [
       {
         id: 'spb-102',
         name: 'Пункт СДЭК SPB102',
         address: 'Санкт-Петербург, Лиговский проспект, 50',
+        providerLabel: 'СДЭК',
         type: 'Пункт выдачи',
         weight: 'до 25 кг',
         hours: 'с 10:00 до 21:00',
@@ -60,6 +62,7 @@ const CITY_CONFIG = {
         id: 'spb-103',
         name: 'Пункт СДЭК SPB103',
         address: 'Санкт-Петербург, Невский проспект, 98',
+        providerLabel: 'СДЭК',
         type: 'Постомат',
         weight: 'до 15 кг',
         hours: 'круглосуточно',
@@ -69,14 +72,14 @@ const CITY_CONFIG = {
   elista: {
     label: 'Элиста',
     courierAvailable: true,
-    pickupFee: 250,
+    pickupFee: 0,
     courierFee: 600,
-    pickupProvider: 'KOKOSSIMO',
     pickupPoints: [
       {
         id: 'elista-store',
-        name: 'Магазин KOKOSSIMO',
+        name: 'Магазин КОКОССИМО',
         address: 'Элиста, улица А. Сусеева, 13',
+        providerLabel: 'КОКОССИМО',
         type: 'Самовывоз из магазина',
         weight: 'без ограничений',
         hours: 'с 9:00 до 20:00',
@@ -174,6 +177,33 @@ const getFirstKnownCityKey = (value) => {
 
 const formatPrice = (value) => `${Number(value || 0).toLocaleString('ru-RU')} ₽`;
 
+const MobileMenuCloseIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <path
+      d="M6 6L18 18M18 6L6 18"
+      stroke="#716A6A"
+      strokeWidth="1.4"
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
+const isStorePickupPoint = (point) => point?.type === 'Самовывоз из магазина';
+
+const getPickupProviderLabel = (point) => point?.providerLabel || 'СДЭК';
+
+const getAddressFieldLabel = (deliveryMethod, selectedPickupPoint) => {
+  if (deliveryMethod === 'courier') {
+    return 'Адрес доставки';
+  }
+
+  if (deliveryMethod === 'pickup' && selectedPickupPoint) {
+    return isStorePickupPoint(selectedPickupPoint) ? 'В магазине' : 'Пункт выдачи';
+  }
+
+  return 'Адрес';
+};
+
 const PaymentPage = ({ modalMode = false }) => {
   const { cartItems, getTotalPrice, clearCart } = useCart();
   const navigate = useNavigate();
@@ -201,11 +231,13 @@ const PaymentPage = ({ modalMode = false }) => {
   const [pickupModalOpen, setPickupModalOpen] = useState(false);
   const [pickupDraftId, setPickupDraftId] = useState('');
   const [courierDrawerOpen, setCourierDrawerOpen] = useState(false);
+  const [courierHintOpen, setCourierHintOpen] = useState(false);
   const [courierDraft, setCourierDraft] = useState(emptyCourierDraft);
   const [status, setStatus] = useState({ type: '', message: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const prevAddressCompleteRef = useRef(false);
   const prevRecipientCompleteRef = useRef(false);
+  const courierHintRef = useRef(null);
 
   const subtotal = Number(getTotalPrice()) || 0;
   const deliveryDays = useMemo(() => buildDeliveryDays(), []);
@@ -213,6 +245,8 @@ const PaymentPage = ({ modalMode = false }) => {
   const pickupPoints = currentCity?.pickupPoints || [];
   const selectedPickupPoint = pickupPoints.find((point) => point.id === delivery.pickupPointId) || null;
   const pickupDraftPoint = pickupPoints.find((point) => point.id === pickupDraftId) || null;
+  const addressFieldLabel = getAddressFieldLabel(delivery.method, selectedPickupPoint);
+  const pickupProviderLabel = getPickupProviderLabel(selectedPickupPoint);
 
   const deliveryFee = useMemo(() => {
     if (!currentCity || !delivery.method) return 0;
@@ -352,6 +386,21 @@ const PaymentPage = ({ modalMode = false }) => {
     prevRecipientCompleteRef.current = recipientComplete;
   }, [expandedStep, recipientComplete]);
 
+  useEffect(() => {
+    if (!courierHintOpen) {
+      return undefined;
+    }
+
+    const handlePointerDown = (event) => {
+      if (courierHintRef.current && !courierHintRef.current.contains(event.target)) {
+        setCourierHintOpen(false);
+      }
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    return () => document.removeEventListener('pointerdown', handlePointerDown);
+  }, [courierHintOpen]);
+
   const closeCheckout = () => {
     if (modalMode) {
       navigate(-1);
@@ -376,6 +425,7 @@ const PaymentPage = ({ modalMode = false }) => {
     setExpandedStep('address');
     setPaymentOption('');
     setStatus({ type: '', message: '' });
+    setCourierHintOpen(false);
   };
 
   const handleDeliveryMethodChange = (method) => {
@@ -391,6 +441,7 @@ const PaymentPage = ({ modalMode = false }) => {
     }));
     setExpandedStep('address');
     setStatus({ type: '', message: '' });
+    setCourierHintOpen(false);
   };
 
   const openPickupModal = () => {
@@ -479,7 +530,7 @@ const PaymentPage = ({ modalMode = false }) => {
       orderHouse = selectedPickupPoint.name;
       orderApartment = selectedPickupPoint.type;
       commentParts.push(`Самовывоз: ${selectedPickupPoint.address}`);
-      commentParts.push(`${currentCity?.pickupProvider || 'Пункт выдачи'}: ${selectedPickupPoint.name}`);
+      commentParts.push(`${pickupProviderLabel}: ${selectedPickupPoint.name}`);
     }
 
     if (delivery.method === 'courier' && delivery.courierAddress) {
@@ -567,7 +618,7 @@ const PaymentPage = ({ modalMode = false }) => {
       <div className="payment-page payment-page--empty">
         <div className="payment-shell payment-shell--empty page-animation">
           <button type="button" className="payment-shell__close" onClick={closeCheckout} aria-label="Закрыть оформление заказа">
-            <X size={24} strokeWidth={1.7} />
+            <MobileMenuCloseIcon />
           </button>
           <div className="payment-empty">
             <h1>Корзина пуста</h1>
@@ -587,7 +638,7 @@ const PaymentPage = ({ modalMode = false }) => {
         <div className="payment-shell__top">
           <h1 className="payment-shell__title">ОФОРМЛЕНИЕ ЗАКАЗА</h1>
           <button type="button" className="payment-shell__close" onClick={closeCheckout} aria-label="Закрыть оформление заказа">
-            <X size={24} strokeWidth={1.7} />
+            <MobileMenuCloseIcon />
           </button>
         </div>
 
@@ -629,32 +680,48 @@ const PaymentPage = ({ modalMode = false }) => {
                         disabled={!currentCity}
                       />
                       <span>Самовывоз</span>
-                      {currentCity?.pickupFee ? <small>{formatPrice(currentCity.pickupFee)}</small> : null}
                     </label>
 
-                    <label className={`payment-radio ${currentCity && !currentCity.courierAvailable ? 'payment-radio--disabled' : ''}`}>
-                      <input
-                        type="radio"
-                        checked={delivery.method === 'courier'}
-                        onChange={() => handleDeliveryMethodChange('courier')}
-                        disabled={!currentCity || !currentCity.courierAvailable}
-                      />
-                      <span>Курьер</span>
-                      {currentCity?.courierAvailable ? <small>{formatPrice(currentCity.courierFee)}</small> : null}
-                    </label>
+                    <div className="payment-radio-option">
+                      <label className={`payment-radio ${currentCity && !currentCity.courierAvailable ? 'payment-radio--disabled' : ''}`}>
+                        <input
+                          type="radio"
+                          checked={delivery.method === 'courier'}
+                          onChange={() => handleDeliveryMethodChange('courier')}
+                          disabled={!currentCity || !currentCity.courierAvailable}
+                        />
+                        <span>Курьер</span>
+                        {currentCity?.courierAvailable ? <small>{formatPrice(currentCity.courierFee)}</small> : null}
+                      </label>
 
-                    {currentCity && !currentCity.courierAvailable ? (
-                      <span className="payment-inline-note">
-                        <Info size={14} strokeWidth={1.8} />
-                        Пока недоступно в Вашем регионе
-                      </span>
-                    ) : null}
+                      {currentCity && !currentCity.courierAvailable ? (
+                        <div
+                          ref={courierHintRef}
+                          className={`payment-tooltip ${courierHintOpen ? 'payment-tooltip--open' : ''}`}
+                          onMouseEnter={() => setCourierHintOpen(true)}
+                          onMouseLeave={() => setCourierHintOpen(false)}
+                        >
+                          <button
+                            type="button"
+                            className="payment-tooltip__trigger"
+                            aria-expanded={courierHintOpen}
+                            aria-label="Почему курьер недоступен"
+                            onClick={() => setCourierHintOpen((prev) => !prev)}
+                          >
+                            <Info size={18} strokeWidth={1.8} />
+                          </button>
+                          <div className="payment-tooltip__bubble" role="tooltip">
+                            Пока недоступно в Вашем регионе
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
               </div>
 
               <div className="payment-field-row">
-                <div className="payment-field-row__label">Адрес доставки</div>
+                <div className="payment-field-row__label">{addressFieldLabel}</div>
                 <div className="payment-field-row__control">
                   {!delivery.method ? (
                     <button type="button" className="payment-secondary-button payment-secondary-button--disabled" disabled>
@@ -663,7 +730,7 @@ const PaymentPage = ({ modalMode = false }) => {
                   ) : delivery.method === 'pickup' ? (
                     selectedPickupPoint ? (
                       <div className="payment-address-block">
-                        <span className="payment-address-block__provider">{currentCity?.pickupProvider}</span>
+                        <span className="payment-address-block__provider">{pickupProviderLabel}</span>
                         <div className="payment-address-block__actions">
                           <div className="payment-address-block__value">{selectedPickupPoint.address}</div>
                           <button type="button" className="payment-secondary-button" onClick={openPickupModal}>
@@ -863,9 +930,9 @@ const PaymentPage = ({ modalMode = false }) => {
               <span>Стоимость товаров:</span>
               <span>{formatPrice(subtotal)}</span>
             </div>
-            {delivery.method ? (
+            {delivery.method === 'courier' && deliveryFee > 0 ? (
               <div className="payment-summary__row">
-                <span>{delivery.method === 'pickup' ? 'Самовывоз:' : 'Курьер:'}</span>
+                <span>Курьер:</span>
                 <span>{formatPrice(deliveryFee)}</span>
               </div>
             ) : null}
@@ -900,7 +967,7 @@ const PaymentPage = ({ modalMode = false }) => {
               </div>
               <div className="payment-pickup-modal__panel">
                 <button type="button" className="payment-shell__close payment-pickup-modal__close" onClick={() => setPickupModalOpen(false)} aria-label="Закрыть выбор пункта самовывоза">
-                  <X size={24} strokeWidth={1.7} />
+                  <MobileMenuCloseIcon />
                 </button>
                 <h2>САМОВЫВОЗ</h2>
                 <div className="payment-input">
@@ -945,7 +1012,7 @@ const PaymentPage = ({ modalMode = false }) => {
               <button type="button" className="payment-drawer-layer__backdrop" onClick={() => setCourierDrawerOpen(false)} aria-label="Закрыть форму адреса доставки" />
               <aside className="payment-drawer">
                 <button type="button" className="payment-shell__close payment-drawer__close" onClick={() => setCourierDrawerOpen(false)} aria-label="Закрыть форму адреса доставки">
-                  <X size={24} strokeWidth={1.7} />
+                  <MobileMenuCloseIcon />
                 </button>
                 <h2>АДРЕС ДОСТАВКИ</h2>
                 <p className="payment-drawer__city">{currentCity?.label || ''}</p>

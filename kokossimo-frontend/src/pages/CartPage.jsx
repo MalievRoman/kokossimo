@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Trash2, Plus, Minus } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import ProductSlider from '../components/product/ProductSlider';
 import { getBestsellers, getNewProducts, getProducts } from '../services/api';
@@ -153,9 +153,12 @@ const CartPage = () => {
 
               {/* Список товаров */}
               <div className="cart-items">
-                <div className="cart-items__list">
+              <div className="cart-items__list">
               {cartItems.map((item) => {
-                const isUnavailable = item.stock != null && Number(item.stock) <= 0;
+                const stock = Number(item.stock);
+                const hasFiniteStock = Number.isFinite(stock);
+                const isUnavailable = item.stock != null && stock <= 0;
+                const isIncreaseDisabled = isUnavailable || (hasFiniteStock && item.quantity >= stock);
                 const hasDiscount =
                   Number.isFinite(Number(item.discount)) &&
                   Number(item.discount) > 0 &&
@@ -215,7 +218,7 @@ const CartPage = () => {
                     >
                       <button
                         type="button"
-                        className="quantity-btn"
+                        className="quantity-btn product-card__qty-btn"
                         disabled={isUnavailable}
                         onClick={(e) => {
                           e.preventDefault();
@@ -223,20 +226,20 @@ const CartPage = () => {
                           handleQuantityChange(item.id, item.quantity - 1);
                         }}
                       >
-                        <Minus size={16} />
+                        −
                       </button>
                       <span className="quantity-value">{item.quantity}</span>
                       <button
                         type="button"
-                        className="quantity-btn"
-                        disabled={isUnavailable}
+                        className="quantity-btn product-card__qty-btn"
+                        disabled={isIncreaseDisabled}
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
                           handleQuantityChange(item.id, item.quantity + 1);
                         }}
                       >
-                        <Plus size={16} />
+                        +
                       </button>
                     </div>
 
@@ -271,11 +274,6 @@ const CartPage = () => {
             {/* Сумма заказа */}
             <div className="cart-summary">
               <h2 className="cart-summary__title">СУММА ЗАКАЗА</h2>
-              <div className="cart-summary__row">
-                <span>Товаров:</span>
-                <span>{getTotalItems()} шт</span>
-              </div>
-              <div className="cart-summary__divider" />
               <div className="cart-summary__row cart-summary__total">
                 <span>Итого:</span>
                 <span>{formatRub(getTotalPrice())}</span>
