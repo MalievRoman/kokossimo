@@ -1,0 +1,85 @@
+:root {
+  --app-icon-button-icon-size: 18px;
+  --app-icon-button-stroke: 1px;
+  --app-icon-button-padding: 14px;
+  --app-icon-button-size: calc(var(--app-icon-button-icon-size) + (var(--app-icon-button-padding) * 2));
+}
+
+@media (min-width: 720px) and (max-width: 1280px) {
+  :root {
+    --app-icon-button-icon-size: 14px;
+    --app-icon-button-stroke: 0.8px;
+    --app-icon-button-padding: 13px;
+    --app-icon-button-size: calc(var(--app-icon-button-icon-size) + (var(--app-icon-button-padding) * 2));
+  }
+}
+
+@media (max-width: 719px) {
+  :root {
+    --app-icon-button-icon-size: 12px;
+    --app-icon-button-stroke: 0.6px;
+    --app-icon-button-padding: 11px;
+    --app-icon-button-size: calc(var(--app-icon-button-icon-size) + (var(--app-icon-button-padding) * 2));
+  }
+}
+
+:where(
+  .product-card__qty-btn,
+  .cart-item__quantity .quantity-btn,
+  .wishlist-btn,
+  .product-card__favorite,
+  .catalog-mobile-filter__icon-button,
+  .payment-shell__close,
+  button.header__icon-btn,
+  .header__search-btn,
+  .header__menu-btn,
+  .slider-btn
+) {
+  width: var(--app-icon-button-size) !important;
+  min-width: var(--app-icon-button-size) !important;
+  height: var(--app-icon-button-size) !important;
+  min-height: var(--app-icon-button-size) !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex: 0 0 auto;
+  line-height: 1 !important;
+}
+
+:where(
+  .product-card__qty-btn,
+  .slider-btn
+) {
+  font-size: var(--app-icon-button-icon-size) !important;
+  font-weight: 400 !important;
+}
+
+:where(
+  .cart-item__quantity .quantity-btn,
+  .wishlist-btn,
+  .payment-shell__close
+) > svg,
+:where(
+  button.header__icon-btn,
+  .header__search-btn
+) .icon,
+.catalog-mobile-filter__icon-svg,
+.product-card__favorite img {
+  width: var(--app-icon-button-icon-size) !important;
+  height: var(--app-icon-button-icon-size) !important;
+}
+
+:where(
+  .cart-item__quantity .quantity-btn,
+  .wishlist-btn,
+  .payment-shell__close
+) > svg,
+.catalog-mobile-filter__icon-svg {
+  stroke-width: var(--app-icon-button-stroke) !important;
+}
+
+.product-card__qty-btn {
+  border-width: 1.1px !important;
+}

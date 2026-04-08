@@ -9,6 +9,7 @@ import './index.css'
 import './styles/koko-main.css'
 import './styles/button-sizing.css'
 import './styles/input-sizing.css'
+import './styles/icon-button-sizing.css'
 
 const baseUrl = import.meta.env.BASE_URL || '/'
 const setIconVar = (name, file) => {
