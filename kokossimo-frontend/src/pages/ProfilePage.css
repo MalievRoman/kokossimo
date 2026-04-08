@@ -355,6 +355,10 @@
   gap: 16px;
 }
 
+.profile-favorite-text {
+  min-width: 0;
+}
+
 .profile-favorite-link {
   text-decoration: none;
   color: inherit;
@@ -381,12 +385,32 @@
   font-weight: 500;
 }
 
+.profile-favorite-price-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .profile-favorite-price {
   margin: 0;
   font-size: 16px;
   line-height: 24px;
   font-family: "Open Sans", sans-serif;
   font-weight: 400;
+}
+
+.profile-favorite-stock-status {
+  color: #740400;
+  font-size: 16px;
+  line-height: 24px;
+  font-family: "Open Sans", sans-serif;
+  font-weight: 400;
+}
+
+.profile-favorite-row.is-out-of-stock .profile-favorite-name,
+.profile-favorite-row.is-out-of-stock .profile-favorite-price {
+  color: #716A6A;
 }
 
 .profile-settings {
@@ -474,11 +498,24 @@
   color: #FCF8F7;
 }
 
+.profile-btn--primary:disabled {
+  border-color: transparent;
+  background: #7f6a6b;
+  color: #c8b6b4;
+  cursor: not-allowed;
+}
+
 @media (hover: hover) {
   .profile-btn--primary:hover {
     background: #330200;
     border-color: #330200;
     color: #FCF8F7;
+  }
+
+  .profile-btn--primary:disabled:hover {
+    background: #7f6a6b;
+    border-color: transparent;
+    color: #c8b6b4;
   }
 }
 

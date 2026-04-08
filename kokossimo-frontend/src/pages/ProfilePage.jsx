@@ -392,6 +392,18 @@ const ProfilePage = () => {
   };
 
   const handleAddFavoriteToCart = (favoriteItem) => {
+    const stock = Number(favoriteItem?.stock);
+    const isOutOfStock =
+      favoriteItem?.is_gift_certificate
+        ? false
+        : (typeof favoriteItem?.is_in_stock === 'boolean'
+            ? !favoriteItem.is_in_stock
+            : (Number.isFinite(stock) ? stock <= 0 : false));
+
+    if (isOutOfStock) {
+      return;
+    }
+
     addToCart(favoriteItem, 1);
     showTemporaryStatus('success', 'Товар добавлен в корзину.');
   };
@@ -591,8 +603,20 @@ const ProfilePage = () => {
                 {favorites.length === 0 ? (
                   <div className="profile-panel profile-muted">В избранном пока нет товаров.</div>
                 ) : (
-                  favorites.map((item) => (
-                    <article key={item.id} className="profile-panel profile-favorite-row">
+                  favorites.map((item) => {
+                    const stock = Number(item?.stock);
+                    const isOutOfStock =
+                      item?.is_gift_certificate
+                        ? false
+                        : (typeof item?.is_in_stock === 'boolean'
+                            ? !item.is_in_stock
+                            : (Number.isFinite(stock) ? stock <= 0 : false));
+
+                    return (
+                    <article
+                      key={item.id}
+                      className={`profile-panel profile-favorite-row${isOutOfStock ? ' is-out-of-stock' : ''}`}
+                    >
                       {item.is_gift_certificate ? (
                         <div className="profile-favorite-main">
                           <img
@@ -600,9 +624,14 @@ const ProfilePage = () => {
                             alt={item.name}
                             className="profile-favorite-image"
                           />
-                          <div>
+                          <div className="profile-favorite-text">
                             <h3 className="profile-favorite-name">{item.name}</h3>
-                            <p className="profile-favorite-price">{formatPrice(item.price)} ₽</p>
+                            <div className="profile-favorite-price-row">
+                              <p className="profile-favorite-price">{formatPrice(item.price)} ₽</p>
+                              {isOutOfStock ? (
+                                <span className="profile-favorite-stock-status">Нет в наличии</span>
+                              ) : null}
+                            </div>
                           </div>
                         </div>
                       ) : (
@@ -613,9 +642,14 @@ const ProfilePage = () => {
                               alt={item.name}
                               className="profile-favorite-image"
                             />
-                            <div>
+                            <div className="profile-favorite-text">
                               <h3 className="profile-favorite-name">{item.name}</h3>
-                              <p className="profile-favorite-price">{formatPrice(item.price)} ₽</p>
+                              <div className="profile-favorite-price-row">
+                                <p className="profile-favorite-price">{formatPrice(item.price)} ₽</p>
+                                {isOutOfStock ? (
+                                  <span className="profile-favorite-stock-status">Нет в наличии</span>
+                                ) : null}
+                              </div>
                             </div>
                           </div>
                         </Link>
@@ -625,6 +659,7 @@ const ProfilePage = () => {
                           type="button"
                           className="profile-btn profile-btn--primary profile-btn--to-cart"
                           onClick={() => handleAddFavoriteToCart(item)}
+                          disabled={isOutOfStock}
                         >
                           В КОРЗИНУ
                         </button>
@@ -637,7 +672,7 @@ const ProfilePage = () => {
                         </button>
                       </div>
                     </article>
-                  ))
+                  )})
                 )}
               </section>
             )}

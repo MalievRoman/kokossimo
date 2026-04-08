@@ -1,17 +1,23 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, ShoppingBag } from 'lucide-react';
+import { Heart } from 'lucide-react';
 import { useFavorites } from '../context/FavoritesContext';
 import { useCart } from '../context/CartContext';
 import ProductCard from '../components/product/ProductCard';
 import './FavoritesPage.css';
 
 const FavoritesPage = () => {
-  const { favorites, clearFavorites, removeFromFavorites } = useFavorites();
+  const { favorites, clearFavorites } = useFavorites();
   const { addToCart } = useCart();
+  const availableFavorites = favorites.filter((item) => {
+    if (item?.is_gift_certificate) return true;
+    if (typeof item?.is_in_stock === 'boolean') return item.is_in_stock;
+    const stock = Number(item?.stock);
+    return Number.isFinite(stock) ? stock > 0 : true;
+  });
 
   const handleAddAllToCart = () => {
-    favorites.forEach(item => {
+    availableFavorites.forEach(item => {
       addToCart(item, 1);
     });
   };
@@ -31,6 +37,7 @@ const FavoritesPage = () => {
               <button 
                 className="btn-secondary"
                 onClick={handleAddAllToCart}
+                disabled={availableFavorites.length === 0}
               >
                 Добавить все в корзину
               </button>
@@ -61,7 +68,7 @@ const FavoritesPage = () => {
             
             <div className="favorites-grid">
               {favorites.map((item) => (
-                <ProductCard key={item.id} product={item} />
+                <ProductCard key={item.id} product={item} className="favorites-product-card" />
               ))}
             </div>
           </>

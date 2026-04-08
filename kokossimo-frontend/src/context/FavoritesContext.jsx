@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
-import { getUserFavorites, mergeUserFavorites, replaceUserFavorites } from '../services/api';
+import { getProduct, getUserFavorites, mergeUserFavorites, replaceUserFavorites } from '../services/api';
 
 const FavoritesContext = createContext();
 
@@ -47,6 +47,12 @@ export const FavoritesProvider = ({ children }) => {
       Number.isFinite(normalizedDiscount) && normalizedDiscount > 0 && normalizedDiscount < 100
         ? normalizedDiscount
         : 0;
+    const normalizedStock = Number(product?.stock);
+    const stock = Number.isFinite(normalizedStock) ? Math.max(0, Math.floor(normalizedStock)) : null;
+    const isInStock =
+      typeof product?.is_in_stock === 'boolean'
+        ? product.is_in_stock
+        : (stock == null ? true : stock > 0);
 
     return {
       id,
@@ -56,6 +62,8 @@ export const FavoritesProvider = ({ children }) => {
       description: product?.description || '',
       is_new: Boolean(product?.is_new || product?.isNew),
       discount,
+      stock,
+      is_in_stock: isInStock,
       is_gift_certificate: Boolean(product?.is_gift_certificate),
     };
   };
@@ -147,6 +155,72 @@ export const FavoritesProvider = ({ children }) => {
   useEffect(() => {
     if (modeRef.current !== 'guest') return;
     writeGuestFavorites(favorites);
+  }, [favorites]);
+
+  // Подтягиваем актуальные остатки и цену для избранного, чтобы UI не жил на устаревших данных.
+  useEffect(() => {
+    let cancelled = false;
+
+    const productIds = favorites
+      .filter((item) => !item?.is_gift_certificate)
+      .map((item) => Number(item?.id))
+      .filter((id) => Number.isFinite(id) && id > 0);
+
+    if (productIds.length === 0) return;
+
+    const refreshFavoriteProducts = async () => {
+      const responses = await Promise.allSettled(productIds.map((id) => getProduct(id)));
+      if (cancelled) return;
+
+      const refreshedById = new Map();
+      responses.forEach((result, index) => {
+        if (result.status !== 'fulfilled' || !result.value?.data) return;
+        refreshedById.set(productIds[index], normalizeFavorite(result.value.data));
+      });
+
+      if (refreshedById.size === 0) return;
+
+      let hasChanges = false;
+      const nextFavorites = favorites.map((item) => {
+        const itemId = Number(item?.id);
+        if (!Number.isFinite(itemId)) return item;
+
+        const refreshed = refreshedById.get(itemId);
+        if (!refreshed) return item;
+
+        const nextItem = {
+          ...item,
+          ...refreshed,
+          is_gift_certificate: Boolean(item?.is_gift_certificate),
+        };
+
+        if (
+          nextItem.name !== item.name ||
+          nextItem.price !== item.price ||
+          nextItem.image !== item.image ||
+          nextItem.description !== item.description ||
+          nextItem.is_new !== item.is_new ||
+          nextItem.discount !== item.discount ||
+          nextItem.stock !== item.stock ||
+          nextItem.is_in_stock !== item.is_in_stock
+        ) {
+          hasChanges = true;
+        }
+
+        return nextItem;
+      });
+
+      if (!hasChanges || cancelled) return;
+
+      skipNextServerSyncRef.current = true;
+      setFavorites(nextFavorites);
+    };
+
+    refreshFavoriteProducts().catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
   }, [favorites]);
 
   // Сохраняем серверное избранное для авторизованного пользователя.
