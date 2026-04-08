@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, ChevronUp, Info, X } from 'lucide-react';
+import { ChevronDown, Info, X } from 'lucide-react';
 import { createOrder, createYooKassaPayment, getCurrentUser, updateProfile } from '../services/api';
 import { useCart } from '../context/CartContext';
 import { formatRuPhone, isPhoneInputKeyAllowed } from '../utils/phone';
@@ -132,10 +132,14 @@ const CheckoutStep = ({
         {subtitle ? <span className="checkout-step__subtitle">{subtitle}</span> : null}
       </span>
       <span className="checkout-step__icon" aria-hidden="true">
-        {expanded ? <ChevronUp size={22} strokeWidth={1.6} /> : <ChevronDown size={22} strokeWidth={1.6} />}
+        <ChevronDown size={22} strokeWidth={1.6} />
       </span>
     </button>
-    {expanded ? <div className="checkout-step__content">{children}</div> : null}
+    <div className="checkout-step__body" aria-hidden={!expanded}>
+      <div className="checkout-step__body-inner">
+        <div className="checkout-step__content">{children}</div>
+      </div>
+    </div>
   </section>
 );
 

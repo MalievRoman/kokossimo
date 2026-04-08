@@ -176,6 +176,7 @@
 .checkout-step__icon {
   justify-self: end;
   color: #6c4b48;
+  transition: transform 240ms ease;
 }
 
 .checkout-step--locked .checkout-step__number,
@@ -184,8 +185,38 @@
   color: #938887;
 }
 
+.checkout-step--expanded .checkout-step__icon {
+  transform: rotate(180deg);
+}
+
+.checkout-step__body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 280ms ease;
+}
+
+.checkout-step__body-inner {
+  overflow: hidden;
+}
+
 .checkout-step__content {
-  padding: 0 0 28px 48px;
+  padding: 0 0 0 48px;
+  opacity: 0;
+  transform: translateY(-8px);
+  transition:
+    padding-bottom 280ms ease,
+    opacity 200ms ease,
+    transform 280ms ease;
+}
+
+.checkout-step--expanded .checkout-step__body {
+  grid-template-rows: 1fr;
+}
+
+.checkout-step--expanded .checkout-step__content {
+  padding-bottom: 28px;
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .payment-field-row {
