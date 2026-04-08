@@ -1177,7 +1177,22 @@ def _product_image_proxy_impl(request, product_id):
     if product.image:
         return HttpResponseRedirect(product.image.url)
     if getattr(product, "external_image_url", ""):
-        return HttpResponseRedirect(product.external_image_url)
+        # Важно: фронт запрашивает картинку через <img src="..."> и не может добавить Authorization.
+        # Если отдать редирект на api.moysklad.ru/download/ — браузер покажет окно входа в МойСклад.
+        if bool(getattr(settings, "MOYSKLAD_IMAGE_PROXY_REDIRECT_ONLY", False)):
+            return HttpResponseRedirect(product.external_image_url)
+
+        try:
+            client = MoySkladClient()
+            payload, content_type = client.download_binary(product.external_image_url)
+        except (MoySkladConfigError, MoySkladError) as exc:
+            return _placeholder_or_debug(request, f"moysklad_error:{str(exc)[:60]}")
+
+        resp = HttpResponse(payload, content_type=content_type or "application/octet-stream")
+        # Картинки меняются редко; даём кэшировать, но оставляем возможность быстро сбросить через CDN.
+        resp["Cache-Control"] = "public, max-age=3600"
+        resp["Access-Control-Allow-Origin"] = "*"
+        return resp
     return _placeholder_or_debug(request, "no_image_available")
 
 
