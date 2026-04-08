@@ -549,7 +549,7 @@ const PaymentPage = ({ modalMode = false }) => {
       clearCart();
       window.location.href = confirmationUrl;
     } catch (error) {
-      if (error?.__authRedirect) {
+      if (error?.__kokoAuthRedirect) {
         return;
       }
       const apiMessage =
