@@ -6,14 +6,28 @@
   animation: fadeIn 0.6s ease-out forwards;
 }
 
-.page-title {
-  font-size: 30px;
-  line-height: 38px;
+.catalog-page .page-title {
+  font-size: 24px;
+  line-height: 32px;
   font-weight: 500;
   letter-spacing: 0;
   margin: 0 0 10px;
   text-transform: uppercase;
   color: #240100;
+}
+
+@media (min-width: 1280px) and (max-width: 1439px) {
+  .catalog-page .page-title {
+    font-size: 24px;
+    line-height: 32px;
+  }
+}
+
+@media (min-width: 1440px) {
+  .catalog-page .page-title {
+    font-size: 30px;
+    line-height: 38px;
+  }
 }
 
 .catalog-search-query {

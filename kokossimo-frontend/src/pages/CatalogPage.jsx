@@ -565,7 +565,7 @@ const CatalogPage = () => {
           <Link to="/">ГЛАВНАЯ</Link> <span>— КАТАЛОГ</span>
         </div>
 
-        <h1 className="page-title">КАТАЛОГ ТОВАРОВ</h1>
+        <h1 className="page-title">КАТАЛОГ</h1>
         {searchParams.get('q') && (
           <div className="catalog-search-query">
             Результаты по запросу: «{searchParams.get('q')}»
