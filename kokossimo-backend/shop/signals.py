@@ -4,20 +4,25 @@ from django.dispatch import receiver
 
 from knox.models import AuthToken
 
+User = get_user_model()
 
-@receiver(pre_save)
-def invalidate_tokens_on_password_change(sender, instance, **kwargs):
+
+@receiver(pre_save, sender=User)
+def invalidate_tokens_on_password_change(sender, instance, update_fields=None, **kwargs):
     """
     Если у пользователя изменился хэш пароля — инвалидируем все активные токены.
 
-    Это покрывает смену пароля через админку/ORM и любые другие места,
-    а не только наш endpoint reset.
+    Подписка только на User (не на каждый pre_save в проекте).
+    Если save(..., update_fields=...) и пароль не в списке — лишний SELECT к БД не делаем.
     """
-    User = get_user_model()
-    if sender is not User:
+    if not instance.pk:
         return
 
-    if not instance.pk:
+    if update_fields is not None and "password" not in update_fields:
+        return
+
+    if update_fields is not None and "password" in update_fields:
+        AuthToken.objects.filter(user=instance).delete()
         return
 
     old_password = (
@@ -25,9 +30,5 @@ def invalidate_tokens_on_password_change(sender, instance, **kwargs):
         .values_list("password", flat=True)
         .first()
     )
-    if not old_password:
-        return
-
-    if old_password != instance.password:
+    if old_password and old_password != instance.password:
         AuthToken.objects.filter(user=instance).delete()
-
