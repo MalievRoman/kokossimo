@@ -58,7 +58,6 @@
 
 :where(
   .tab-btn,
-  .profile-tab,
   .profile-shortcut,
   .page-btn
 ) {

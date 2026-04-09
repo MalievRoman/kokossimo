@@ -554,14 +554,23 @@ body {
 }
 
 .mobile-menu__chevron {
-  transition: transform 160ms ease-out;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   color: #740400;
   width: 24px;
   height: 24px;
+  flex: 0 0 24px;
 }
 
-.mobile-menu__toggle.is-open .mobile-menu__chevron {
-  transform: rotate(180deg);
+.mobile-menu__chevron svg {
+  display: block;
+  transform-origin: center;
+  transition: transform 160ms ease-out;
+}
+
+.mobile-menu__toggle.is-open .mobile-menu__chevron svg {
+  transform: scaleY(-1);
 }
 
 .mobile-menu__submenu {
@@ -1807,7 +1816,7 @@ body.body--without-header {
 
 .footer__title {
   margin: 0;
-  font-size: 24px;
+  font-size: 16px;
   font-weight: 600;
   color: #240100;
   letter-spacing: 0.02em;
@@ -1823,11 +1832,31 @@ body.body--without-header {
 }
 
 .footer__link {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 400;
   color: #240100;
   text-decoration: none;
   line-height: 1.35;
+}
+
+@media (min-width: 1280px) and (max-width: 1439px) {
+  .footer__title {
+    font-size: 18px;
+  }
+
+  .footer__link {
+    font-size: 14px;
+  }
+}
+
+@media (min-width: 1440px) {
+  .footer__title {
+    font-size: 20px;
+  }
+
+  .footer__link {
+    font-size: 16px;
+  }
 }
 
 @media (hover: hover) {

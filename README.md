@@ -21,20 +21,63 @@
 ## Структура репозитория
 - `kokossimo-frontend/` — SPA интерфейс магазина
 - `kokossimo-backend/` — API и админ‑панель Django
-- `products.txt` — исходные данные для импорта
+- `.env` — общий конфиг для frontend и backend
+
+## Связка frontend и backend через `.env`
+Проект использует один корневой файл `.env`:
+- Django читает `/Users/minaonsi/Desktop/kokossimo/.env` в [config/settings.py](/Users/minaonsi/Desktop/kokossimo/kokossimo-backend/config/settings.py)
+- Vite читает тот же файл через `envDir: '..'` в [vite.config.js](/Users/minaonsi/Desktop/kokossimo/kokossimo-frontend/vite.config.js)
+- клиентский API использует `VITE_API_URL` в [api.js](/Users/minaonsi/Desktop/kokossimo/kokossimo-frontend/src/services/api.js)
+
+Минимальные переменные для локальной разработки:
+
+```env
+FRONTEND_URL=http://localhost:5173
+VITE_API_URL=http://127.0.0.1:8000/api
+DJANGO_DEBUG=true
+DJANGO_ALLOWED_HOSTS=127.0.0.1,localhost
+DJANGO_CORS_ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+DJANGO_CSRF_TRUSTED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+```
+
+Если `.env` ещё не создан, можно взять шаблон из `.env.example`.
 
 ## Быстрый старт (локально)
 ### Backend
-1. Перейдите в `kokossimo-backend/`.
-2. Установите зависимости: `pip install -r requirements.txt`
-3. Примените миграции: `python manage.py migrate`
-4. Загрузите данные (по желанию): `python manage.py loaddata shop/fixtures/initial_data.json`
-5. Запустите сервер: `python manage.py runserver`
+1. Из корня репозитория создайте `.env`, если его ещё нет:
+   `cp .env.example .env`
+2. Перейдите в `kokossimo-backend/`.
+3. Создайте и активируйте виртуальное окружение:
+   `python3 -m venv .venv`
+   `source .venv/bin/activate`
+4. Установите зависимости: `pip install -r requirements.txt`
+5. Примените миграции: `python manage.py migrate`
+6. Загрузите данные по желанию: `python manage.py loaddata shop/fixtures/initial_data.json`
+7. Запустите сервер: `python manage.py runserver 127.0.0.1:8000`
 
 ### Frontend
-1. Перейдите в `kokossimo-frontend/`.
+1. Откройте второй терминал и перейдите в `kokossimo-frontend/`.
 2. Установите зависимости: `npm install`
-3. Запустите dev‑сервер: `npm run dev`
+3. Фронтенд автоматически возьмёт `VITE_API_URL` из корневого `.env`.
+4. Запустите dev‑сервер: `npm run dev`
+5. Откройте `http://localhost:5173`
+
+## Команды запуска
+Backend:
+
+```bash
+cd /Users/minaonsi/Desktop/kokossimo/kokossimo-backend
+source .venv/bin/activate
+python manage.py runserver 127.0.0.1:8000
+```
+
+Frontend:
+
+```bash
+cd /Users/minaonsi/Desktop/kokossimo/kokossimo-frontend
+npm install
+npm run dev
+```
 
 ## API (основные эндпоинты)
 - `GET /api/products/` — товары (фильтры: `is_new`, `is_bestseller`, `category`)
