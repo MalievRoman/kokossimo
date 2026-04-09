@@ -1,8 +1,10 @@
 from rest_framework import serializers
 from django.db import transaction
 from collections import defaultdict
+from decimal import Decimal, ROUND_HALF_UP
 from .models import Product, Category, Profile, Order, OrderItem, ProductRating, ProductSubcategory
 from django.conf import settings
+from .delivery_cities import delivery_fee_rub
 
 class CategorySerializer(serializers.ModelSerializer):
     image = serializers.SerializerMethodField()
@@ -286,7 +288,14 @@ class OrderCreateSerializer(serializers.Serializer):
                 )
                 total += amount * quantity
 
-        order.total_price = total
+        delivery_fee = delivery_fee_rub(
+            validated_data.get('city', ''),
+            validated_data.get('delivery_method', ''),
+        )
+        order.total_price = (Decimal(total) + delivery_fee).quantize(
+            Decimal('0.01'),
+            rounding=ROUND_HALF_UP,
+        )
         order.save(update_fields=['total_price'])
         return order
 

@@ -1,92 +1,16 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, Info, X } from 'lucide-react';
-import { createOrder, createYooKassaPayment, getCurrentUser, updateProfile } from '../services/api';
+import { ChevronDown, ChevronUp, Info, X } from 'lucide-react';
+import {
+  createOrder,
+  createYooKassaPayment,
+  getCurrentUser,
+  getDeliveryCities,
+  updateProfile,
+} from '../services/api';
 import { useCart } from '../context/CartContext';
 import { formatRuPhone, isPhoneInputKeyAllowed } from '../utils/phone';
 import './PaymentPage.css';
-
-const CITY_CONFIG = {
-  moscow: {
-    label: 'Москва',
-    courierAvailable: false,
-    pickupFee: 0,
-    courierFee: 0,
-    pickupPoints: [
-      {
-        id: 'msk-537',
-        name: 'Пункт СДЭК MSK537',
-        address: 'Москва, 2-й Хвостов переулок, 12',
-        providerLabel: 'СДЭК',
-        type: 'Пункт выдачи',
-        weight: 'до 35 кг',
-        hours: 'с 9:00 до 21:00',
-      },
-      {
-        id: 'msk-589',
-        name: 'Пункт СДЭК MSK589',
-        address: 'Москва, Волгоградский проспект, 32, корпус 2',
-        providerLabel: 'СДЭК',
-        type: 'Пункт выдачи',
-        weight: 'до 25 кг',
-        hours: 'с 10:00 до 21:00',
-      },
-      {
-        id: 'msk-2360',
-        name: 'Пункт СДЭК MSK2360',
-        address: 'Москва, ул. Таганская, 25-27',
-        providerLabel: 'СДЭК',
-        type: 'Постомат',
-        weight: 'до 15 кг',
-        hours: 'круглосуточно',
-      },
-    ],
-  },
-  saint_petersburg: {
-    label: 'Санкт-Петербург',
-    courierAvailable: false,
-    pickupFee: 0,
-    courierFee: 0,
-    pickupPoints: [
-      {
-        id: 'spb-102',
-        name: 'Пункт СДЭК SPB102',
-        address: 'Санкт-Петербург, Лиговский проспект, 50',
-        providerLabel: 'СДЭК',
-        type: 'Пункт выдачи',
-        weight: 'до 25 кг',
-        hours: 'с 10:00 до 21:00',
-      },
-      {
-        id: 'spb-103',
-        name: 'Пункт СДЭК SPB103',
-        address: 'Санкт-Петербург, Невский проспект, 98',
-        providerLabel: 'СДЭК',
-        type: 'Постомат',
-        weight: 'до 15 кг',
-        hours: 'круглосуточно',
-      },
-    ],
-  },
-  elista: {
-    label: 'Элиста',
-    courierAvailable: true,
-    pickupFee: 0,
-    courierFee: 600,
-    pickupPoints: [
-      {
-        id: 'elista-store',
-        name: 'Магазин КОКОССИМО',
-        address: 'Элиста, улица А. Сусеева, 13',
-        providerLabel: 'КОКОССИМО',
-        type: 'Самовывоз из магазина',
-        weight: 'без ограничений',
-        hours: 'с 9:00 до 20:00',
-      },
-    ],
-  },
-};
 
 const PAYMENT_OPTIONS = [
   { value: 'card', label: 'Оплата картой' },
@@ -172,10 +96,11 @@ const splitStreetAndHouse = (rawValue) => {
   };
 };
 
-const getFirstKnownCityKey = (value) => {
+const getFirstKnownCityKey = (value, cityConfig) => {
+  if (!cityConfig) return '';
   const normalized = String(value || '').trim().toLowerCase();
   return (
-    Object.entries(CITY_CONFIG).find(([, config]) => config.label.toLowerCase() === normalized)?.[0] || ''
+    Object.entries(cityConfig).find(([, config]) => config.label.toLowerCase() === normalized)?.[0] || ''
   );
 };
 
@@ -239,13 +164,30 @@ const PaymentPage = ({ modalMode = false }) => {
   const [courierDraft, setCourierDraft] = useState(emptyCourierDraft);
   const [status, setStatus] = useState({ type: '', message: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const prevAddressCompleteRef = useRef(false);
-  const prevRecipientCompleteRef = useRef(false);
-  const courierHintRef = useRef(null);
+  const [cityConfig, setCityConfig] = useState(null);
+  const [cityConfigError, setCityConfigError] = useState(null);
+
+  const loadCityConfig = useCallback(() => {
+    setCityConfig(null);
+    setCityConfigError(null);
+    getDeliveryCities()
+      .then((res) => {
+        setCityConfig(res.data || {});
+      })
+      .catch(() => {
+        setCityConfigError('Не удалось загрузить настройки доставки.');
+      });
+  }, []);
+
+  useEffect(() => {
+    if (cartItems.length === 0) return undefined;
+    loadCityConfig();
+    return undefined;
+  }, [cartItems.length, loadCityConfig]);
 
   const subtotal = Number(getTotalPrice()) || 0;
   const deliveryDays = useMemo(() => buildDeliveryDays(), []);
-  const currentCity = delivery.city ? CITY_CONFIG[delivery.city] : null;
+  const currentCity = delivery.city && cityConfig ? cityConfig[delivery.city] : null;
   const pickupPoints = currentCity?.pickupPoints || [];
   const selectedPickupPoint = pickupPoints.find((point) => point.id === delivery.pickupPointId) || null;
   const pickupDraftPoint = pickupPoints.find((point) => point.id === pickupDraftId) || null;
@@ -291,12 +233,12 @@ const PaymentPage = ({ modalMode = false }) => {
   const readyToPay = addressComplete && recipientComplete && Boolean(paymentOption);
 
   useEffect(() => {
-    if (!authToken) return;
+    if (!authToken || !cityConfig) return;
 
     getCurrentUser(authToken)
       .then((response) => {
         const data = response.data || {};
-        const matchedCityKey = getFirstKnownCityKey(data.city);
+        const matchedCityKey = getFirstKnownCityKey(data.city, cityConfig);
         setRecipient((prev) => ({
           ...prev,
           phone: formatRuPhone(data.phone || prev.phone),
@@ -308,7 +250,7 @@ const PaymentPage = ({ modalMode = false }) => {
           setDelivery((prev) => ({
             ...prev,
             city: prev.city || matchedCityKey,
-            method: prev.method || (CITY_CONFIG[matchedCityKey].courierAvailable ? '' : 'pickup'),
+            method: prev.method || (cityConfig[matchedCityKey].courierAvailable ? '' : 'pickup'),
           }));
         }
         const profileStreet = [data.street, data.house].filter(Boolean).join(', ');
@@ -319,7 +261,7 @@ const PaymentPage = ({ modalMode = false }) => {
         }));
       })
       .catch(() => {});
-  }, [authToken]);
+  }, [authToken, cityConfig]);
 
   useEffect(() => {
     if (!modalMode && !pickupModalOpen && !courierDrawerOpen) {
@@ -415,7 +357,7 @@ const PaymentPage = ({ modalMode = false }) => {
 
   const handleCityChange = (event) => {
     const nextCity = event.target.value;
-    const nextCityConfig = nextCity ? CITY_CONFIG[nextCity] : null;
+    const nextCityConfig = nextCity && cityConfig ? cityConfig[nextCity] : null;
 
     setDelivery({
       city: nextCity,
@@ -636,6 +578,41 @@ const PaymentPage = ({ modalMode = false }) => {
     );
   }
 
+  if (cityConfigError) {
+    return (
+      <div className="payment-page payment-page--empty">
+        <div className="payment-shell payment-shell--empty page-animation">
+          <button type="button" className="payment-shell__close" onClick={closeCheckout} aria-label="Закрыть оформление заказа">
+            <X size={24} strokeWidth={1.7} />
+          </button>
+          <div className="payment-empty">
+            <h1>Ошибка загрузки</h1>
+            <p>{cityConfigError}</p>
+            <button type="button" className="payment-primary-button payment-primary-button--active" onClick={loadCityConfig}>
+              Повторить
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!cityConfig) {
+    return (
+      <div className="payment-page payment-page--empty">
+        <div className="payment-shell payment-shell--empty page-animation">
+          <button type="button" className="payment-shell__close" onClick={closeCheckout} aria-label="Закрыть оформление заказа">
+            <X size={24} strokeWidth={1.7} />
+          </button>
+          <div className="payment-empty">
+            <h1>Оформление заказа</h1>
+            <p>Загружаем тарифы доставки…</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`payment-page ${modalMode ? 'payment-page--modal' : ''}`}>
       <div className={`payment-shell page-animation ${modalMode ? 'payment-shell--modal' : ''}`}>
@@ -662,11 +639,13 @@ const PaymentPage = ({ modalMode = false }) => {
                   <label className="payment-select">
                     <select value={delivery.city} onChange={handleCityChange}>
                       <option value="">Выберите город</option>
-                      {Object.entries(CITY_CONFIG).map(([key, config]) => (
-                        <option key={key} value={key}>
-                          {config.label}
-                        </option>
-                      ))}
+                      {cityConfig
+                        ? Object.entries(cityConfig).map(([key, config]) => (
+                            <option key={key} value={key}>
+                              {config.label}
+                            </option>
+                          ))
+                        : null}
                     </select>
                   </label>
                 </div>

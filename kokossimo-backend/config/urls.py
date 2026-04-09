@@ -33,6 +33,7 @@ from shop.views import (
     product_image_proxy,
     moysklad_status,
     moysklad_assortment,
+    delivery_cities_config,
 )
 
 # Оформление админки для сотрудников магазина
@@ -139,6 +140,7 @@ urlpatterns = [
     path('api/integrations/moysklad/status/', moysklad_status),
     path('api/integrations/moysklad/assortment/', moysklad_assortment),
     path('api/legal/<str:slug>/', legal_document_view),
+    path('api/delivery/cities/', delivery_cities_config),
 ]
 
 # Отдача React приложения для всех остальных маршрутов (SPA)
