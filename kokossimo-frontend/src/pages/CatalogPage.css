@@ -433,6 +433,7 @@
 
 .catalog-mobile-filter--sort {
   background: transparent;
+  position: relative;
 }
 
 .catalog-mobile-filter__icon-button {
@@ -464,7 +465,9 @@
 }
 
 .catalog-mobile-price-modal {
-  position: fixed;
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
   width: 280px;
   max-width: calc(100vw - 24px);
   min-height: 130px;
@@ -473,7 +476,7 @@
   padding: 10px;
   box-sizing: border-box;
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
-  z-index: 10000;
+  z-index: 60;
 }
 
 .catalog-mobile-price-modal__row {
@@ -580,7 +583,9 @@
 }
 
 .catalog-mobile-sort-modal {
-  position: fixed;
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
   width: max-content;
   min-width: 0;
   max-width: calc(100vw - 24px);
@@ -589,7 +594,7 @@
   background: #FCF8F7;
   box-sizing: border-box;
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.14);
-  z-index: 10000;
+  z-index: 60;
   display: grid;
   gap: 8px;
 }

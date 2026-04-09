@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { createPortal } from 'react-dom';
 import { Link, useSearchParams } from 'react-router-dom';
 import ProductCard from '../components/product/ProductCard';
 import { getProducts, getProductsPriceRange, getProductSubcategoriesTree } from '../services/api';
@@ -76,11 +75,7 @@ const CatalogPage = () => {
   const [isMobilePriceOpen, setIsMobilePriceOpen] = useState(false);
   const [isMobileCategoryOpen, setIsMobileCategoryOpen] = useState(false);
   const [isMobileSortOpen, setIsMobileSortOpen] = useState(false);
-  const [priceModalPosition, setPriceModalPosition] = useState(null);
-  const [sortModalPosition, setSortModalPosition] = useState(null);
   const mobileCategoryDetailsRef = useRef(null);
-  const priceFilterButtonRef = useRef(null);
-  const sortFilterButtonRef = useRef(null);
   const productsRequestIdRef = useRef(0);
   const skipInitialPageResetRef = useRef(true);
   const skipFirstFetchRef = useRef(false);
@@ -684,7 +679,14 @@ const CatalogPage = () => {
               <details
                 className="catalog-mobile-filter"
                 ref={mobileCategoryDetailsRef}
-                onToggle={(event) => setIsMobileCategoryOpen(event.currentTarget.open)}
+                onToggle={(event) => {
+                  const isOpen = event.currentTarget.open;
+                  setIsMobileCategoryOpen(isOpen);
+                  if (isOpen) {
+                    setIsMobilePriceOpen(false);
+                    setIsMobileSortOpen(false);
+                  }
+                }}
               >
                 <summary className="catalog-mobile-filter__summary">
                   <span>КАТЕГОРИИ</span>
@@ -734,7 +736,6 @@ const CatalogPage = () => {
 
               <div className="catalog-mobile-filter catalog-mobile-filter--price">
                 <button
-                  ref={priceFilterButtonRef}
                   type="button"
                   className="catalog-mobile-filter__summary catalog-mobile-filter__button"
                   onClick={() => {
@@ -743,12 +744,6 @@ const CatalogPage = () => {
                       setIsMobileCategoryOpen(false);
                     }
                     setIsMobileSortOpen(false);
-                    const rect = priceFilterButtonRef.current?.getBoundingClientRect();
-                    if (rect) {
-                      setPriceModalPosition({ left: rect.left, top: rect.bottom + 4 });
-                    } else {
-                      setPriceModalPosition(null);
-                    }
                     setIsMobilePriceOpen((prev) => !prev);
                   }}
                 >
@@ -756,100 +751,75 @@ const CatalogPage = () => {
                   <CatalogChevron className={`catalog-mobile-filter__chevron ${isMobilePriceOpen ? 'is-open' : ''}`} />
                 </button>
 
-                {isMobilePriceOpen && createPortal(
-                  (() => {
-                    const pos = priceModalPosition || { left: 0, top: 0 };
-                    const pad = 12;
-                    const maxW = typeof window !== 'undefined'
-                      ? Math.min(280, window.innerWidth - pos.left - pad)
-                      : 280;
-                    const maxH = typeof window !== 'undefined'
-                      ? window.innerHeight - pos.top - pad
-                      : 400;
-                    const scaleX = maxW / 280;
-                    const scaleY = maxH / 200;
-                    const scale = Math.min(1, scaleX, scaleY);
-                    return (
-                      <div
-                        className="catalog-mobile-price-modal"
-                        role="dialog"
-                        aria-modal="true"
-                        aria-label="Фильтр по цене"
-                        style={{
-                          left: pos.left,
-                          top: pos.top,
-                          transformOrigin: 'top left',
-                          maxWidth: maxW,
-                          maxHeight: maxH,
-                          transform: scale < 1 ? `scale(${scale})` : undefined,
-                        }}
+                {isMobilePriceOpen && (
+                  <div
+                    className="catalog-mobile-price-modal"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label="Фильтр по цене"
+                  >
+                    <div className="catalog-mobile-price-modal__row">
+                      <label className="catalog-mobile-price-modal__field">
+                        <span>ОТ</span>
+                        <input
+                          className="catalog-price-input"
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          placeholder={priceRange.min != null ? String(Math.floor(priceRange.min)) : '0'}
+                          value={priceFrom}
+                          onChange={handlePriceFromChange}
+                          onKeyDown={(event) => {
+                            if (!isPriceKeyAllowed(event)) event.preventDefault();
+                          }}
+                        />
+                      </label>
+
+                      <label className="catalog-mobile-price-modal__field">
+                        <span>ДО</span>
+                        <input
+                          className="catalog-price-input"
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          placeholder={priceRange.max != null ? String(Math.ceil(priceRange.max)) : '0'}
+                          value={priceTo}
+                          onChange={handlePriceToChange}
+                          onKeyDown={(event) => {
+                            if (!isPriceKeyAllowed(event)) event.preventDefault();
+                          }}
+                        />
+                      </label>
+                    </div>
+
+                    {priceError && (
+                      <p className="catalog-filter-price-error" role="alert">
+                        {priceError}
+                      </p>
+                    )}
+
+                    <div className="catalog-mobile-price-modal__actions">
+                      <button
+                        type="button"
+                        className="catalog-mobile-price-modal__submit"
+                        onClick={handleMobilePriceApply}
                       >
-                        <div className="catalog-mobile-price-modal__row">
-                          <label className="catalog-mobile-price-modal__field">
-                            <span>ОТ</span>
-                            <input
-                              className="catalog-price-input"
-                              type="text"
-                              inputMode="numeric"
-                              pattern="[0-9]*"
-                              placeholder={priceRange.min != null ? String(Math.floor(priceRange.min)) : '0'}
-                              value={priceFrom}
-                              onChange={handlePriceFromChange}
-                              onKeyDown={(event) => {
-                                if (!isPriceKeyAllowed(event)) event.preventDefault();
-                              }}
-                            />
-                          </label>
-
-                          <label className="catalog-mobile-price-modal__field">
-                            <span>ДО</span>
-                            <input
-                              className="catalog-price-input"
-                              type="text"
-                              inputMode="numeric"
-                              pattern="[0-9]*"
-                              placeholder={priceRange.max != null ? String(Math.ceil(priceRange.max)) : '0'}
-                              value={priceTo}
-                              onChange={handlePriceToChange}
-                              onKeyDown={(event) => {
-                                if (!isPriceKeyAllowed(event)) event.preventDefault();
-                              }}
-                            />
-                          </label>
-                        </div>
-
-                        {priceError && (
-                          <p className="catalog-filter-price-error" role="alert">
-                            {priceError}
-                          </p>
-                        )}
-
-                        <div className="catalog-mobile-price-modal__actions">
-                          <button
-                            type="button"
-                            className="catalog-mobile-price-modal__submit"
-                            onClick={handleMobilePriceApply}
-                          >
-                            ПОДТВЕРДИТЬ
-                          </button>
-                          <button
-                            type="button"
-                            className="catalog-mobile-price-modal__reset"
-                            onClick={handleMobilePriceReset}
-                          >
-                            СБРОСИТЬ
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })(),
-                  document.body
+                        ПОДТВЕРДИТЬ
+                      </button>
+                      <button
+                        type="button"
+                        className="catalog-mobile-price-modal__reset"
+                        onClick={handleMobilePriceReset}
+                      >
+                        СБРОСИТЬ
+                      </button>
+                    </div>
+                  </div>
                 )}
               </div>
 
               <div className="catalog-mobile-filter catalog-mobile-filter--sort">
                 <button
-                  ref={sortFilterButtonRef}
                   type="button"
                   className="catalog-mobile-filter__icon-button"
                   aria-label="Открыть фильтры сортировки"
@@ -859,101 +829,77 @@ const CatalogPage = () => {
                       setIsMobileCategoryOpen(false);
                     }
                     setIsMobilePriceOpen(false);
-                    const rect = sortFilterButtonRef.current?.getBoundingClientRect();
-                    if (rect) {
-                      setSortModalPosition({
-                        right: Math.max(12, window.innerWidth - rect.right),
-                        top: rect.bottom + 4,
-                      });
-                    } else {
-                      setSortModalPosition(null);
-                    }
                     setIsMobileSortOpen((prev) => !prev);
                   }}
                 >
                   <CatalogFilterButtonIcon className="catalog-mobile-filter__icon-svg" />
                 </button>
 
-                {isMobileSortOpen && createPortal(
-                  (() => {
-                    const pos = sortModalPosition || { right: 12, top: 0 };
-                    const pad = 12;
-                    const maxW = typeof window !== 'undefined'
-                      ? Math.min(260, window.innerWidth - pad * 2)
-                      : 260;
-                    return (
-                      <div
-                        className="catalog-mobile-sort-modal"
-                        role="dialog"
-                        aria-modal="true"
-                        aria-label="Фильтры сортировки"
-                        style={{
-                          right: pos.right,
-                          top: pos.top,
-                          maxWidth: maxW,
+                {isMobileSortOpen && (
+                  <div
+                    className="catalog-mobile-sort-modal"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label="Фильтры сортировки"
+                  >
+                    <button
+                      type="button"
+                      className={`catalog-mobile-sort-option ${sortBy === 'popular' ? 'is-active' : ''}`}
+                      onClick={() => {
+                        setSortBy('popular');
+                        setIsMobileSortOpen(false);
+                      }}
+                    >
+                      ПО ПОПУЛЯРНОСТИ
+                    </button>
+                    <button
+                      type="button"
+                      className={`catalog-mobile-sort-option ${sortBy === 'price_asc' ? 'is-active' : ''}`}
+                      onClick={() => {
+                        setSortBy('price_asc');
+                        setIsMobileSortOpen(false);
+                      }}
+                    >
+                      СНАЧАЛА ДЕШЕВЫЕ
+                    </button>
+                    <button
+                      type="button"
+                      className={`catalog-mobile-sort-option ${sortBy === 'price_desc' ? 'is-active' : ''}`}
+                      onClick={() => {
+                        setSortBy('price_desc');
+                        setIsMobileSortOpen(false);
+                      }}
+                    >
+                      СНАЧАЛА ДОРОГИЕ
+                    </button>
+                    <button
+                      type="button"
+                      className={`catalog-mobile-sort-option ${sortBy === 'new' ? 'is-active' : ''}`}
+                      onClick={() => {
+                        setSortBy('new');
+                        setIsMobileSortOpen(false);
+                      }}
+                    >
+                      НОВИНКИ
+                    </button>
+                    <label className="catalog-mobile-sort-stock">
+                      <input
+                        type="checkbox"
+                        checked={onlyInStock}
+                        onChange={(event) => {
+                          setOnlyInStock(event.target.checked);
+                          const nextParams = new URLSearchParams(searchParams);
+                          if (event.target.checked) {
+                            nextParams.set('in_stock', 'true');
+                          } else {
+                            nextParams.delete('in_stock');
+                          }
+                          setSearchParams(nextParams, { replace: true });
                         }}
-                      >
-                        <button
-                          type="button"
-                          className={`catalog-mobile-sort-option ${sortBy === 'popular' ? 'is-active' : ''}`}
-                          onClick={() => {
-                            setSortBy('popular');
-                            setIsMobileSortOpen(false);
-                          }}
-                        >
-                          ПО ПОПУЛЯРНОСТИ
-                        </button>
-                        <button
-                          type="button"
-                          className={`catalog-mobile-sort-option ${sortBy === 'price_asc' ? 'is-active' : ''}`}
-                          onClick={() => {
-                            setSortBy('price_asc');
-                            setIsMobileSortOpen(false);
-                          }}
-                        >
-                          СНАЧАЛА ДЕШЕВЫЕ
-                        </button>
-                        <button
-                          type="button"
-                          className={`catalog-mobile-sort-option ${sortBy === 'price_desc' ? 'is-active' : ''}`}
-                          onClick={() => {
-                            setSortBy('price_desc');
-                            setIsMobileSortOpen(false);
-                          }}
-                        >
-                          СНАЧАЛА ДОРОГИЕ
-                        </button>
-                        <button
-                          type="button"
-                          className={`catalog-mobile-sort-option ${sortBy === 'new' ? 'is-active' : ''}`}
-                          onClick={() => {
-                            setSortBy('new');
-                            setIsMobileSortOpen(false);
-                          }}
-                        >
-                          НОВИНКИ
-                        </button>
-                        <label className="catalog-mobile-sort-stock">
-                          <input
-                            type="checkbox"
-                            checked={onlyInStock}
-                            onChange={(event) => {
-                              setOnlyInStock(event.target.checked);
-                              const nextParams = new URLSearchParams(searchParams);
-                              if (event.target.checked) {
-                                nextParams.set('in_stock', 'true');
-                              } else {
-                                nextParams.delete('in_stock');
-                              }
-                              setSearchParams(nextParams, { replace: true });
-                            }}
-                          />
-                          В НАЛИЧИИ
-                        </label>
-                      </div>
-                    );
-                  })(),
-                  document.body
+                      />
+                      В НАЛИЧИИ
+                    </label>
+                  </div>
                 )}
               </div>
 

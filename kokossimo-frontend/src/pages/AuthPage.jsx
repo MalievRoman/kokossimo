@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import './AuthPage.css';
 
 const AuthPage = () => {
+  const REGISTER_RESEND_SECONDS = 120;
+  const RESET_RESEND_SECONDS = 20;
   const navigate = useNavigate();
   const [screen, setScreen] = useState('intro');
   const [authToken, setAuthToken] = useState('');
@@ -22,7 +24,11 @@ const AuthPage = () => {
   const [status, setStatus] = useState({ type: '', message: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSendingCode, setIsSendingCode] = useState(false);
-  const [resendSeconds, setResendSeconds] = useState(0);
+  const [resetToken, setResetToken] = useState('');
+  const [resendSeconds, setResendSeconds] = useState({
+    register: 0,
+    reset: 0,
+  });
   const [lastCodeEmails, setLastCodeEmails] = useState({
     register: '',
     reset: '',
@@ -35,7 +41,8 @@ const AuthPage = () => {
     resetPasswordRepeat: false,
   });
 
-  const canResendCode = resendSeconds === 0;
+  const canResendRegisterCode = resendSeconds.register === 0;
+  const canResendResetCode = resendSeconds.reset === 0;
 
   const backLabel = useMemo(() => {
     if (screen === 'login' || screen === 'register' || screen === 'restoreRequest') {
@@ -45,19 +52,33 @@ const AuthPage = () => {
   }, [screen]);
 
   useEffect(() => {
-    if (resendSeconds <= 0) {
+    if (resendSeconds.register <= 0 && resendSeconds.reset <= 0) {
       return undefined;
     }
     const timerId = setInterval(() => {
-      setResendSeconds((prev) => (prev > 0 ? prev - 1 : 0));
+      setResendSeconds((prev) => ({
+        register: prev.register > 0 ? prev.register - 1 : 0,
+        reset: prev.reset > 0 ? prev.reset - 1 : 0,
+      }));
     }, 1000);
     return () => clearInterval(timerId);
   }, [resendSeconds]);
 
   const clearStatus = () => setStatus({ type: '', message: '' });
 
-  const startCooldown = () => setResendSeconds(120);
   const MIN_PASSWORD_LENGTH = 6;
+
+  const startCooldown = (purpose, seconds) => {
+    setResendSeconds((prev) => ({
+      ...prev,
+      [purpose]: Math.max(0, Number(seconds) || 0),
+    }));
+  };
+
+  const getCooldownSeconds = (responseData, fallbackSeconds) => {
+    const secondsLeft = Number(responseData?.seconds_left);
+    return Number.isFinite(secondsLeft) && secondsLeft > 0 ? secondsLeft : fallbackSeconds;
+  };
 
   const getAuthErrorMessage = (error, fallbackMessage) => {
     const data = error?.response?.data;
@@ -94,6 +115,15 @@ const AuthPage = () => {
 
   const goToScreen = (nextScreen) => {
     clearStatus();
+    if (nextScreen === 'restoreRequest') {
+      setResetToken('');
+      setForm((prev) => ({
+        ...prev,
+        resetCode: '',
+        resetPassword: '',
+        resetPasswordRepeat: '',
+      }));
+    }
     setScreen(nextScreen);
   };
 
@@ -146,21 +176,21 @@ const AuthPage = () => {
       setStatus({ type: 'error', message: `Пароль должен содержать не менее ${MIN_PASSWORD_LENGTH} символов.` });
       return;
     }
-    if (resendSeconds > 0 && lastCodeEmails.register === form.registerEmail) {
+    if (resendSeconds.register > 0 && lastCodeEmails.register === form.registerEmail) {
       setScreen('registerCode');
       setStatus({ type: 'success', message: 'Код уже отправлен. Введите код из письма или дождитесь таймера.' });
       return;
     }
     setIsSendingCode(true);
     try {
-      await sendEmailCode({
+      const response = await sendEmailCode({
         email: form.registerEmail,
         purpose: 'register',
       });
       setLastCodeEmails((prev) => ({ ...prev, register: form.registerEmail }));
-      startCooldown();
+      startCooldown('register', getCooldownSeconds(response?.data, REGISTER_RESEND_SECONDS));
       setScreen('registerCode');
-      setStatus({ type: 'success', message: 'Код подтверждения отправлен на почту.' });
+      setStatus({ type: 'success', message: response?.data?.detail || 'Код подтверждения отправлен на почту.' });
     } catch (error) {
       const message =
         error?.response?.data?.detail ||
@@ -199,18 +229,18 @@ const AuthPage = () => {
   };
 
   const resendRegisterCode = async () => {
-    if (!canResendCode) {
+    if (!canResendRegisterCode) {
       return;
     }
     clearStatus();
     setIsSendingCode(true);
     try {
-      await sendEmailCode({
+      const response = await sendEmailCode({
         email: form.registerEmail,
         purpose: 'register',
       });
-      startCooldown();
-      setStatus({ type: 'success', message: 'Новый код отправлен.' });
+      startCooldown('register', getCooldownSeconds(response?.data, REGISTER_RESEND_SECONDS));
+      setStatus({ type: 'success', message: response?.data?.detail || 'Новый код отправлен.' });
     } catch (error) {
       const message = error?.response?.data?.detail || 'Не удалось отправить код повторно.';
       setStatus({ type: 'error', message });
@@ -226,20 +256,20 @@ const AuthPage = () => {
       setStatus({ type: 'error', message: 'Введите email.' });
       return;
     }
-    if (resendSeconds > 0 && lastCodeEmails.reset === form.resetEmail) {
-      setScreen('restoreSent');
-      setStatus({ type: 'success', message: 'Код уже отправлен. Проверьте почту или дождитесь таймера.' });
+    if (resendSeconds.reset > 0 && lastCodeEmails.reset === form.resetEmail) {
+      setScreen('restoreCode');
       return;
     }
     setIsSendingCode(true);
     try {
-      await sendEmailCode({
+      const response = await sendEmailCode({
         email: form.resetEmail,
         purpose: 'reset',
       });
+      setResetToken('');
       setLastCodeEmails((prev) => ({ ...prev, reset: form.resetEmail }));
-      startCooldown();
-      setScreen('restoreSent');
+      startCooldown('reset', getCooldownSeconds(response?.data, RESET_RESEND_SECONDS));
+      setScreen('restoreCode');
     } catch (error) {
       const message =
         error?.response?.data?.detail ||
@@ -250,11 +280,60 @@ const AuthPage = () => {
     }
   };
 
+  const handleRestoreCodeVerify = async (event) => {
+    event.preventDefault();
+    clearStatus();
+    if (!form.resetCode) {
+      setStatus({ type: 'error', message: 'Введите код подтверждения.' });
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const response = await verifyEmailCode({
+        email: form.resetEmail,
+        code: form.resetCode,
+        purpose: 'reset',
+      });
+      setResetToken(response?.data?.reset_token || '');
+      setScreen('restorePassword');
+    } catch (error) {
+      const message = getAuthErrorMessage(error, 'Неверный или просроченный код.');
+      setStatus({ type: 'error', message });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const resendResetCode = async () => {
+    if (!canResendResetCode) {
+      return;
+    }
+    clearStatus();
+    setIsSendingCode(true);
+    try {
+      const response = await sendEmailCode({
+        email: form.resetEmail,
+        purpose: 'reset',
+      });
+      startCooldown('reset', getCooldownSeconds(response?.data, RESET_RESEND_SECONDS));
+    } catch (error) {
+      const message = error?.response?.data?.detail || 'Не удалось отправить код повторно.';
+      setStatus({ type: 'error', message });
+    } finally {
+      setIsSendingCode(false);
+    }
+  };
+
   const handleRestorePassword = async (event) => {
     event.preventDefault();
     clearStatus();
-    if (!form.resetCode || !form.resetPassword || !form.resetPasswordRepeat) {
-      setStatus({ type: 'error', message: 'Заполните все поля.' });
+    if (!resetToken) {
+      setScreen('restoreCode');
+      setStatus({ type: 'error', message: 'Сначала подтвердите код из письма.' });
+      return;
+    }
+    if (!form.resetPassword || !form.resetPasswordRepeat) {
+      setStatus({ type: 'error', message: 'Заполните оба поля пароля.' });
       return;
     }
     if (form.resetPassword !== form.resetPasswordRepeat) {
@@ -269,10 +348,11 @@ const AuthPage = () => {
     try {
       await verifyEmailCode({
         email: form.resetEmail,
-        code: form.resetCode,
         purpose: 'reset',
+        reset_token: resetToken,
         password: form.resetPassword,
       });
+      setResetToken('');
       setScreen('restoreSuccess');
     } catch (error) {
       const message = getAuthErrorMessage(error, 'Неверный или просроченный код.');
@@ -443,9 +523,9 @@ const AuthPage = () => {
                   type="button"
                   className="auth-link auth-link--resend"
                   onClick={resendRegisterCode}
-                  disabled={isSendingCode || !canResendCode}
+                  disabled={isSendingCode || !canResendRegisterCode}
                 >
-                  {canResendCode ? 'Отправить повторно' : `Отправить повторно ${resendSeconds}`}
+                  {canResendRegisterCode ? 'Отправить повторно' : `Отправить повторно ${resendSeconds.register}`}
                 </button>
                 <button type="button" className="auth-back-link" onClick={() => goToScreen('register')}>
                   <span aria-hidden="true">‹</span> назад
@@ -495,33 +575,44 @@ const AuthPage = () => {
               </form>
             )}
 
-            {screen === 'restoreSent' && (
-              <div className="auth-content">
-                <h1 className="auth-title">Восстановление профиля</h1>
+            {screen === 'restoreCode' && (
+              <form className="auth-content auth-form auth-form--restore-code" onSubmit={handleRestoreCodeVerify}>
+                <h1 className="auth-title auth-title--restore">Восстановление профиля</h1>
                 <p className="auth-description">
-                  На Вашу электронную почту была выслана инструкция по сбросу пароля
+                  На вашу электронную почту отправлен код подтверждения для сброса пароля.
                 </p>
-                <button type="button" className="auth-btn auth-btn--primary" onClick={() => goToScreen('login')}>
-                  Вернуться ко входу
+                <label className="auth-field">
+                  <span>Код</span>
+                  <input
+                    type="text"
+                    placeholder="Введите код подтверждения"
+                    value={form.resetCode}
+                    onChange={handleChange('resetCode')}
+                  />
+                </label>
+                <button type="submit" className="auth-btn auth-btn--primary auth-btn--form-primary" disabled={isSubmitting}>
+                  {isSubmitting ? 'Проверка...' : 'Подтвердить'}
                 </button>
-                <button type="button" className="auth-link auth-link--muted" onClick={() => goToScreen('restorePassword')}>
-                  У меня есть код
+                <button
+                  type="button"
+                  className="auth-inline-action"
+                  onClick={resendResetCode}
+                  disabled={isSendingCode || !canResendResetCode}
+                >
+                  <span>Отправить повторно</span>
+                  {resendSeconds.reset > 0 ? (
+                    <span className="auth-inline-action__timer">{resendSeconds.reset}</span>
+                  ) : null}
                 </button>
-              </div>
+                <button type="button" className="auth-back-link auth-back-link--site" onClick={() => goToScreen('restoreRequest')}>
+                  <span aria-hidden="true">‹</span> Назад
+                </button>
+              </form>
             )}
 
             {screen === 'restorePassword' && (
               <form className="auth-content auth-form auth-form--restore-password" onSubmit={handleRestorePassword}>
                 <h1 className="auth-title auth-title--restore">Придумайте пароль</h1>
-                <label className="auth-field">
-                  <span>Код подтверждения</span>
-                  <input
-                    type="text"
-                    placeholder="Введите код из письма"
-                    value={form.resetCode}
-                    onChange={handleChange('resetCode')}
-                  />
-                </label>
                 <label className="auth-field">
                   <span>Новый пароль</span>
                   <div className="auth-password-wrap">
@@ -571,7 +662,7 @@ const AuthPage = () => {
                 <button type="submit" className="auth-btn auth-btn--primary auth-btn--form-primary" disabled={isSubmitting}>
                   {isSubmitting ? 'Сохранение...' : 'Подтвердить'}
                 </button>
-                <button type="button" className="auth-back-link" onClick={() => goToScreen('restoreRequest')}>
+                <button type="button" className="auth-back-link" onClick={() => goToScreen('restoreCode')}>
                   <span aria-hidden="true">‹</span> назад
                 </button>
               </form>
