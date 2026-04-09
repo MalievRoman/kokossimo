@@ -2,9 +2,9 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import api_view, permission_classes, authentication_classes, action
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
-from rest_framework.authentication import TokenAuthentication
 from rest_framework.pagination import PageNumberPagination
-from rest_framework.authtoken.models import Token
+from knox.auth import TokenAuthentication
+from knox.models import AuthToken
 from django.contrib.auth import authenticate, get_user_model
 from django.conf import settings
 from django.core.mail import send_mail
@@ -696,8 +696,8 @@ def register_user(request):
     profile.last_name = last_name
     profile.save(update_fields=['first_name', 'last_name'])
 
-    token, _ = Token.objects.get_or_create(user=user)
-    return Response({"token": token.key}, status=status.HTTP_201_CREATED)
+    token = AuthToken.objects.create(user)[1]
+    return Response({"token": token}, status=status.HTTP_201_CREATED)
 
 
 @api_view(['POST'])
@@ -725,8 +725,8 @@ def login_user(request):
     if not auth_user:
         return Response({"detail": "Неверный пароль."}, status=status.HTTP_400_BAD_REQUEST)
 
-    token, _ = Token.objects.get_or_create(user=user)
-    return Response({"token": token.key}, status=status.HTTP_200_OK)
+    token = AuthToken.objects.create(user)[1]
+    return Response({"token": token}, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])
@@ -824,8 +824,8 @@ def verify_email_code(request):
         user = User.objects.filter(Q(username__iexact=email) | Q(email__iexact=email)).first()
         if not user:
             return Response({"detail": "Пользователь не найден."}, status=status.HTTP_400_BAD_REQUEST)
-        token, _ = Token.objects.get_or_create(user=user)
-        return Response({"token": token.key}, status=status.HTTP_200_OK)
+        token = AuthToken.objects.create(user)[1]
+        return Response({"token": token}, status=status.HTTP_200_OK)
 
     if purpose == 'reset':
         password = serializer.validated_data.get('password')
@@ -836,9 +836,10 @@ def verify_email_code(request):
             return Response({"detail": "Пользователь не найден."}, status=status.HTTP_400_BAD_REQUEST)
         user.set_password(password)
         user.save(update_fields=['password'])
-        Token.objects.filter(user=user).delete()
-        token = Token.objects.create(user=user)
-        return Response({"token": token.key, "detail": "Пароль обновлен."}, status=status.HTTP_200_OK)
+        # После смены пароля разлогиниваем все устройства (безопасность).
+        AuthToken.objects.filter(user=user).delete()
+        token = AuthToken.objects.create(user)[1]
+        return Response({"token": token, "detail": "Пароль обновлен."}, status=status.HTTP_200_OK)
 
     password = serializer.validated_data.get('password')
     if not password:
@@ -862,15 +863,17 @@ def verify_email_code(request):
         user.save(update_fields=['first_name', 'last_name'])
         profile.save(update_fields=['first_name', 'last_name'])
 
-    token, _ = Token.objects.get_or_create(user=user)
-    return Response({"token": token.key}, status=status.HTTP_201_CREATED)
+    token = AuthToken.objects.create(user)[1]
+    return Response({"token": token}, status=status.HTTP_201_CREATED)
 
 
 @api_view(['POST'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def logout_user(request):
-    Token.objects.filter(user=request.user).delete()
+    # Knox создаёт отдельный токен на каждую сессию/устройство; удаляем только текущий.
+    if request.auth:
+        request.auth.delete()
     return Response({"detail": "Вы вышли из аккаунта."}, status=status.HTTP_200_OK)
 
 
