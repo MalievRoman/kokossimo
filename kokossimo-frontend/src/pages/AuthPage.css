@@ -250,11 +250,42 @@
   color: #aaa0a1;
 }
 
+.auth-inline-action {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  color: #aaa0a1;
+  font-family: "Open Sans", sans-serif;
+  font-size: 13px;
+  line-height: 20px;
+  text-transform: uppercase;
+  cursor: pointer;
+  justify-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.2s ease, opacity 0.2s ease;
+}
+
+.auth-inline-action:disabled {
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+.auth-inline-action:not(:disabled) {
+  color: #240100;
+}
+
+.auth-inline-action__timer {
+  min-width: 18px;
+  text-align: left;
+}
+
 .auth-back-link {
   background: transparent;
   border: 0;
   padding: 0;
-  color: #766c70;
+  color: #240100;
   font-family: "Open Sans", sans-serif;
   font-size: 13px;
   line-height: 20px;
@@ -290,6 +321,7 @@
 .auth-form--register .auth-title,
 .auth-form--register-code .auth-title,
 .auth-form--restore-request .auth-title,
+ .auth-form--restore-code .auth-title,
 .auth-form--restore-password .auth-title {
   margin-bottom: 28px;
 }
@@ -304,6 +336,7 @@
 .auth-form--register .auth-btn--primary,
 .auth-form--register-code .auth-btn--primary,
 .auth-form--restore-request .auth-btn--primary,
+ .auth-form--restore-code .auth-btn--primary,
 .auth-form--restore-password .auth-btn--primary {
   margin-top: 14px;
 }
@@ -311,17 +344,23 @@
 .auth-form--login .auth-back-link,
 .auth-form--register .auth-back-link,
 .auth-form--restore-request .auth-back-link,
+ .auth-form--restore-code .auth-back-link,
 .auth-form--restore-password .auth-back-link {
   margin-top: 54px;
 }
 
 .auth-form--register-code .auth-description,
-.auth-form--restore-request .auth-description {
+.auth-form--restore-request .auth-description,
+.auth-form--restore-code .auth-description {
   margin-bottom: 16px;
 }
 
 .auth-form--register-code .auth-back-link {
   margin-top: 44px;
+}
+
+.auth-form--restore-code .auth-inline-action {
+  margin-top: 16px;
 }
 
 .auth-content--center .auth-btn {

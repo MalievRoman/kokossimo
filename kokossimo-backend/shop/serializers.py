@@ -135,8 +135,9 @@ class EmailCodeSendSerializer(serializers.Serializer):
 
 class EmailCodeVerifySerializer(serializers.Serializer):
     email = serializers.EmailField()
-    code = serializers.CharField(min_length=6, max_length=6)
     purpose = serializers.ChoiceField(choices=['login', 'register', 'reset'])
+    code = serializers.CharField(required=False, allow_blank=False, min_length=6, max_length=6)
+    reset_token = serializers.CharField(required=False, allow_blank=False)
     password = serializers.CharField(required=False, allow_blank=False, min_length=6)
     first_name = serializers.CharField(required=False, allow_blank=True)
     last_name = serializers.CharField(required=False, allow_blank=True)

@@ -8,6 +8,7 @@ from knox.models import AuthToken
 from django.contrib.auth import authenticate, get_user_model
 from django.conf import settings
 from django.core.mail import send_mail
+from django.core import signing
 from django.utils import timezone
 from datetime import timedelta
 import secrets
@@ -73,6 +74,24 @@ def _email_code_ttl():
     return int(getattr(settings, 'EMAIL_CODE_TTL_MINUTES', 10))
 
 
+def _email_code_resend_cooldown_seconds(purpose):
+    defaults = {
+        'register': 120,
+        'login': 120,
+        'reset': 20,
+    }
+    env_map = {
+        'register': 'EMAIL_CODE_REGISTER_RESEND_SECONDS',
+        'login': 'EMAIL_CODE_LOGIN_RESEND_SECONDS',
+        'reset': 'EMAIL_CODE_RESET_RESEND_SECONDS',
+    }
+    default_value = defaults.get(purpose, 120)
+    try:
+        return int(getattr(settings, env_map.get(purpose, ''), default_value))
+    except (TypeError, ValueError):
+        return default_value
+
+
 def _generate_email_code():
     return f"{secrets.randbelow(10**6):06d}"
 
@@ -80,6 +99,22 @@ def _generate_email_code():
 def _purge_expired_codes():
     cutoff = timezone.now() - timedelta(minutes=_email_code_ttl())
     EmailVerificationCode.objects.filter(created_at__lt=cutoff).delete()
+
+
+def _make_reset_token(email):
+    return signing.dumps(
+        {'email': email, 'purpose': 'reset'},
+        salt='kokossimo-reset-password',
+    )
+
+
+def _read_reset_token(token):
+    max_age = _email_code_ttl() * 60
+    return signing.loads(
+        token,
+        salt='kokossimo-reset-password',
+        max_age=max_age,
+    )
 
 
 def _yookassa_enabled():
@@ -740,9 +775,9 @@ def send_email_code(request):
     _purge_expired_codes()
     now = timezone.now()
     ttl_minutes = _email_code_ttl()
-    cutoff = now - timedelta(minutes=ttl_minutes)
     email = serializer.validated_data['email'].strip().lower()
     purpose = serializer.validated_data['purpose']
+    resend_cutoff = now - timedelta(seconds=_email_code_resend_cooldown_seconds(purpose))
 
     User = get_user_model()
     user_exists = User.objects.filter(Q(username__iexact=email) | Q(email__iexact=email)).exists()
@@ -756,13 +791,13 @@ def send_email_code(request):
             email__iexact=email,
             purpose=purpose,
             is_used=False,
-            created_at__gte=cutoff,
+            created_at__gte=resend_cutoff,
         )
         .order_by('-created_at')
         .first()
     )
     if existing_code:
-        expires_at = existing_code.created_at + timedelta(minutes=ttl_minutes)
+        expires_at = existing_code.created_at + timedelta(seconds=_email_code_resend_cooldown_seconds(purpose))
         seconds_left = max(int((expires_at - now).total_seconds()), 0)
         return Response(
             {
@@ -798,28 +833,78 @@ def verify_email_code(request):
 
     _purge_expired_codes()
     email = serializer.validated_data['email'].strip().lower()
-    code = serializer.validated_data['code']
     purpose = serializer.validated_data['purpose']
 
-    cutoff = timezone.now() - timedelta(minutes=_email_code_ttl())
-    record = (
-        EmailVerificationCode.objects.filter(
-            email__iexact=email,
-            purpose=purpose,
-            is_used=False,
-            created_at__gte=cutoff,
-        )
-        .order_by('-created_at')
-        .first()
-    )
-
-    if not record or record.code != code:
-        return Response({"detail": "Неверный или просроченный код."}, status=status.HTTP_400_BAD_REQUEST)
-
-    record.is_used = True
-    record.save(update_fields=['is_used'])
-
     User = get_user_model()
+    record = None
+    reset_token_payload = None
+
+    if purpose == 'reset':
+        reset_token = serializer.validated_data.get('reset_token')
+        code = serializer.validated_data.get('code')
+
+        if reset_token:
+            try:
+                reset_token_payload = _read_reset_token(reset_token)
+            except signing.BadSignature:
+                return Response({"detail": "Сессия восстановления истекла. Запросите код заново."}, status=status.HTTP_400_BAD_REQUEST)
+
+            if reset_token_payload.get('purpose') != 'reset' or reset_token_payload.get('email', '').strip().lower() != email:
+                return Response({"detail": "Неверный токен восстановления."}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            if not code:
+                return Response({"detail": "Код подтверждения обязателен."}, status=status.HTTP_400_BAD_REQUEST)
+
+            cutoff = timezone.now() - timedelta(minutes=_email_code_ttl())
+            record = (
+                EmailVerificationCode.objects.filter(
+                    email__iexact=email,
+                    purpose=purpose,
+                    is_used=False,
+                    created_at__gte=cutoff,
+                )
+                .order_by('-created_at')
+                .first()
+            )
+
+            if not record or record.code != code:
+                return Response({"detail": "Неверный или просроченный код."}, status=status.HTTP_400_BAD_REQUEST)
+
+            password = serializer.validated_data.get('password')
+            if not password:
+                record.is_used = True
+                record.save(update_fields=['is_used'])
+                return Response(
+                    {
+                        "detail": "Код подтвержден.",
+                        "reset_token": _make_reset_token(email),
+                    },
+                    status=status.HTTP_200_OK,
+                )
+    else:
+        code = serializer.validated_data.get('code')
+        if not code:
+            return Response({"detail": "Код подтверждения обязателен."}, status=status.HTTP_400_BAD_REQUEST)
+
+        cutoff = timezone.now() - timedelta(minutes=_email_code_ttl())
+        record = (
+            EmailVerificationCode.objects.filter(
+                email__iexact=email,
+                purpose=purpose,
+                is_used=False,
+                created_at__gte=cutoff,
+            )
+            .order_by('-created_at')
+            .first()
+        )
+
+        if not record or record.code != code:
+            return Response({"detail": "Неверный или просроченный код."}, status=status.HTTP_400_BAD_REQUEST)
+
+    if record:
+        record.is_used = True
+        record.save(update_fields=['is_used'])
+
     if purpose == 'login':
         user = User.objects.filter(Q(username__iexact=email) | Q(email__iexact=email)).first()
         if not user:
