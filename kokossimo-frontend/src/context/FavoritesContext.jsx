@@ -157,6 +157,13 @@ export const FavoritesProvider = ({ children }) => {
     writeGuestFavorites(favorites);
   }, [favorites]);
 
+  // В авторизованном режиме дублируем список в localStorage, чтобы после выхода гостевое
+  // избранное не показывало товары, удалённые уже на сервере.
+  useEffect(() => {
+    if (modeRef.current !== 'auth' || !authToken) return;
+    writeGuestFavorites(favorites);
+  }, [authToken, favorites]);
+
   // Подтягиваем актуальные остатки и цену для избранного, чтобы UI не жил на устаревших данных.
   useEffect(() => {
     let cancelled = false;
