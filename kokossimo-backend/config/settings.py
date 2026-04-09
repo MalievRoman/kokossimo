@@ -56,7 +56,7 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'knox',
     'corsheaders',      # Чтобы React мог подключаться
-    'shop',             # Наше приложение
+    'shop.apps.ShopConfig',             # Наше приложение
 ]
 
 
