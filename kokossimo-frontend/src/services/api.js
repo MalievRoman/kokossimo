@@ -85,6 +85,7 @@ export const getProduct = (id) => api.get(`/products/${id}/`);
 export const getCategories = () => api.get('/categories/');
 export const getProductSubcategories = () => api.get('/product-subcategories/');
 export const getProductSubcategoriesTree = () => api.get('/product-subcategories/tree/');
+export const getDeliveryCities = () => api.get('/delivery/cities/');
 export const registerUser = (payload) => api.post('/auth/register/', payload);
 export const loginUser = (payload) => api.post('/auth/login/', payload);
 export const sendEmailCode = (payload) => api.post('/auth/email/send/', payload);

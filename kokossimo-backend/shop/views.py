@@ -25,6 +25,7 @@ from decimal import ROUND_HALF_UP
 from yookassa import Configuration, Payment
 
 from .models import Product, Category, Profile, Order, EmailVerificationCode, ProductRating, ProductSubcategory, Cart, CartItem, FavoriteList, FavoriteItem
+from .delivery_cities import DELIVERY_CITIES
 
 logger = logging.getLogger(__name__)
 # Миниатюра 1×1 прозрачный GIF — чтобы при ошибках отдавать изображение, а не JSON,
@@ -646,6 +647,13 @@ def product_ratings(request, product_id):
     product = get_object_or_404(Product, id=product_id)
     ratings = ProductRating.objects.filter(product=product).select_related('user')
     return Response(ProductRatingSerializer(ratings, many=True).data, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def delivery_cities_config(request):
+    """Публичный конфиг городов доставки для оформления заказа (единый источник с расчётом суммы)."""
+    return Response(DELIVERY_CITIES, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])
