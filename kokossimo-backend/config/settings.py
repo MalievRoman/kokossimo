@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     # Добавляем это:
     'rest_framework',   # API
     'rest_framework.authtoken',
+    'knox',
     'corsheaders',      # Чтобы React мог подключаться
     'shop',             # Наше приложение
 ]
@@ -197,6 +198,9 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': None,  # Отключаем пагинацию по умолчанию
     'PAGE_SIZE': None,
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'knox.auth.TokenAuthentication',
+    ),
 }
 
 # Email (SMTP) settings
