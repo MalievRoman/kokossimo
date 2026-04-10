@@ -45,8 +45,6 @@ const ProductCard = ({ product, className = '' }) => {
   const [imageError, setImageError] = React.useState(false);
   const imageUrl = resolveMediaUrl(product.image, placeholderImage);
   const displayImageUrl = imageError ? placeholderImage : imageUrl;
-  const description = String(product.short_description ?? product.description ?? '').trim();
-
   const favorite = isFavorite(product.id);
 
   const handleAddToCart = (e) => {
@@ -178,8 +176,6 @@ const ProductCard = ({ product, className = '' }) => {
         )}
 
         <div className="product-card__meta">
-          <div className="product-card__desc">{description}</div>
-
           <div className="product-card__prices">
             {discount > 0 && oldPrice ? (
               <>
