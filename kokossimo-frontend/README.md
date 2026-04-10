@@ -1,16 +1,33 @@
-# React + Vite
+# Kokossimo Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Frontend часть интернет-магазина на React + Vite.
 
-Currently, two official plugins are available:
+## Окружение
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Фронтенд использует общий корневой файл `../.env`:
 
-## React Compiler
+- `VITE_API_URL` задает базовый URL API для dev-режима
+- `VITE_BACKEND_URL` используется Vite proxy для `/api`, `/media`, `/static`, `/admin`
+- `FRONTEND_URL` использует backend для CORS, CSRF и redirect URL
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Vite читает переменные из корня репозитория через `envDir: '..'`.
 
-## Expanding the ESLint configuration
+## Локальный запуск
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+```bash
+cd kokossimo-frontend
+npm install
+npm run dev
+```
+
+По умолчанию приложение открывается на `http://localhost:5173`.
+
+## Проверка связки с backend
+
+Для локальной разработки backend должен быть запущен на `http://127.0.0.1:8000`, а в корневом `.env` должны быть значения:
+
+```env
+FRONTEND_URL=http://localhost:5173
+VITE_BACKEND_URL=http://127.0.0.1:8000
+VITE_API_URL=http://127.0.0.1:8000/api
+```

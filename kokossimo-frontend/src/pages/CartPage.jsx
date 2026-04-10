@@ -71,6 +71,14 @@ const CartPage = () => {
   }, []);
 
   const handleQuantityChange = (productId, newQuantity) => {
+    const item = cartItems.find((cartItem) => cartItem.id === productId);
+    const stock = Number(item?.stock);
+    const isUnavailable = item?.stock != null && Number.isFinite(stock) && stock <= 0;
+
+    if (isUnavailable) {
+      return;
+    }
+
     if (newQuantity < 1) {
       removeFromCart(productId);
     } else {
@@ -195,42 +203,43 @@ const CartPage = () => {
                       </div>
                     </div>
 
-                    <div
-                      className="cart-item__quantity"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                      }}
-                      onKeyDown={(e) => e.stopPropagation()}
-                      role="group"
-                      aria-label="Изменить количество"
-                    >
-                      <button
-                        type="button"
-                        className="quantity-btn product-card__qty-btn"
-                        disabled={isUnavailable}
+                    {!isUnavailable ? (
+                      <div
+                        className="cart-item__quantity"
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
-                          handleQuantityChange(item.id, item.quantity - 1);
                         }}
+                        onKeyDown={(e) => e.stopPropagation()}
+                        role="group"
+                        aria-label="Изменить количество"
                       >
-                        −
-                      </button>
-                      <span className="quantity-value">{item.quantity}</span>
-                      <button
-                        type="button"
-                        className="quantity-btn product-card__qty-btn"
-                        disabled={isIncreaseDisabled}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          handleQuantityChange(item.id, item.quantity + 1);
-                        }}
-                      >
-                        +
-                      </button>
-                    </div>
+                        <button
+                          type="button"
+                          className="quantity-btn product-card__qty-btn"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleQuantityChange(item.id, item.quantity - 1);
+                          }}
+                        >
+                          −
+                        </button>
+                        <span className="quantity-value">{item.quantity}</span>
+                        <button
+                          type="button"
+                          className="quantity-btn product-card__qty-btn"
+                          disabled={isIncreaseDisabled}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleQuantityChange(item.id, item.quantity + 1);
+                          }}
+                        >
+                          +
+                        </button>
+                      </div>
+                    ) : null}
 
                     {!isUnavailable ? (
                       <div className="cart-item__total">
