@@ -64,6 +64,21 @@ const AuthPage = () => {
     return () => clearInterval(timerId);
   }, [resendSeconds]);
 
+  useEffect(() => {
+    const viewport = document.querySelector('meta[name="viewport"]');
+    if (!viewport) return undefined;
+
+    const previousContent = viewport.getAttribute('content') || '';
+    viewport.setAttribute(
+      'content',
+      'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'
+    );
+
+    return () => {
+      viewport.setAttribute('content', previousContent);
+    };
+  }, []);
+
   const clearStatus = () => setStatus({ type: '', message: '' });
 
   const MIN_PASSWORD_LENGTH = 6;
