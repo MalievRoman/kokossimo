@@ -17,11 +17,9 @@ from dotenv import load_dotenv
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 REPO_ROOT = BASE_DIR.parent
-# Корневой .env — общий источник настроек для frontend и backend.
-# Локальный backend/.env можно использовать как запасной вариант, но значения из
-# корня репозитория должны иметь приоритет.
-load_dotenv(BASE_DIR / '.env')
-load_dotenv(REPO_ROOT / '.env', override=True)
+
+load_dotenv(REPO_ROOT / '.env')
+load_dotenv(BASE_DIR / '.env',  override=True)
 
 
 def env_list(name, default=''):
