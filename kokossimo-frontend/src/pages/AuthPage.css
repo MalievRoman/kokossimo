@@ -418,6 +418,12 @@
     padding: 20px 16px;
   }
 
+  .auth-field input {
+    font-size: 16px !important;
+    line-height: 24px !important;
+    min-height: 44px !important;
+  }
+
   .auth-panel {
     width: 100%;
     min-height: 0;
