@@ -304,6 +304,14 @@ class Order(models.Model):
     payment_method = models.CharField("Способ оплаты", max_length=20, choices=PAYMENT_METHOD_CHOICES, default='cash_on_delivery')
     payment_provider = models.CharField("Провайдер оплаты", max_length=30, blank=True, default="")
     payment_id = models.CharField("ID платежа провайдера", max_length=100, blank=True, null=True, db_index=True)
+    yookassa_payment_id = models.CharField(
+        "Идентификатор платежа",
+        max_length=100,
+        blank=True,
+        default="",
+        db_index=True,
+        help_text="Заполняется при успешной оплате через ЮKassa.",
+    )
     payment_status = models.CharField("Статус платежа", max_length=30, blank=True, default="")
     paid_at = models.DateTimeField("Оплачен в", null=True, blank=True)
 

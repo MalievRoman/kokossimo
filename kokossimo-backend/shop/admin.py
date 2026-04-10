@@ -370,6 +370,8 @@ class OrderAdmin(admin.ModelAdmin):
         "full_name",
         "phone",
         "status",
+        "payment_state",
+        "yookassa_payment_id_display",
         "delivery_method",
         "payment_method",
         "total_price",
@@ -377,17 +379,52 @@ class OrderAdmin(admin.ModelAdmin):
     )
     list_filter = ("status", "delivery_method", "payment_method", "created_at")
     search_fields = ("full_name", "phone", "email")
-    readonly_fields = ("total_price", "created_at", "updated_at")
+    readonly_fields = (
+        "payment_provider",
+        "payment_id",
+        "payment_status",
+        "yookassa_payment_id",
+        "paid_at",
+        "total_price",
+        "created_at",
+        "updated_at",
+    )
     list_editable = ("status",)
     list_per_page = 25
     date_hierarchy = "created_at"
     inlines = [OrderItemInline]
     fieldsets = (
-        ("Статус и оплата", {"fields": ("status", "delivery_method", "payment_method", "total_price")}),
+        (
+            "Статус и оплата",
+            {
+                "fields": (
+                    "status",
+                    "delivery_method",
+                    "payment_method",
+                    "payment_provider",
+                    "payment_status",
+                    "yookassa_payment_id",
+                    "paid_at",
+                    "total_price",
+                )
+            },
+        ),
         ("Клиент", {"fields": ("user", "full_name", "phone", "email", "comment")}),
         ("Адрес доставки", {"fields": ("city", "street", "house", "apartment", "postal_code")}),
         ("Даты", {"fields": ("created_at", "updated_at")}),
     )
+
+    @admin.display(description="Оплата")
+    def payment_state(self, obj: Order):
+        if obj.payment_status == "succeeded" or obj.status == "paid" or obj.paid_at:
+            return "Оплачено"
+        if obj.payment_method == "card_online":
+            return "Не оплачено"
+        return "Не требуется"
+
+    @admin.display(description="ID платежа (ЮKassa)")
+    def yookassa_payment_id_display(self, obj: Order):
+        return (obj.yookassa_payment_id or "").strip() or "—"
 
 
 @admin.register(ProductRating)
