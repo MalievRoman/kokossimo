@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { useCart } from '../context/CartContext';
@@ -80,7 +80,7 @@ const ProfilePage = () => {
   const navigate = useNavigate();
   const [authToken, setAuthToken] = useState(() => localStorage.getItem('authToken') || '');
   const isAuthenticated = Boolean(authToken);
-  const { addToCart } = useCart();
+  const { addToCart, cartItems, updateQuantity, removeFromCart } = useCart();
   const { favorites, removeFromFavorites } = useFavorites();
   const [activeTab, setActiveTab] = useState('main');
   const [profile, setProfile] = useState({
@@ -97,12 +97,14 @@ const ProfilePage = () => {
   const [fullNameInput, setFullNameInput] = useState('');
   const [birthDate, setBirthDate] = useState('');
   const [status, setStatus] = useState({ type: '', message: '' });
+  const [favoriteCartToastVisible, setFavoriteCartToastVisible] = useState(false);
   const [settingsStatus, setSettingsStatus] = useState({ type: '', message: '' });
   const [settingsBaseline, setSettingsBaseline] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orders, setOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
   const [detailsOrder, setDetailsOrder] = useState(null);
+  const favoriteCartToastTimerRef = useRef(null);
 
   const resetAuthState = (message = '') => {
     localStorage.removeItem('authToken');
@@ -219,6 +221,12 @@ const ProfilePage = () => {
     };
   }, [detailsOrder]);
 
+  useEffect(() => () => {
+    if (favoriteCartToastTimerRef.current) {
+      clearTimeout(favoriteCartToastTimerRef.current);
+    }
+  }, []);
+
   const userName = useMemo(() => {
     const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
     return fullName || 'Гость';
@@ -269,6 +277,17 @@ const ProfilePage = () => {
   const showTemporaryStatus = (type, message) => {
     setStatus({ type, message });
     setTimeout(() => setStatus({ type: '', message: '' }), 3000);
+  };
+
+  const showFavoriteCartToast = () => {
+    setFavoriteCartToastVisible(true);
+    if (favoriteCartToastTimerRef.current) {
+      clearTimeout(favoriteCartToastTimerRef.current);
+    }
+    favoriteCartToastTimerRef.current = setTimeout(() => {
+      setFavoriteCartToastVisible(false);
+      favoriteCartToastTimerRef.current = null;
+    }, 1500);
   };
 
   if (!isAuthenticated) {
@@ -405,7 +424,24 @@ const ProfilePage = () => {
     }
 
     addToCart(favoriteItem, 1);
-    showTemporaryStatus('success', 'Товар добавлен в корзину.');
+    showFavoriteCartToast();
+  };
+
+  const handleFavoriteQuantityChange = (productId, newQuantity) => {
+    const item = cartItems.find((cartItem) => cartItem.id === productId);
+    const stock = Number(item?.stock);
+    const isUnavailable = item?.stock != null && Number.isFinite(stock) && stock <= 0;
+
+    if (isUnavailable) {
+      return;
+    }
+
+    if (newQuantity < 1) {
+      removeFromCart(productId);
+      return;
+    }
+
+    updateQuantity(productId, newQuantity);
   };
 
   return (
@@ -611,6 +647,12 @@ const ProfilePage = () => {
                         : (typeof item?.is_in_stock === 'boolean'
                             ? !item.is_in_stock
                             : (Number.isFinite(stock) ? stock <= 0 : false));
+                    const cartItem = cartItems.find((entry) => String(entry.id) === String(item.id));
+                    const quantity = cartItem?.quantity || 0;
+                    const cartStock = Number(cartItem?.stock ?? item?.stock);
+                    const hasFiniteStock = Number.isFinite(cartStock);
+                    const showQtyControls = !isOutOfStock && quantity > 0;
+                    const isIncreaseDisabled = hasFiniteStock && quantity >= cartStock;
 
                     return (
                     <article
@@ -655,14 +697,39 @@ const ProfilePage = () => {
                         </Link>
                       )}
                       <div className="profile-favorite-actions">
-                        <button
-                          type="button"
-                          className="profile-btn profile-btn--primary profile-btn--to-cart"
-                          onClick={() => handleAddFavoriteToCart(item)}
-                          disabled={isOutOfStock}
-                        >
-                          В КОРЗИНУ
-                        </button>
+                        {showQtyControls ? (
+                          <div
+                            className="profile-favorite-quantity"
+                            role="group"
+                            aria-label="Изменить количество"
+                          >
+                            <button
+                              type="button"
+                              className="quantity-btn product-card__qty-btn"
+                              onClick={() => handleFavoriteQuantityChange(item.id, quantity - 1)}
+                            >
+                              −
+                            </button>
+                            <span className="profile-favorite-quantity-value">{quantity}</span>
+                            <button
+                              type="button"
+                              className="quantity-btn product-card__qty-btn"
+                              disabled={isIncreaseDisabled}
+                              onClick={() => handleFavoriteQuantityChange(item.id, quantity + 1)}
+                            >
+                              +
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            className="profile-btn profile-btn--primary profile-btn--to-cart"
+                            onClick={() => handleAddFavoriteToCart(item)}
+                            disabled={isOutOfStock}
+                          >
+                            В КОРЗИНУ
+                          </button>
+                        )}
                         <button
                           type="button"
                           className="profile-btn profile-btn--outline profile-btn--remove"
@@ -790,6 +857,13 @@ const ProfilePage = () => {
                 {status.message}
               </div>
             )}
+            {favoriteCartToastVisible &&
+              createPortal(
+                <div className="profile-favorite-toast" aria-live="polite">
+                  Товар добавлен в корзину.
+                </div>,
+                document.body
+              )}
             {detailsOrder &&
               createPortal(
                 <div
