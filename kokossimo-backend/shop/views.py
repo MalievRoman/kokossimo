@@ -1216,6 +1216,7 @@ def yookassa_webhook(request):
 
     if payment_status == "succeeded":
         updates["status"] = "paid"
+        updates["yookassa_payment_id"] = payment_id
         if not order.paid_at:
             updates["paid_at"] = timezone.now()
     elif payment_status == "canceled":
