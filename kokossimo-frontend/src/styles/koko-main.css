@@ -1169,7 +1169,7 @@ body {
 .product-card__meta {
   display: flex;
   flex-direction: column;
-  margin-top: auto;
+  margin-top: 6px;
 }
 
 .product-card__rating {
@@ -1226,7 +1226,7 @@ body {
 }
 
 .product-card__prices {
-  margin-top: 12px;
+  margin-top: 0;
   width: 100%;
   display: flex;
   align-items: baseline;
