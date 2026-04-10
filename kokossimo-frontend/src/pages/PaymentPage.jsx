@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronDown, ChevronUp, Info, X } from 'lucide-react';
 import {
@@ -136,6 +136,9 @@ const getAddressFieldLabel = (deliveryMethod, selectedPickupPoint) => {
 const PaymentPage = ({ modalMode = false }) => {
   const { cartItems, getTotalPrice, clearCart } = useCart();
   const navigate = useNavigate();
+  const courierHintRef = useRef(null);
+  const prevAddressCompleteRef = useRef(false);
+  const prevRecipientCompleteRef = useRef(false);
 
   const [authToken] = useState(() => localStorage.getItem('authToken') || '');
   const [expandedStep, setExpandedStep] = useState('address');
