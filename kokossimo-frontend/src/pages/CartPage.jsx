@@ -141,7 +141,7 @@ const CartPage = () => {
                 </h2>
                 <button
                   type="button"
-                  className="cart-items__clear"
+                  className="cart-items__clear product-card__btn"
                   onClick={clearCart}
                 >
                   ОЧИСТИТЬ
