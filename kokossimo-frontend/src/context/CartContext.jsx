@@ -261,10 +261,19 @@ export const CartProvider = ({ children }) => {
     setCartItems(prevItems =>
       prevItems.map(item =>
         item.id === productId
-          ? {
-              ...item,
-              quantity: item.stock == null ? quantity : Math.min(quantity, item.stock)
-            }
+          ? (() => {
+              const stock = Number(item.stock);
+              const isUnavailable = item.stock != null && Number.isFinite(stock) && stock <= 0;
+
+              if (isUnavailable) {
+                return item;
+              }
+
+              return {
+                ...item,
+                quantity: item.stock == null ? quantity : Math.min(quantity, item.stock)
+              };
+            })()
           : item
       )
     );
