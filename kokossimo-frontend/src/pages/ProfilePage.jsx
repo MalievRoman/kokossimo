@@ -53,6 +53,31 @@ const inputBirthDateToApi = (value) => {
   return `${year}-${month}-${day}`;
 };
 
+const getBirthDateValidationError = (value) => {
+  const digits = String(value || '').replace(/\D/g, '');
+  if (digits.length === 0) return '';
+  if (digits.length < 8) {
+    return 'Введите дату рождения полностью: день, месяц и четыре цифры года (формат ДД.ММ.ГГГГ).';
+  }
+  const api = inputBirthDateToApi(value);
+  if (!api) {
+    return 'Введите дату рождения полностью: день, месяц и четыре цифры года (формат ДД.ММ.ГГГГ).';
+  }
+  const [ys, ms, ds] = api.split('-');
+  const y = Number(ys);
+  const m = Number(ms);
+  const d = Number(ds);
+  const check = new Date(y, m - 1, d);
+  if (check.getFullYear() !== y || check.getMonth() !== m - 1 || check.getDate() !== d) {
+    return 'Такой даты не существует.';
+  }
+  const currentYear = new Date().getFullYear();
+  if (y > currentYear) {
+    return 'Такой даты не существует.';
+  }
+  return '';
+};
+
 const normalizeFullNameInput = (value) =>
   String(value || '')
     .replace(/\s+/g, ' ')
@@ -96,6 +121,7 @@ const ProfilePage = () => {
   });
   const [fullNameInput, setFullNameInput] = useState('');
   const [birthDate, setBirthDate] = useState('');
+  const [birthDateTouched, setBirthDateTouched] = useState(false);
   const [status, setStatus] = useState({ type: '', message: '' });
   const [favoriteCartToastVisible, setFavoriteCartToastVisible] = useState(false);
   const [settingsStatus, setSettingsStatus] = useState({ type: '', message: '' });
@@ -123,6 +149,7 @@ const ProfilePage = () => {
     });
     setFullNameInput('');
     setBirthDate('');
+    setBirthDateTouched(false);
     setSettingsStatus({ type: '', message: '' });
     setSettingsBaseline(null);
     setOrders([]);
@@ -261,6 +288,7 @@ const ProfilePage = () => {
     );
   }, [settingsBaseline, fullNameInput, profile.phone, profile.email, birthDate]);
   const fullNameError = useMemo(() => getFullNameValidationError(fullNameInput), [fullNameInput]);
+  const birthDateError = useMemo(() => getBirthDateValidationError(birthDate), [birthDate]);
 
   const latestOrder = orders[0] || null;
 
@@ -308,6 +336,11 @@ const ProfilePage = () => {
 
     if (fullNameError) {
       setSettingsStatus({ type: 'error', message: 'Исправьте поле ФИО перед сохранением.' });
+      return;
+    }
+
+    if (birthDateError) {
+      setBirthDateTouched(true);
       return;
     }
 
@@ -379,6 +412,7 @@ const ProfilePage = () => {
       });
       setFullNameInput('');
       setBirthDate('');
+      setBirthDateTouched(false);
       setOrders([]);
       setOrdersLoading(false);
       showTemporaryStatus('success', 'Вы вышли из аккаунта.');
@@ -791,14 +825,21 @@ const ProfilePage = () => {
                   <span>Дата рождения</span>
                   <input
                     type="text"
+                    inputMode="numeric"
+                    autoComplete="bday"
                     placeholder="15.10.1998"
-                    className="profile-settings-input"
+                    className={`profile-settings-input${birthDateTouched && birthDateError ? ' is-invalid' : ''}`}
+                    aria-invalid={birthDateTouched && birthDateError ? 'true' : 'false'}
                     value={birthDate}
+                    onBlur={() => setBirthDateTouched(true)}
                     onChange={(event) => {
                       setSettingsStatus({ type: '', message: '' });
                       setBirthDate(formatBirthDateInput(event.target.value));
                     }}
                   />
+                  {birthDateTouched && birthDateError && (
+                    <small className="profile-field-error">{birthDateError}</small>
+                  )}
                 </label>
                 <label className="profile-field">
                   <span>Email</span>

@@ -347,12 +347,12 @@ class SyncLogAdmin(admin.ModelAdmin):
 
 @admin.register(Profile)
 class ProfileAdmin(admin.ModelAdmin):
-    list_display = ("user", "first_name", "last_name", "phone", "city")
-    search_fields = ("user__username", "user__email", "phone", "first_name", "last_name")
+    list_display = ("user", "last_name", "first_name", "birth_date", "phone", "city")
+    search_fields = ("user__username", "user__email", "phone", "first_name", "last_name", "birth_date")
     list_per_page = 25
     fieldsets = (
         ("Пользователь", {"fields": ("user",)}),
-        ("Контакт", {"fields": ("first_name", "last_name", "phone")}),
+        ("Контакт", {"fields": ("first_name", "last_name", "phone", "birth_date")}),
         ("Адрес", {"fields": ("city", "street", "house", "apartment", "postal_code")}),
     )
 
