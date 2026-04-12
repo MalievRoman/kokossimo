@@ -9,7 +9,7 @@ DELIVERY_CITIES = {
     "moscow": {
         "label": "Москва",
         "courierAvailable": False,
-        "pickupFee": 250,
+        "pickupFee": 0,
         "courierFee": 0,
         "pickupProvider": "СДЭК",
         "pickupPoints": [
@@ -42,7 +42,7 @@ DELIVERY_CITIES = {
     "saint_petersburg": {
         "label": "Санкт-Петербург",
         "courierAvailable": False,
-        "pickupFee": 250,
+        "pickupFee": 0,
         "courierFee": 0,
         "pickupProvider": "СДЭК",
         "pickupPoints": [
@@ -67,7 +67,7 @@ DELIVERY_CITIES = {
     "elista": {
         "label": "Элиста",
         "courierAvailable": True,
-        "pickupFee": 250,
+        "pickupFee": 0,
         "courierFee": 600,
         "pickupProvider": "KOKOSSIMO",
         "pickupPoints": [
