@@ -901,7 +901,7 @@ const ProfilePage = () => {
             {favoriteCartToastVisible &&
               createPortal(
                 <div className="profile-favorite-toast" aria-live="polite">
-                  Товар добавлен в корзину.
+                  Товар добавлен в корзину
                 </div>,
                 document.body
               )}
