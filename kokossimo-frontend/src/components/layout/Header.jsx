@@ -195,6 +195,14 @@ const Header = () => {
     setIsMobileSearchOpen(false);
   };
 
+  const handleMobileSearchClose = () => {
+    if (searchValue.trim() !== '') {
+      handleSearchClear();
+      return;
+    }
+    closeMobileSearch();
+  };
+
   const toggleMobileDropdown = (key) => {
     setMobileDropdown((prev) => (prev === key ? null : key));
   };
@@ -280,10 +288,16 @@ const Header = () => {
                 </button>
                 <input
                   className="header__search-input"
-                  type="search"
+                  type="text"
                   name="q"
                   placeholder=""
                   value={searchValue}
+                  inputMode="search"
+                  enterKeyHint="search"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="none"
+                  spellCheck={false}
                   onChange={handleSearchChange}
                   onReset={handleSearchClear}
                   onFocus={() => {
@@ -454,10 +468,16 @@ const Header = () => {
             </button>
             <input
               className="mobile-search__input"
-              type="search"
+              type="text"
               name="q"
               placeholder=""
               value={searchValue}
+              inputMode="search"
+              enterKeyHint="search"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="none"
+              spellCheck={false}
               onChange={handleSearchChange}
               onReset={handleSearchClear}
               onFocus={() => {
@@ -471,26 +491,11 @@ const Header = () => {
                 }, 150);
               }}
             />
-            {searchValue.trim() !== '' && (
-              <button
-                type="button"
-                className="mobile-search__clear"
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleSearchClear();
-                }}
-                aria-label="Очистить поиск"
-              >
-                <svg width="14" height="14" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-                  <path d="M5 5l8 8M13 5l-8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                </svg>
-              </button>
-            )}
             <button
               className="mobile-search__close"
               type="button"
-              aria-label="Закрыть"
-              onClick={closeMobileSearch}
+              aria-label={searchValue.trim() !== '' ? 'Очистить поиск' : 'Закрыть'}
+              onClick={handleMobileSearchClose}
             >
               ×
             </button>

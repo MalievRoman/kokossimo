@@ -15,6 +15,7 @@ Vite читает переменные из корня репозитория ч
 ## Локальный запуск
 
 ```bash
+cp ../.env.example ../.env
 cd kokossimo-frontend
 npm install
 npm run dev

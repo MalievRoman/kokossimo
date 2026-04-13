@@ -211,6 +211,8 @@ body {
   font: inherit;
   font-weight: 300;
   color: var(--accent);
+  appearance: none;
+  -webkit-appearance: none;
 }
 
 /* Одинаковый вид при ручном вводе и после выбора подсказки — без синей заливки выделения */
@@ -230,7 +232,10 @@ body {
   transition: background-color 5000s ease-in-out 0s;
 }
 
-.header__search-input::-webkit-search-cancel-button {
+.header__search-input::-webkit-search-decoration,
+.header__search-input::-webkit-search-cancel-button,
+.header__search-input::-webkit-search-results-button,
+.header__search-input::-webkit-search-results-decoration {
   -webkit-appearance: none;
   appearance: none;
   display: none;
@@ -396,6 +401,8 @@ body {
   font: inherit;
   font-weight: 300;
   color: var(--accent);
+  appearance: none;
+  -webkit-appearance: none;
 }
 
 .mobile-search__input::selection {
@@ -414,34 +421,13 @@ body {
   transition: background-color 5000s ease-in-out 0s;
 }
 
-.mobile-search__input::-webkit-search-cancel-button {
+.mobile-search__input::-webkit-search-decoration,
+.mobile-search__input::-webkit-search-cancel-button,
+.mobile-search__input::-webkit-search-results-button,
+.mobile-search__input::-webkit-search-results-decoration {
   -webkit-appearance: none;
   appearance: none;
   display: none;
-}
-
-.mobile-search__clear {
-  flex-shrink: 0;
-  width: 20px;
-  height: 20px;
-  margin-right: 8px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: #740400;
-  cursor: pointer;
-  border-radius: 4px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: background-color 0.2s ease;
-}
-.mobile-search__clear:hover {
-  background-color: rgba(116, 4, 0, 0.08);
-}
-.mobile-search__clear:focus-visible {
-  outline: 2px solid #740400;
-  outline-offset: 2px;
 }
 
 .mobile-search__close {
