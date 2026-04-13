@@ -95,7 +95,22 @@ const AuthPage = () => {
     return Number.isFinite(secondsLeft) && secondsLeft > 0 ? secondsLeft : fallbackSeconds;
   };
 
+  const DEFAULT_SERVER_ERROR_MESSAGE = 'Что-то пошло не так. Попробуйте позже.';
+
+  const isServerSideFailure = (error) => {
+    const statusCode = error?.response?.status;
+    if (typeof statusCode === 'number') {
+      return statusCode >= 500;
+    }
+    // Network / CORS / timeout cases: no response received.
+    return Boolean(error);
+  };
+
   const getAuthErrorMessage = (error, fallbackMessage) => {
+    if (isServerSideFailure(error)) {
+      return DEFAULT_SERVER_ERROR_MESSAGE;
+    }
+
     const data = error?.response?.data;
     if (!data) {
       return fallbackMessage;
@@ -167,9 +182,10 @@ const AuthPage = () => {
       window.dispatchEvent(new Event('auth-token-changed'));
       navigate('/profile');
     } catch (error) {
-      const message =
-        error?.response?.data?.detail ||
-        'Не удалось выполнить операцию. Проверьте данные.';
+      const serverFallback = DEFAULT_SERVER_ERROR_MESSAGE;
+      const validationFallback = 'Не удалось выполнить операцию. Проверьте данные.';
+      const fallback = isServerSideFailure(error) ? serverFallback : validationFallback;
+      const message = error?.response?.data?.detail || fallback;
       setStatus({ type: 'error', message });
     } finally {
       setIsSubmitting(false);
@@ -207,9 +223,10 @@ const AuthPage = () => {
       setScreen('registerCode');
       setStatus({ type: 'success', message: response?.data?.detail || 'Код подтверждения отправлен на почту.' });
     } catch (error) {
-      const message =
-        error?.response?.data?.detail ||
-        'Не удалось отправить код. Проверьте email.';
+      const serverFallback = DEFAULT_SERVER_ERROR_MESSAGE;
+      const validationFallback = 'Не удалось отправить код. Проверьте email.';
+      const fallback = isServerSideFailure(error) ? serverFallback : validationFallback;
+      const message = error?.response?.data?.detail || fallback;
       setStatus({ type: 'error', message });
     } finally {
       setIsSendingCode(false);
@@ -257,7 +274,8 @@ const AuthPage = () => {
       startCooldown('register', getCooldownSeconds(response?.data, REGISTER_RESEND_SECONDS));
       setStatus({ type: 'success', message: response?.data?.detail || 'Новый код отправлен.' });
     } catch (error) {
-      const message = error?.response?.data?.detail || 'Не удалось отправить код повторно.';
+      const fallback = isServerSideFailure(error) ? DEFAULT_SERVER_ERROR_MESSAGE : 'Не удалось отправить код повторно.';
+      const message = error?.response?.data?.detail || fallback;
       setStatus({ type: 'error', message });
     } finally {
       setIsSendingCode(false);
@@ -286,9 +304,10 @@ const AuthPage = () => {
       startCooldown('reset', getCooldownSeconds(response?.data, RESET_RESEND_SECONDS));
       setScreen('restoreCode');
     } catch (error) {
-      const message =
-        error?.response?.data?.detail ||
-        'Не удалось отправить код. Проверьте email.';
+      const serverFallback = DEFAULT_SERVER_ERROR_MESSAGE;
+      const validationFallback = 'Не удалось отправить код. Проверьте email.';
+      const fallback = isServerSideFailure(error) ? serverFallback : validationFallback;
+      const message = error?.response?.data?.detail || fallback;
       setStatus({ type: 'error', message });
     } finally {
       setIsSendingCode(false);
@@ -332,7 +351,8 @@ const AuthPage = () => {
       });
       startCooldown('reset', getCooldownSeconds(response?.data, RESET_RESEND_SECONDS));
     } catch (error) {
-      const message = error?.response?.data?.detail || 'Не удалось отправить код повторно.';
+      const fallback = isServerSideFailure(error) ? DEFAULT_SERVER_ERROR_MESSAGE : 'Не удалось отправить код повторно.';
+      const message = error?.response?.data?.detail || fallback;
       setStatus({ type: 'error', message });
     } finally {
       setIsSendingCode(false);
