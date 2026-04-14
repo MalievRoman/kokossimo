@@ -4,6 +4,10 @@
   box-sizing: border-box;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
 :root {
   --color-primary: #8B4513;
   --color-secondary: #F5E6D3;

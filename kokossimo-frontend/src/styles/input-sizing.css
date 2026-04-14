@@ -62,3 +62,32 @@
   height: auto !important;
   min-height: calc(var(--app-input-line-height) + (var(--app-input-padding-y) * 2)) !important;
 }
+
+@media (hover: none) and (pointer: coarse) {
+  :where(
+    input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='color']):not([type='submit']):not([type='button']):not([type='reset']):not([type='image']),
+    textarea,
+    select
+  ) {
+    font-size: 16px !important;
+    line-height: 24px !important;
+  }
+
+  :where(
+    .auth-field input,
+    .catalog-price-input,
+    .profile-settings-input,
+    .payment-input input,
+    .payment-drawer__fields input,
+    .payment-select select,
+    .certificate-form__input,
+    .certificate-form__custom input[type='number'],
+    .newsletter__input,
+    .subscribeinput,
+    .header__search-input,
+    .mobile-search__input,
+    .sort-select
+  ) {
+    min-height: 48px !important;
+  }
+}
