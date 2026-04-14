@@ -1090,6 +1090,22 @@
   .profile-tab {
     flex: 0 0 auto;
     white-space: nowrap;
+    font-weight: 400;
+  }
+
+  .profile-tab.is-active {
+    font-weight: 600;
+  }
+}
+
+@media (max-width: 480px) {
+  .profile-tabs {
+    gap: 6px;
+  }
+
+  .profile-tab {
+    font-size: 12px;
+    line-height: 18px;
   }
 }
 
