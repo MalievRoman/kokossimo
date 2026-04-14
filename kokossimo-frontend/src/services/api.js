@@ -1,9 +1,21 @@
 import axios from 'axios';
 
+const withApiPath = (baseUrl) => `${baseUrl.replace(/\/+$/, '')}/api`;
+
+const resolveDevApiBaseUrl = () => {
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+
+  if (import.meta.env.VITE_BACKEND_URL) {
+    return withApiPath(import.meta.env.VITE_BACKEND_URL);
+  }
+
+  return '/api';
+};
+
 // In prod use same-origin /api via nginx; for dev you can override with VITE_API_URL
-const API_BASE_URL = import.meta.env.PROD
-  ? '/api'
-  : (import.meta.env.VITE_API_URL || '/api');
+const API_BASE_URL = import.meta.env.PROD ? '/api' : resolveDevApiBaseUrl();
 
 const api = axios.create({
   baseURL: API_BASE_URL,
