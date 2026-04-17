@@ -221,6 +221,8 @@ YOOKASSA_RETURN_URL = os.getenv(
     'YOOKASSA_RETURN_URL',
     f'{FRONTEND_URL}/checkout/success',
 )
+# Срок действия платежа в ЮKassa (минимум 1). После истечения оплатить по той же ссылке нельзя.
+YOOKASSA_PAYMENT_TTL_MINUTES = max(1, int(os.getenv('YOOKASSA_PAYMENT_TTL_MINUTES', '1')))
 
 # Telegram-бот для обратной связи (отзывы, предложения, просьбы о связи)
 # Токен создаётся у @BotFather. Запуск: python manage.py run_telegram_bot

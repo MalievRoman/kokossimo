@@ -10,7 +10,7 @@ from django.conf import settings
 from django.core.mail import send_mail
 from django.core import signing
 from django.utils import timezone
-from datetime import timedelta
+from datetime import timedelta, timezone as datetime_timezone
 import secrets
 from django.db.models import Q, Avg, Count, Min, Max, Prefetch
 from django.db import transaction
@@ -134,6 +134,16 @@ def _yookassa_return_url(request, order):
     return request.build_absolute_uri(f"/checkout/success?order={order.id}")
 
 
+def _yookassa_payment_expires_at_iso():
+    """UTC ISO 8601 для поля expires_at в API ЮKassa."""
+    ttl = int(getattr(settings, "YOOKASSA_PAYMENT_TTL_MINUTES", 1) or 1)
+    until = timezone.now() + timedelta(minutes=max(1, ttl))
+    if timezone.is_naive(until):
+        until = timezone.make_aware(until)
+    utc = until.astimezone(datetime_timezone.utc)
+    return utc.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+
+
 def _create_yookassa_payment(order, request):
     Configuration.account_id = settings.YOOKASSA_SHOP_ID
     Configuration.secret_key = settings.YOOKASSA_SECRET_KEY
@@ -148,6 +158,7 @@ def _create_yookassa_payment(order, request):
             "return_url": _yookassa_return_url(request, order),
         },
         "capture": True,
+        "expires_at": _yookassa_payment_expires_at_iso(),
         "description": f"Оплата заказа #{order.id}",
         "metadata": {
             "order_id": str(order.id),
