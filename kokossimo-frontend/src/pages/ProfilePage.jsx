@@ -630,6 +630,19 @@ const ProfilePage = () => {
                           {getOrderStatusLabel(latestOrder.status)}
                         </span>
                       </div>
+                      {isOrderUnpaid(latestOrder) ? (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', marginTop: 10 }}>
+                          <span className="profile-muted">Не оплачен</span>
+                          <button
+                            type="button"
+                            className="profile-btn profile-btn--primary profile-btn--repeat"
+                            onClick={() => handlePayOrder(latestOrder)}
+                            disabled={payingOrderId === latestOrder.id}
+                          >
+                            {payingOrderId === latestOrder.id ? 'ПЕРЕХОД...' : 'ОПЛАТИТЬ'}
+                          </button>
+                        </div>
+                      ) : null}
                       <div className="profile-order-items">
                         {(latestOrder.items || []).slice(0, 3).map((item) => (
                           <div key={`${latestOrder.id}-${item.product_id || item.product_name}`} className="profile-order-item">
@@ -695,11 +708,7 @@ const ProfilePage = () => {
                           >
                             {payingOrderId === order.id ? 'ПЕРЕХОД...' : 'ОПЛАТИТЬ'}
                           </button>
-                        ) : (
-                          <span className="profile-muted" style={{ alignSelf: 'center' }}>
-                            {order.status === 'paid' ? '' : ''}
-                          </span>
-                        )}
+                        ) : null}
                         <button
                           type="button"
                           className="profile-btn profile-btn--outline profile-btn--details"

@@ -312,6 +312,12 @@ class Order(models.Model):
         db_index=True,
         help_text="Заполняется при успешной оплате через ЮKassa.",
     )
+    payment_confirmation_url = models.URLField(
+        "Ссылка на оплату",
+        blank=True,
+        default="",
+        help_text="Ссылка на страницу оплаты (confirmation_url) для возврата к неоплаченному платежу.",
+    )
     payment_status = models.CharField("Статус платежа", max_length=30, blank=True, default="")
     paid_at = models.DateTimeField("Оплачен в", null=True, blank=True)
 

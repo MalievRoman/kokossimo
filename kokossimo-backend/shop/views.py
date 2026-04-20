@@ -262,9 +262,17 @@ def _create_yookassa_payment(order, request):
     order.payment_provider = "yookassa"
     order.payment_id = str(getattr(payment, "id", "") or "")
     order.payment_status = str(getattr(payment, "status", "") or "pending")
-    order.save(update_fields=["payment_provider", "payment_id", "payment_status"])
+    order.payment_confirmation_url = confirmation_url or ""
+    order.save(update_fields=["payment_provider", "payment_id", "payment_status", "payment_confirmation_url"])
 
     return payment, confirmation_url
+
+
+def _yookassa_confirmation_url_from_payment(payment):
+    confirmation = getattr(payment, "confirmation", None)
+    if confirmation is None:
+        return ""
+    return str(getattr(confirmation, "confirmation_url", "") or "")
 
 
 def _cart_item_image_url(product, request):
@@ -1250,6 +1258,69 @@ def create_yookassa_payment(request):
             },
             status=status.HTTP_200_OK,
         )
+
+    # Если платеж уже был создан и еще не финализирован — возвращаем текущую ссылку,
+    # чтобы не создавать новый платеж каждый раз при нажатии "Оплатить".
+    if order.payment_id and order.payment_status not in ("canceled", "cancelled"):
+        # Если платеж протух — sync отменит заказ; здесь пытаемся сначала синхронизировать.
+        sync_result = _sync_yookassa_order_payment(order)
+        if order.status == "cancelled":
+            return Response(
+                {
+                    "detail": "Платеж истек и заказ отменён.",
+                    "order_id": order.id,
+                    "payment_id": order.payment_id,
+                    "payment_status": order.payment_status,
+                    "sync": sync_result,
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+        if order.status == "paid" or order.payment_status == "succeeded":
+            return Response(
+                {
+                    "detail": "Заказ уже оплачен.",
+                    "order_id": order.id,
+                    "payment_id": order.payment_id,
+                    "payment_status": order.payment_status,
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        # 1) Берем из БД (самый быстрый путь)
+        if (order.payment_confirmation_url or "").strip():
+            return Response(
+                {
+                    "order_id": order.id,
+                    "payment_id": order.payment_id,
+                    "payment_status": order.payment_status,
+                    "confirmation_url": order.payment_confirmation_url,
+                    "reused": True,
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        # 2) Если ссылки в БД нет — пробуем подтянуть из YooKassa
+        try:
+            Configuration.account_id = settings.YOOKASSA_SHOP_ID
+            Configuration.secret_key = settings.YOOKASSA_SECRET_KEY
+            payment = Payment.find_one(str(order.payment_id))
+            confirmation_url = _yookassa_confirmation_url_from_payment(payment)
+            if confirmation_url:
+                order.payment_confirmation_url = confirmation_url
+                order.save(update_fields=["payment_confirmation_url"])
+            return Response(
+                {
+                    "order_id": order.id,
+                    "payment_id": order.payment_id,
+                    "payment_status": order.payment_status,
+                    "confirmation_url": confirmation_url,
+                    "reused": True,
+                },
+                status=status.HTTP_200_OK,
+            )
+        except Exception:
+            logger.exception("Failed to reuse YooKassa confirmation url for order %s", order.id)
+            # Фоллбек — создаем новый платеж, если по старому не можем достать ссылку.
 
     try:
         payment, confirmation_url = _create_yookassa_payment(order, request)
