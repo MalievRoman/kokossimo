@@ -3,7 +3,7 @@ import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
-import { getCurrentUser, getMyOrders, logoutUser, updateProfile } from '../services/api';
+import { createYooKassaPayment, getCurrentUser, getMyOrders, logoutUser, syncYooKassaPayments, updateProfile } from '../services/api';
 import { formatRuPhone, isPhoneInputKeyAllowed } from '../utils/phone';
 import './ProfilePage.css';
 
@@ -130,6 +130,7 @@ const ProfilePage = () => {
   const [orders, setOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
   const [detailsOrder, setDetailsOrder] = useState(null);
+  const [payingOrderId, setPayingOrderId] = useState(null);
   const favoriteCartToastTimerRef = useRef(null);
 
   const resetAuthState = (message = '') => {
@@ -207,21 +208,24 @@ const ProfilePage = () => {
         setStatus({ type: 'error', message: 'Не удалось загрузить профиль.' });
       });
 
-    getMyOrders(authToken)
-      .then((response) => {
+    (async () => {
+      try {
+        // Делаем синхронизацию платежей перед загрузкой заказов,
+        // чтобы карточки сразу показывали актуальный статус оплаты.
+        await syncYooKassaPayments(authToken).catch(() => {});
+        const response = await getMyOrders(authToken);
         setOrders(Array.isArray(response.data) ? response.data : []);
-      })
-      .catch((error) => {
+      } catch (error) {
         if (error?.response?.status === 401 && !unauthorizedHandled) {
           unauthorizedHandled = true;
           resetAuthState('Сессия истекла. Войдите в аккаунт заново.');
           return;
         }
         setOrders([]);
-      })
-      .finally(() => {
+      } finally {
         setOrdersLoading(false);
-      });
+      }
+    })();
   }, [authToken]);
 
   useEffect(() => {
@@ -295,6 +299,11 @@ const ProfilePage = () => {
   const formatPrice = (value) => Number(value || 0).toLocaleString('ru-RU');
 
   const getOrderStatusLabel = (orderStatus) => STATUS_LABELS[orderStatus] || orderStatus || '—';
+  const isOrderUnpaid = (order) =>
+    order?.payment_method === 'card_online' &&
+    order?.status !== 'paid' &&
+    order?.status !== 'cancelled' &&
+    order?.payment_status !== 'succeeded';
   const formatOrderAddress = (order) => {
     const parts = [order?.city, order?.street, order?.house, order?.apartment]
       .map((part) => (part || '').trim())
@@ -442,6 +451,29 @@ const ProfilePage = () => {
     });
 
     showTemporaryStatus('success', `Товары из заказа №${order.id} добавлены в корзину.`);
+  };
+
+  const handlePayOrder = async (order) => {
+    if (!authToken || !order?.id) return;
+    setPayingOrderId(order.id);
+    try {
+      const paymentResponse = await createYooKassaPayment(order.id, authToken);
+      const confirmationUrl = paymentResponse?.data?.confirmation_url;
+      if (!confirmationUrl) {
+        showTemporaryStatus('error', 'Не удалось получить ссылку на оплату. Попробуйте ещё раз.');
+        return;
+      }
+      window.location.href = confirmationUrl;
+    } catch (error) {
+      if (error?.response?.status === 401) {
+        resetAuthState('Сессия истекла. Войдите в аккаунт заново.');
+        return;
+      }
+      const message = error?.response?.data?.detail || 'Не удалось перейти к оплате. Попробуйте ещё раз.';
+      showTemporaryStatus('error', message);
+    } finally {
+      setPayingOrderId(null);
+    }
   };
 
   const handleAddFavoriteToCart = (favoriteItem) => {
@@ -654,6 +686,20 @@ const ProfilePage = () => {
                         <span className="profile-order-total-text">Итог: {formatPrice(order.total_price)} ₽</span>
                       </div>
                       <div className="profile-order-actions profile-order-actions--list">
+                        {isOrderUnpaid(order) ? (
+                          <button
+                            type="button"
+                            className="profile-btn profile-btn--primary profile-btn--repeat"
+                            onClick={() => handlePayOrder(order)}
+                            disabled={payingOrderId === order.id}
+                          >
+                            {payingOrderId === order.id ? 'ПЕРЕХОД...' : 'ОПЛАТИТЬ'}
+                          </button>
+                        ) : (
+                          <span className="profile-muted" style={{ alignSelf: 'center' }}>
+                            {order.status === 'paid' ? '' : ''}
+                          </span>
+                        )}
                         <button
                           type="button"
                           className="profile-btn profile-btn--outline profile-btn--details"
@@ -662,6 +708,11 @@ const ProfilePage = () => {
                           ПОДРОБНЕЕ
                         </button>
                       </div>
+                      {isOrderUnpaid(order) ? (
+                        <div className="profile-muted" style={{ marginTop: 10 }}>
+                          Не оплачен
+                        </div>
+                      ) : null}
                     </article>
                   ))
                 )}
@@ -932,6 +983,10 @@ const ProfilePage = () => {
                       <div className="profile-modal__meta-value">{new Date(detailsOrder.created_at).toLocaleDateString('ru-RU')}</div>
                       <div className="profile-modal__meta-label">Статус</div>
                       <div className="profile-modal__meta-value">{getOrderStatusLabel(detailsOrder.status)}</div>
+                      <div className="profile-modal__meta-label">Оплата</div>
+                      <div className="profile-modal__meta-value">
+                        {isOrderUnpaid(detailsOrder) ? 'Не оплачен' : detailsOrder.status === 'paid' ? 'Оплачен' : '—'}
+                      </div>
                       <div className="profile-modal__meta-label">Адрес доставки</div>
                       <div className="profile-modal__meta-value">{formatOrderAddress(detailsOrder)}</div>
                     </div>
@@ -979,8 +1034,19 @@ const ProfilePage = () => {
                           );
                         })()
                       ))}
-                    </div>
+                    </div>м
                     <div className="profile-modal__total">Итого: {formatPrice(detailsOrder.total_price)} ₽</div>
+                    {isOrderUnpaid(detailsOrder) ? (
+                      <button
+                        type="button"
+                        className="profile-btn profile-btn--primary profile-btn--full"
+                        onClick={() => handlePayOrder(detailsOrder)}
+                        disabled={payingOrderId === detailsOrder.id}
+                        style={{ marginTop: 12 }}
+                      >
+                        {payingOrderId === detailsOrder.id ? 'ПЕРЕХОД...' : 'ОПЛАТИТЬ'}
+                      </button>
+                    ) : null}
                     <button
                       type="button"
                       className="profile-btn profile-btn--outline profile-modal__repeat-btn"

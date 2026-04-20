@@ -122,6 +122,104 @@ def _yookassa_enabled():
     return bool(getattr(settings, "YOOKASSA_SHOP_ID", "")) and bool(getattr(settings, "YOOKASSA_SECRET_KEY", ""))
 
 
+def _yookassa_payment_timeout_minutes():
+    try:
+        return int(getattr(settings, "YOOKASSA_PAYMENT_TIMEOUT_MINUTES", 15))
+    except (TypeError, ValueError):
+        return 15
+
+
+def _parse_yookassa_datetime(value):
+    """
+    YooKassa возвращает ISO-дату, часто с суффиксом 'Z'.
+    Возвращает aware datetime (UTC) или None.
+    """
+    raw = str(value or "").strip()
+    if not raw:
+        return None
+    try:
+        normalized = raw.replace("Z", "+00:00")
+        dt = timezone.datetime.fromisoformat(normalized)
+        if timezone.is_naive(dt):
+            dt = timezone.make_aware(dt, timezone=timezone.utc)
+        return dt.astimezone(timezone.utc)
+    except Exception:
+        return None
+
+
+def _sync_yookassa_order_payment(order):
+    """
+    Обновляет status/payment_status заказа по данным YooKassa.
+    Если платеж просрочен по таймауту — отменяет платеж в YooKassa и отменяет заказ.
+    Возвращает dict с итоговыми значениями.
+    """
+    if not _yookassa_enabled():
+        return {"order_id": order.id, "synced": False, "reason": "yookassa_disabled"}
+    if order.payment_method != "card_online":
+        return {"order_id": order.id, "synced": False, "reason": "not_online_payment"}
+    if not order.payment_id:
+        return {"order_id": order.id, "synced": False, "reason": "missing_payment_id"}
+    if order.status in ("paid", "cancelled"):
+        return {"order_id": order.id, "synced": False, "reason": "final_state"}
+
+    Configuration.account_id = settings.YOOKASSA_SHOP_ID
+    Configuration.secret_key = settings.YOOKASSA_SECRET_KEY
+
+    payment = Payment.find_one(str(order.payment_id))
+    remote_status = str(getattr(payment, "status", "") or "")
+    remote_created_at = _parse_yookassa_datetime(getattr(payment, "created_at", None))
+
+    timeout_minutes = _yookassa_payment_timeout_minutes()
+    is_timeout = False
+    if remote_status in ("pending", "waiting_for_capture"):
+        created_at = remote_created_at
+        if created_at is None:
+            # Фоллбек: если дату не распарсили, используем локальный updated_at момента создания платежа.
+            created_at = order.updated_at.astimezone(timezone.utc) if order.updated_at else None
+        if created_at is not None:
+            age = timezone.now().astimezone(timezone.utc) - created_at
+            is_timeout = age >= timedelta(minutes=timeout_minutes)
+
+    updates = {}
+    # Всегда фиксируем провайдера/статус платежа, если получили.
+    if remote_status and order.payment_status != remote_status:
+        updates["payment_provider"] = "yookassa"
+        updates["payment_status"] = remote_status
+
+    if remote_status == "succeeded":
+        updates["status"] = "paid"
+        updates["payment_provider"] = "yookassa"
+        updates["yookassa_payment_id"] = str(getattr(payment, "id", "") or order.payment_id)
+        if not order.paid_at:
+            updates["paid_at"] = timezone.now()
+    elif remote_status == "canceled":
+        updates["status"] = "cancelled"
+        updates["payment_provider"] = "yookassa"
+    elif is_timeout:
+        # Стараемся отменить в YooKassa, чтобы платеж не был завершен после таймаута.
+        try:
+            Payment.cancel(str(order.payment_id), str(uuid.uuid4()))
+        except Exception:
+            logger.exception("Failed to cancel YooKassa payment %s for order %s", order.payment_id, order.id)
+        updates["status"] = "cancelled"
+        updates["payment_provider"] = "yookassa"
+        updates["payment_status"] = "canceled"
+
+    if updates:
+        for field, value in updates.items():
+            setattr(order, field, value)
+        order.save(update_fields=list(updates.keys()))
+
+    return {
+        "order_id": order.id,
+        "synced": True,
+        "payment_status": order.payment_status,
+        "status": order.status,
+        "timeout_minutes": timeout_minutes,
+        "timed_out": bool(is_timeout),
+    }
+
+
 def _yookassa_amount(value):
     amount = Decimal(value).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
     return f"{amount:.2f}"
@@ -1165,6 +1263,47 @@ def create_yookassa_payment(request):
             "payment_id": str(getattr(payment, "id", "") or ""),
             "payment_status": str(getattr(payment, "status", "") or ""),
             "confirmation_url": confirmation_url,
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(['POST'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def sync_yookassa_payments(request):
+    """
+    Синхронизация статусов платежей YooKassa для пользователя.
+    Вызывается фронтом при входе в корзину / личный кабинет, чтобы корректно показать "Не оплачен"
+    и автоматически отменить заказ после таймаута.
+    """
+    if not _yookassa_enabled():
+        return Response({"detail": "ЮKassa не настроена на сервере."}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+    orders = (
+        Order.objects
+        .filter(
+            user=request.user,
+            payment_method="card_online",
+        )
+        .exclude(payment_id__isnull=True)
+        .exclude(payment_id__exact="")
+        .exclude(status__in=["paid", "cancelled"])
+        .order_by("-created_at")[:30]
+    )
+
+    results = []
+    for order in orders:
+        try:
+            results.append(_sync_yookassa_order_payment(order))
+        except Exception:
+            logger.exception("Failed to sync YooKassa payment for order %s", order.id)
+            results.append({"order_id": order.id, "synced": False, "reason": "exception"})
+
+    return Response(
+        {
+            "count": len(results),
+            "results": results,
         },
         status=status.HTTP_200_OK,
     )

@@ -131,6 +131,14 @@ export const createYooKassaPayment = (orderId, token) =>
       headers: { Authorization: `Token ${token}` },
     }
   );
+export const syncYooKassaPayments = (token) =>
+  api.post(
+    '/payments/yookassa/sync/',
+    {},
+    {
+      headers: { Authorization: `Token ${token}` },
+    }
+  );
 export const getMyOrders = (token) =>
   api.get('/orders/list/', {
     headers: { Authorization: `Token ${token}` },

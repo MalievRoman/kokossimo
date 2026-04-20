@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { getProduct, getUserCart, mergeUserCart, replaceUserCart } from '../services/api';
+import { getProduct, getUserCart, mergeUserCart, replaceUserCart, syncYooKassaPayments } from '../services/api';
 
 const CartContext = createContext();
 
@@ -352,6 +352,9 @@ export const CartProvider = ({ children }) => {
     }
 
     try {
+      // Требование: при входе в корзину актуализировать статусы платежей (ЮKassa),
+      // чтобы показывать "Не оплачен" и отменять просроченные заказы.
+      await syncYooKassaPayments(authToken).catch(() => {});
       const serverResponse = await getUserCart(authToken);
       const nextItems = Array.isArray(serverResponse?.data?.items)
         ? serverResponse.data.items.map(normalizeServerItem)
