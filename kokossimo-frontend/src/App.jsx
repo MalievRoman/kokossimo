@@ -38,8 +38,9 @@ function App() {
   const backgroundLocation = location.state?.backgroundLocation;
   const displayLocation = backgroundLocation || location;
   const isCheckoutFullscreen = pathname === '/checkout' && !backgroundLocation;
+  const isCheckoutSuccessFullscreen = pathname === '/checkout/success';
   const isAuthFullscreen = pathname === '/auth';
-  const hideChrome = isCheckoutFullscreen || isAuthFullscreen;
+  const hideChrome = isCheckoutFullscreen || isCheckoutSuccessFullscreen || isAuthFullscreen;
 
   useEffect(() => {
     document.body.classList.toggle('body--without-header', hideChrome);
