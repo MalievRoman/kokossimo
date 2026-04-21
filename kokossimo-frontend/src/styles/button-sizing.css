@@ -47,7 +47,8 @@
   .page-btn--load-more,
   .profile-btn,
   .profile-modal__repeat-btn,
-  .checkout-success__button
+  .checkout-success__button,
+  .checkout-failed__button
 ) {
   font-size: var(--app-button-font-size) !important;
   line-height: var(--app-button-line-height) !important;

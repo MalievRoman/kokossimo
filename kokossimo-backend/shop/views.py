@@ -127,6 +127,11 @@ def _yookassa_amount(value):
     return f"{amount:.2f}"
 
 
+def _configure_yookassa():
+    Configuration.account_id = settings.YOOKASSA_SHOP_ID
+    Configuration.secret_key = settings.YOOKASSA_SECRET_KEY
+
+
 def _yookassa_return_url(request, order):
     configured = (getattr(settings, "YOOKASSA_RETURN_URL", "") or "").strip()
     if configured:
@@ -134,10 +139,51 @@ def _yookassa_return_url(request, order):
     return request.build_absolute_uri(f"/checkout/success?order={order.id}")
 
 
-def _create_yookassa_payment(order, request):
-    Configuration.account_id = settings.YOOKASSA_SHOP_ID
-    Configuration.secret_key = settings.YOOKASSA_SECRET_KEY
+def _yookassa_confirmation_url(payment):
+    confirmation = getattr(payment, "confirmation", None)
+    if confirmation is None:
+        return ""
+    return getattr(confirmation, "confirmation_url", "") or ""
 
+
+def _sync_yookassa_payment_state(order, payment):
+    payment_status = str(getattr(payment, "status", "") or "")
+    if not payment_status:
+        return
+
+    updates = {
+        "payment_provider": "yookassa",
+        "payment_id": str(getattr(payment, "id", "") or order.payment_id or ""),
+        "payment_status": payment_status,
+    }
+    if payment_status == "succeeded":
+        updates["status"] = "paid"
+        updates["yookassa_payment_id"] = updates["payment_id"]
+        if not order.paid_at:
+            updates["paid_at"] = timezone.now()
+    elif payment_status == "canceled":
+        updates["status"] = "cancelled"
+
+    changed_fields = []
+    for field, value in updates.items():
+        if getattr(order, field) != value:
+            setattr(order, field, value)
+            changed_fields.append(field)
+    if changed_fields:
+        order.save(update_fields=changed_fields)
+
+
+def _get_existing_yookassa_payment(order):
+    if not order.payment_id:
+        return None
+    _configure_yookassa()
+    payment = Payment.find_one(order.payment_id)
+    _sync_yookassa_payment_state(order, payment)
+    return payment
+
+
+def _create_yookassa_payment(order, request):
+    _configure_yookassa()
     payment_request = {
         "amount": {
             "value": _yookassa_amount(order.total_price),
@@ -156,10 +202,7 @@ def _create_yookassa_payment(order, request):
     }
 
     payment = Payment.create(payment_request, str(uuid.uuid4()))
-    confirmation_url = ""
-    confirmation = getattr(payment, "confirmation", None)
-    if confirmation is not None:
-        confirmation_url = getattr(confirmation, "confirmation_url", "") or ""
+    confirmation_url = _yookassa_confirmation_url(payment)
 
     order.payment_provider = "yookassa"
     order.payment_id = str(getattr(payment, "id", "") or "")
@@ -1154,7 +1197,25 @@ def create_yookassa_payment(request):
         )
 
     try:
-        payment, confirmation_url = _create_yookassa_payment(order, request)
+        payment = None
+        confirmation_url = ""
+        if order.payment_id and order.payment_status not in ("canceled", "succeeded"):
+            payment = _get_existing_yookassa_payment(order)
+            if order.payment_status == "succeeded" or order.status == "paid":
+                return Response(
+                    {
+                        "detail": "Заказ уже оплачен.",
+                        "order_id": order.id,
+                        "payment_id": order.payment_id,
+                        "payment_status": order.payment_status,
+                    },
+                    status=status.HTTP_200_OK,
+                )
+            if order.payment_status != "canceled":
+                confirmation_url = _yookassa_confirmation_url(payment)
+
+        if not confirmation_url:
+            payment, confirmation_url = _create_yookassa_payment(order, request)
     except Exception as exc:
         logger.exception("Failed to create YooKassa payment for order %s", order.id)
         return Response({"detail": f"Не удалось создать платеж: {exc}"}, status=status.HTTP_502_BAD_GATEWAY)
