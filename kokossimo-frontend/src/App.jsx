@@ -21,6 +21,7 @@ import ProfilePage from './pages/ProfilePage';
 import AuthPage from './pages/AuthPage';
 import PaymentPage from './pages/PaymentPage';
 import CheckoutSuccessPage from './pages/CheckoutSuccessPage';
+import CheckoutFailedPage from './pages/CheckoutFailedPage';
 
 const ScrollToTop = () => {
   const { pathname } = useLocation();
@@ -38,8 +39,10 @@ function App() {
   const backgroundLocation = location.state?.backgroundLocation;
   const displayLocation = backgroundLocation || location;
   const isCheckoutFullscreen = pathname === '/checkout' && !backgroundLocation;
+  const isCheckoutSuccessFullscreen = pathname === '/checkout/success';
+  const isCheckoutFailedFullscreen = pathname === '/checkout/failed';
   const isAuthFullscreen = pathname === '/auth';
-  const hideChrome = isCheckoutFullscreen || isAuthFullscreen;
+  const hideChrome = isCheckoutFullscreen || isCheckoutSuccessFullscreen || isCheckoutFailedFullscreen || isAuthFullscreen;
 
   useEffect(() => {
     document.body.classList.toggle('body--without-header', hideChrome);
@@ -72,6 +75,7 @@ function App() {
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/checkout" element={<PaymentPage />} />
             <Route path="/checkout/success" element={<CheckoutSuccessPage />} />
+            <Route path="/checkout/failed" element={<CheckoutFailedPage />} />
             <Route path="/product/:id" element={<ProductPage />} />
 
             {/* 3. И ТОЛЬКО В САМОМ КОНЦЕ - заглушка для всего остального */}
