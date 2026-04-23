@@ -143,12 +143,6 @@ def _yookassa_payment_ttl_minutes():
     return max(1, ttl)
 
 
-def _format_yookassa_datetime(value):
-    if timezone.is_naive(value):
-        value = timezone.make_aware(value, datetime_timezone.utc)
-    return value.astimezone(datetime_timezone.utc).isoformat().replace("+00:00", "Z")
-
-
 def _parse_yookassa_datetime(value):
     if not value:
         return None
@@ -170,10 +164,43 @@ def _parse_yookassa_datetime(value):
 
 
 def _yookassa_payment_is_expired(payment):
-    expires_at = _parse_yookassa_datetime(getattr(payment, "expires_at", None))
-    if not expires_at:
+    created_at = _parse_yookassa_datetime(getattr(payment, "created_at", None))
+    if not created_at:
         return False
-    return timezone.now() >= expires_at
+    local_deadline = created_at + timedelta(minutes=_yookassa_payment_ttl_minutes())
+    return timezone.now() >= local_deadline
+
+
+def _cancel_yookassa_payment(payment_id):
+    payment_id = str(payment_id or "").strip()
+    if not payment_id:
+        return None
+    _configure_yookassa()
+    try:
+        return Payment.cancel(payment_id, str(uuid.uuid4()))
+    except TypeError:
+        # Для обратной совместимости со старыми версиями SDK без idempotency key.
+        return Payment.cancel(payment_id)
+
+
+def _cancel_expired_yookassa_payment(order, payment):
+    if payment is None:
+        return payment, False
+    payment_status = str(getattr(payment, "status", "") or "")
+    if payment_status not in ("pending", "waiting_for_capture"):
+        return payment, False
+    if not _yookassa_payment_is_expired(payment):
+        return payment, False
+
+    payment_id = str(getattr(payment, "id", "") or order.payment_id or "")
+    if not payment_id:
+        return payment, False
+
+    canceled_payment = _cancel_yookassa_payment(payment_id)
+    if canceled_payment is not None:
+        _sync_yookassa_payment_state(order, canceled_payment)
+        return canceled_payment, True
+    return payment, False
 
 
 def _yookassa_return_url(request, order):
@@ -194,8 +221,6 @@ def _sync_yookassa_payment_state(order, payment):
     payment_status = str(getattr(payment, "status", "") or "")
     if not payment_status:
         return
-    if payment_status == "pending" and _yookassa_payment_is_expired(payment):
-        payment_status = "canceled"
 
     updates = {
         "payment_provider": "yookassa",
@@ -230,7 +255,6 @@ def _get_existing_yookassa_payment(order):
 
 def _create_yookassa_payment(order, request):
     _configure_yookassa()
-    expires_at = timezone.now() + timedelta(minutes=_yookassa_payment_ttl_minutes())
     payment_request = {
         "amount": {
             "value": _yookassa_amount(order.total_price),
@@ -246,7 +270,6 @@ def _create_yookassa_payment(order, request):
             "order_id": str(order.id),
             "user_id": str(order.user_id or ""),
         },
-        "expires_at": _format_yookassa_datetime(expires_at),
     }
 
     payment = Payment.create(payment_request, str(uuid.uuid4()))
@@ -1296,9 +1319,8 @@ def create_yookassa_payment(request):
         confirmation_url = ""
         if order.payment_id and order.payment_status not in ("canceled", "succeeded"):
             payment = _get_existing_yookassa_payment(order)
-            if payment and _yookassa_payment_is_expired(payment):
-                confirmation_url = ""
-            elif payment:
+            payment, expired_and_canceled = _cancel_expired_yookassa_payment(order, payment)
+            if payment and not expired_and_canceled and not _yookassa_payment_is_expired(payment):
                 confirmation_url = _yookassa_confirmation_url(payment)
             if order.payment_status == "succeeded" or order.status == "paid":
                 return Response(
