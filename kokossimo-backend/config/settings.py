@@ -221,6 +221,7 @@ YOOKASSA_RETURN_URL = os.getenv(
     'YOOKASSA_RETURN_URL',
     f'{FRONTEND_URL}/checkout/success',
 )
+YOOKASSA_PAYMENT_TTL_MINUTES = int(os.getenv('YOOKASSA_PAYMENT_TTL_MINUTES', '15'))
 
 # Telegram-бот для обратной связи (отзывы, предложения, просьбы о связи)
 # Токен создаётся у @BotFather. Запуск: python manage.py run_telegram_bot
