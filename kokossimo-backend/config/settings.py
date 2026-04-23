@@ -18,8 +18,13 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent.parent
 REPO_ROOT = BASE_DIR.parent
 
-# Frontend and backend share a single repo-level .env file.
-load_dotenv(REPO_ROOT / '.env')
+# Prefer backend-local .env, fallback to repo-level .env.
+BACKEND_ENV_PATH = BASE_DIR / '.env'
+REPO_ENV_PATH = REPO_ROOT / '.env'
+if BACKEND_ENV_PATH.exists():
+    load_dotenv(BACKEND_ENV_PATH)
+else:
+    load_dotenv(REPO_ENV_PATH)
 
 
 def env_list(name, default=''):
