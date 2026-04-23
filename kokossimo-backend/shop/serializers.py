@@ -2,7 +2,7 @@ from rest_framework import serializers
 from django.db import transaction
 from collections import defaultdict
 from decimal import Decimal, ROUND_HALF_UP
-from .models import Product, Category, Profile, Order, OrderItem, ProductRating, ProductSubcategory
+from .models import Product, Category, Profile, Order, OrderItem, ProductRating, ProductSubcategory, SavedDeliveryAddress
 from django.conf import settings
 from .delivery_cities import delivery_fee_rub
 
@@ -156,6 +156,33 @@ class ProfileUpdateSerializer(serializers.Serializer):
     house = serializers.CharField(required=False, allow_blank=True)
     apartment = serializers.CharField(required=False, allow_blank=True)
     postal_code = serializers.CharField(required=False, allow_blank=True)
+
+
+class SavedDeliveryAddressSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SavedDeliveryAddress
+        fields = [
+            'id',
+            'city',
+            'street_house',
+            'entrance',
+            'floor',
+            'apartment_office',
+            'intercom',
+            'comment',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def validate(self, attrs):
+        normalized = {}
+        for key, value in attrs.items():
+            if isinstance(value, str):
+                normalized[key] = " ".join(value.strip().split())
+            else:
+                normalized[key] = value
+        return normalized
 
 
 class CartItemSyncSerializer(serializers.Serializer):

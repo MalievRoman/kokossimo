@@ -646,6 +646,10 @@
   color: #316d4e;
 }
 
+.payment-status--inline {
+  margin-top: 0;
+}
+
 .payment-empty {
   max-width: 520px;
   text-align: center;
@@ -887,6 +891,16 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+}
+
+.payment-drawer__actions {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.payment-drawer__save-button {
+  width: 100%;
 }
 
 .payment-drawer .payment-primary-button,

@@ -7,6 +7,7 @@ import {
   createYooKassaPayment,
   getCurrentUser,
   getDeliveryCities,
+  saveDeliveryAddress,
   updateProfile,
 } from '../services/api';
 import { useCart } from '../context/CartContext';
@@ -120,7 +121,13 @@ const MobileMenuCloseIcon = () => (
 
 const isStorePickupPoint = (point) => point?.type === 'Самовывоз из магазина';
 
-const getPickupProviderLabel = (point) => point?.providerLabel || 'СДЭК';
+const getPickupProviderLabel = (point, cityPickupProvider) => {
+  if (isStorePickupPoint(point)) {
+    return 'МАГАЗИН';
+  }
+
+  return point?.providerLabel || cityPickupProvider || 'СДЭК';
+};
 
 const getAddressFieldLabel = (deliveryMethod, selectedPickupPoint) => {
   if (deliveryMethod === 'courier') {
@@ -166,6 +173,9 @@ const PaymentPage = ({ modalMode = false }) => {
   const [courierDrawerOpen, setCourierDrawerOpen] = useState(false);
   const [courierHintOpen, setCourierHintOpen] = useState(false);
   const [courierDraft, setCourierDraft] = useState(emptyCourierDraft);
+  const [saveAddressStatus, setSaveAddressStatus] = useState({ type: '', message: '' });
+  const [isSavingAddress, setIsSavingAddress] = useState(false);
+  const [isCourierAddressSaved, setIsCourierAddressSaved] = useState(false);
   const [status, setStatus] = useState({ type: '', message: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [cityConfig, setCityConfig] = useState(null);
@@ -196,7 +206,7 @@ const PaymentPage = ({ modalMode = false }) => {
   const selectedPickupPoint = pickupPoints.find((point) => point.id === delivery.pickupPointId) || null;
   const pickupDraftPoint = pickupPoints.find((point) => point.id === pickupDraftId) || null;
   const addressFieldLabel = getAddressFieldLabel(delivery.method, selectedPickupPoint);
-  const pickupProviderLabel = getPickupProviderLabel(selectedPickupPoint);
+  const pickupProviderLabel = getPickupProviderLabel(selectedPickupPoint, currentCity?.pickupProvider);
 
   const deliveryFee = useMemo(() => {
     if (!currentCity || !delivery.method) return 0;
@@ -257,12 +267,6 @@ const PaymentPage = ({ modalMode = false }) => {
             method: prev.method || (cityConfig[matchedCityKey].courierAvailable ? '' : 'pickup'),
           }));
         }
-        const profileStreet = [data.street, data.house].filter(Boolean).join(', ');
-        setCourierDraft((prev) => ({
-          ...prev,
-          streetHouse: profileStreet || prev.streetHouse,
-          apartmentOffice: data.apartment || prev.apartmentOffice,
-        }));
       })
       .catch(() => {});
   }, [authToken, cityConfig]);
@@ -372,6 +376,8 @@ const PaymentPage = ({ modalMode = false }) => {
       deliveryTime: '',
     });
     setPickupDraftId('');
+    setCourierDraft(emptyCourierDraft);
+    setIsCourierAddressSaved(false);
     setExpandedStep('address');
     setPaymentOption('');
     setStatus({ type: '', message: '' });
@@ -389,6 +395,8 @@ const PaymentPage = ({ modalMode = false }) => {
       deliveryDate: '',
       deliveryTime: '',
     }));
+    setCourierDraft(emptyCourierDraft);
+    setIsCourierAddressSaved(false);
     setExpandedStep('address');
     setStatus({ type: '', message: '' });
     setCourierHintOpen(false);
@@ -413,16 +421,54 @@ const PaymentPage = ({ modalMode = false }) => {
   };
 
   const openCourierDrawer = () => {
-    setCourierDraft(delivery.courierAddress || courierDraft);
+    setCourierDraft(emptyCourierDraft);
+    setSaveAddressStatus({ type: '', message: '' });
+    setIsCourierAddressSaved(false);
     setCourierDrawerOpen(true);
   };
 
   const handleCourierDraftChange = (field) => (event) => {
     const value = event.target.value;
+    setSaveAddressStatus({ type: '', message: '' });
+    setIsCourierAddressSaved(false);
     setCourierDraft((prev) => ({
       ...prev,
       [field]: value,
     }));
+  };
+
+  const handleSaveCourierAddress = async () => {
+    if (!authToken) {
+      navigate('/auth');
+      return;
+    }
+
+    if (!courierDraftComplete || !currentCity) {
+      return;
+    }
+
+    try {
+      setIsSavingAddress(true);
+      setSaveAddressStatus({ type: '', message: '' });
+      await saveDeliveryAddress(authToken, {
+        city: currentCity.label,
+        street_house: courierDraft.streetHouse,
+        entrance: courierDraft.entrance,
+        floor: courierDraft.floor,
+        apartment_office: courierDraft.apartmentOffice,
+        intercom: courierDraft.intercom,
+        comment: courierDraft.comment,
+      });
+      setIsCourierAddressSaved(true);
+      setSaveAddressStatus({ type: 'success', message: 'Адрес сохранён.' });
+    } catch (error) {
+      if (error?.__kokoAuthRedirect) {
+        return;
+      }
+      setSaveAddressStatus({ type: 'error', message: 'Не удалось сохранить адрес.' });
+    } finally {
+      setIsSavingAddress(false);
+    }
   };
 
   const confirmCourierAddress = () => {
@@ -1043,6 +1089,24 @@ const PaymentPage = ({ modalMode = false }) => {
                     onChange={handleCourierDraftChange('comment')}
                     placeholder="Комментарий"
                   />
+                </div>
+
+                <div className="payment-drawer__actions">
+                  {!isCourierAddressSaved ? (
+                    <button
+                      type="button"
+                      className={`payment-secondary-button payment-drawer__save-button ${(!courierDraftComplete || isSavingAddress) ? 'payment-secondary-button--disabled' : ''}`}
+                      disabled={!courierDraftComplete || isSavingAddress}
+                      onClick={handleSaveCourierAddress}
+                    >
+                      {isSavingAddress ? 'СОХРАНЕНИЕ...' : 'СОХРАНИТЬ АДРЕС'}
+                    </button>
+                  ) : null}
+                  {saveAddressStatus.message ? (
+                    <div className={`payment-status payment-status--${saveAddressStatus.type || 'success'} payment-status--inline`}>
+                      {saveAddressStatus.message}
+                    </div>
+                  ) : null}
                 </div>
 
                 <button

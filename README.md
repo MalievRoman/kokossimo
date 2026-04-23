@@ -27,6 +27,7 @@
 Проект использует один корневой файл `.env`:
 - Django читает `/Users/minaonsi/Desktop/kokossimo/.env` в [config/settings.py](/Users/minaonsi/Desktop/kokossimo/kokossimo-backend/config/settings.py)
 - Vite читает тот же файл через `envDir: '..'` в [vite.config.js](/Users/minaonsi/Desktop/kokossimo/kokossimo-frontend/vite.config.js)
+- dev-сервер frontend теперь берёт `host` и `port` из `FRONTEND_URL`, чтобы адрес фронта совпадал с CORS/CSRF-настройками backend
 - клиентский API использует `VITE_API_URL` в [api.js](/Users/minaonsi/Desktop/kokossimo/kokossimo-frontend/src/services/api.js)
 
 Минимальные переменные для локальной разработки:
@@ -60,7 +61,7 @@ DJANGO_CSRF_TRUSTED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
 2. Установите зависимости: `npm install`
 3. Фронтенд автоматически возьмёт `VITE_API_URL` из корневого `.env`.
 4. Запустите dev‑сервер: `npm run dev`
-5. Откройте `http://localhost:5173`
+5. Откройте адрес из `FRONTEND_URL` (по умолчанию `http://localhost:5173`)
 
 ## Команды запуска
 Backend:

@@ -11,7 +11,7 @@ from django.urls import path, reverse
 from django.utils.html import format_html
 import threading
 import time
-from .models import Category, Product, ProductSubcategory, Profile, Order, OrderItem, ProductRating, Feedback, SyncLog
+from .models import Category, Product, ProductSubcategory, Profile, Order, OrderItem, ProductRating, Feedback, SyncLog, SavedDeliveryAddress
 from .moysklad import MoySkladConfigError, MoySkladError
 from .moysklad_sync import sync_product_stocks, sync_single_product, sync_site_products, SyncStoppedError
 
@@ -90,6 +90,14 @@ class ProductSubcategoryAdmin(admin.ModelAdmin):
     list_filter = ("parent_code",)
     search_fields = ("code", "name")
     ordering = ("code",)
+
+
+@admin.register(SavedDeliveryAddress)
+class SavedDeliveryAddressAdmin(admin.ModelAdmin):
+    list_display = ("user", "city", "street_house", "apartment_office", "updated_at")
+    list_filter = ("city", "updated_at", "created_at")
+    search_fields = ("user__username", "user__email", "city", "street_house", "apartment_office", "comment")
+    readonly_fields = ("created_at", "updated_at")
 
 
 @admin.register(Product)
