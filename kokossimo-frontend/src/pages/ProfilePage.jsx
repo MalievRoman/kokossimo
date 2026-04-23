@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
+import { Pencil, Trash2 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
-import { getCurrentUser, getMyOrders, logoutUser, updateProfile } from '../services/api';
+import { deleteSavedDeliveryAddress, getCurrentUser, getMyOrders, getSavedDeliveryAddresses, logoutUser, updateProfile, updateSavedDeliveryAddress } from '../services/api';
 import { formatRuPhone, isPhoneInputKeyAllowed } from '../utils/phone';
 import './ProfilePage.css';
 
@@ -100,6 +101,45 @@ const getFullNameValidationError = (value) => {
   return '';
 };
 
+const formatSavedAddressTitle = (address) =>
+  [address?.city, address?.street_house]
+    .map((part) => String(part || '').trim())
+    .filter(Boolean)
+    .join(', ');
+
+const formatSavedAddressMeta = (address) => {
+  const parts = [
+    address?.entrance ? `Подъезд: ${address.entrance}` : '',
+    address?.floor ? `Этаж: ${address.floor}` : '',
+    address?.apartment_office ? `Кв./офис: ${address.apartment_office}` : '',
+    address?.intercom ? `Домофон: ${address.intercom}` : '',
+  ].filter(Boolean);
+
+  return parts.join(' • ');
+};
+
+const ProfileModalCloseIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <path
+      d="M6 6L18 18M18 6L6 18"
+      stroke="#716A6A"
+      strokeWidth="1.4"
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
+const emptySavedAddressDraft = {
+  id: null,
+  city: '',
+  street_house: '',
+  entrance: '',
+  floor: '',
+  apartment_office: '',
+  intercom: '',
+  comment: '',
+};
+
 const ProfilePage = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -130,6 +170,15 @@ const ProfilePage = () => {
   const [orders, setOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
   const [detailsOrder, setDetailsOrder] = useState(null);
+  const [savedAddressesOpen, setSavedAddressesOpen] = useState(false);
+  const [savedAddresses, setSavedAddresses] = useState([]);
+  const [savedAddressesLoading, setSavedAddressesLoading] = useState(false);
+  const [savedAddressesStatus, setSavedAddressesStatus] = useState({ type: '', message: '' });
+  const [editingAddress, setEditingAddress] = useState(null);
+  const [savedAddressDraft, setSavedAddressDraft] = useState(emptySavedAddressDraft);
+  const [savedAddressSubmitting, setSavedAddressSubmitting] = useState(false);
+  const [savedAddressActionId, setSavedAddressActionId] = useState(null);
+  const [savedAddressEditStatus, setSavedAddressEditStatus] = useState({ type: '', message: '' });
   const favoriteCartToastTimerRef = useRef(null);
 
   const resetAuthState = (message = '') => {
@@ -154,6 +203,15 @@ const ProfilePage = () => {
     setSettingsBaseline(null);
     setOrders([]);
     setOrdersLoading(false);
+    setSavedAddressesOpen(false);
+    setSavedAddresses([]);
+    setSavedAddressesLoading(false);
+    setSavedAddressesStatus({ type: '', message: '' });
+    setEditingAddress(null);
+    setSavedAddressDraft(emptySavedAddressDraft);
+    setSavedAddressSubmitting(false);
+    setSavedAddressActionId(null);
+    setSavedAddressEditStatus({ type: '', message: '' });
     setActiveTab('main');
     if (message) {
       showTemporaryStatus('error', message);
@@ -230,14 +288,25 @@ const ProfilePage = () => {
   }, [profile.first_name, profile.last_name]);
 
   useEffect(() => {
-    if (!detailsOrder) return undefined;
+    if (!detailsOrder && !savedAddressesOpen && !editingAddress) return undefined;
 
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
 
     const handleEscape = (event) => {
       if (event.key === 'Escape') {
-        setDetailsOrder(null);
+        if (detailsOrder) {
+          setDetailsOrder(null);
+          return;
+        }
+        if (editingAddress) {
+          setSavedAddressesOpen(true);
+          setEditingAddress(null);
+          setSavedAddressDraft(emptySavedAddressDraft);
+          setSavedAddressEditStatus({ type: '', message: '' });
+          return;
+        }
+        setSavedAddressesOpen(false);
       }
     };
 
@@ -246,7 +315,7 @@ const ProfilePage = () => {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener('keydown', handleEscape);
     };
-  }, [detailsOrder]);
+  }, [detailsOrder, savedAddressesOpen, editingAddress]);
 
   useEffect(() => () => {
     if (favoriteCartToastTimerRef.current) {
@@ -415,8 +484,147 @@ const ProfilePage = () => {
       setBirthDateTouched(false);
       setOrders([]);
       setOrdersLoading(false);
+      setSavedAddressesOpen(false);
+      setSavedAddresses([]);
+      setSavedAddressesLoading(false);
+      setSavedAddressesStatus({ type: '', message: '' });
+      setEditingAddress(null);
+      setSavedAddressDraft(emptySavedAddressDraft);
+      setSavedAddressSubmitting(false);
+      setSavedAddressActionId(null);
+      setSavedAddressEditStatus({ type: '', message: '' });
       showTemporaryStatus('success', 'Вы вышли из аккаунта.');
       setActiveTab('main');
+    }
+  };
+
+  const handleOpenSavedAddresses = async () => {
+    if (!authToken) {
+      resetAuthState('Сессия истекла. Войдите в аккаунт заново.');
+      return;
+    }
+
+    setSavedAddressesOpen(true);
+    setSavedAddressesLoading(true);
+    setSavedAddressesStatus({ type: '', message: '' });
+
+    try {
+      const response = await getSavedDeliveryAddresses(authToken);
+      setSavedAddresses(Array.isArray(response.data) ? response.data : []);
+    } catch (error) {
+      if (error?.response?.status === 401) {
+        setSavedAddressesOpen(false);
+        resetAuthState('Сессия истекла. Войдите в аккаунт заново.');
+        return;
+      }
+      setSavedAddresses([]);
+      setSavedAddressesStatus({ type: 'error', message: 'Не удалось загрузить сохранённые адреса.' });
+    } finally {
+      setSavedAddressesLoading(false);
+    }
+  };
+
+  const isSavedAddressDraftComplete = useMemo(() => (
+    String(savedAddressDraft.street_house || '').trim() &&
+    String(savedAddressDraft.entrance || '').trim() &&
+    String(savedAddressDraft.floor || '').trim() &&
+    String(savedAddressDraft.apartment_office || '').trim() &&
+    String(savedAddressDraft.intercom || '').trim()
+  ), [savedAddressDraft]);
+
+  const handleDeleteSavedAddress = async (addressId) => {
+    if (!authToken) {
+      resetAuthState('Сессия истекла. Войдите в аккаунт заново.');
+      return;
+    }
+
+    try {
+      setSavedAddressActionId(addressId);
+      await deleteSavedDeliveryAddress(authToken, addressId);
+      setSavedAddresses((prev) => prev.filter((address) => address.id !== addressId));
+      setSavedAddressesStatus({ type: '', message: '' });
+    } catch (error) {
+      if (error?.response?.status === 401) {
+        setSavedAddressesOpen(false);
+        resetAuthState('Сессия истекла. Войдите в аккаунт заново.');
+        return;
+      }
+      setSavedAddressesStatus({ type: 'error', message: 'Не удалось удалить адрес.' });
+    } finally {
+      setSavedAddressActionId(null);
+    }
+  };
+
+  const handleOpenEditSavedAddress = (address) => {
+    setSavedAddressEditStatus({ type: '', message: '' });
+    setSavedAddressDraft({
+      id: address.id,
+      city: address.city || '',
+      street_house: address.street_house || '',
+      entrance: address.entrance || '',
+      floor: address.floor || '',
+      apartment_office: address.apartment_office || '',
+      intercom: address.intercom || '',
+      comment: address.comment || '',
+    });
+    setSavedAddressesOpen(false);
+    setEditingAddress(address);
+  };
+
+  const handleSavedAddressDraftChange = (field) => (event) => {
+    const value = event.target.value;
+    setSavedAddressEditStatus({ type: '', message: '' });
+    setSavedAddressDraft((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const handleSavedAddressEditClose = () => {
+    setSavedAddressesOpen(true);
+    setEditingAddress(null);
+    setSavedAddressDraft(emptySavedAddressDraft);
+    setSavedAddressEditStatus({ type: '', message: '' });
+    setSavedAddressSubmitting(false);
+  };
+
+  const handleSaveEditedAddress = async () => {
+    if (!authToken) {
+      resetAuthState('Сессия истекла. Войдите в аккаунт заново.');
+      return;
+    }
+
+    if (!editingAddress?.id || !isSavedAddressDraftComplete) {
+      return;
+    }
+
+    try {
+      setSavedAddressSubmitting(true);
+      setSavedAddressEditStatus({ type: '', message: '' });
+      const response = await updateSavedDeliveryAddress(authToken, editingAddress.id, {
+        city: savedAddressDraft.city,
+        street_house: savedAddressDraft.street_house,
+        entrance: savedAddressDraft.entrance,
+        floor: savedAddressDraft.floor,
+        apartment_office: savedAddressDraft.apartment_office,
+        intercom: savedAddressDraft.intercom,
+        comment: savedAddressDraft.comment,
+      });
+      const updatedAddress = response.data;
+      setSavedAddresses((prev) => prev.map((address) => (
+        address.id === updatedAddress.id ? updatedAddress : address
+      )));
+      handleSavedAddressEditClose();
+    } catch (error) {
+      if (error?.response?.status === 401) {
+        handleSavedAddressEditClose();
+        setSavedAddressesOpen(false);
+        resetAuthState('Сессия истекла. Войдите в аккаунт заново.');
+        return;
+      }
+      setSavedAddressEditStatus({ type: 'error', message: 'Не удалось сохранить изменения.' });
+    } finally {
+      setSavedAddressSubmitting(false);
     }
   };
 
@@ -857,6 +1065,13 @@ const ProfilePage = () => {
 
                 <button
                   type="button"
+                  className="profile-btn profile-btn--outline-secondary profile-btn--full"
+                  onClick={handleOpenSavedAddresses}
+                >
+                  СОХРАНЕННЫЕ АДРЕСА
+                </button>
+                <button
+                  type="button"
                   className="profile-btn profile-btn--primary profile-btn--full"
                   onClick={handleSaveSettings}
                   disabled={!isSettingsDirty || isSubmitting || Boolean(fullNameError)}
@@ -990,6 +1205,166 @@ const ProfilePage = () => {
                       }}
                     >
                       ПОВТОРИТЬ ЗАКАЗ
+                    </button>
+                  </div>
+                </div>,
+                document.body
+              )}
+            {savedAddressesOpen &&
+              createPortal(
+                <div
+                  className="profile-modal"
+                  onMouseDown={(event) => {
+                    if (event.target === event.currentTarget) {
+                      setSavedAddressesOpen(false);
+                    }
+                  }}
+                >
+                  <div className="profile-modal__dialog profile-modal__dialog--addresses" onMouseDown={(event) => event.stopPropagation()}>
+                    <button
+                      type="button"
+                      className="profile-modal__close"
+                      onClick={() => setSavedAddressesOpen(false)}
+                      aria-label="Закрыть"
+                    >
+                      <ProfileModalCloseIcon />
+                    </button>
+                    <h3 className="profile-modal__title">СОХРАНЕННЫЕ АДРЕСА</h3>
+                    {savedAddressesLoading ? (
+                      <div className="profile-muted">Загрузка адресов...</div>
+                    ) : savedAddressesStatus.message ? (
+                      <div className={`profile-settings-status profile-settings-status--${savedAddressesStatus.type}`}>
+                        {savedAddressesStatus.message}
+                      </div>
+                    ) : savedAddresses.length === 0 ? (
+                      <div className="profile-muted">У вас пока нет сохранённых адресов.</div>
+                    ) : (
+                      <div className="profile-addresses-list">
+                        {savedAddresses.map((address) => (
+                          <article key={address.id} className="profile-address-card">
+                            <div className="profile-address-card__head">
+                              <div className="profile-address-card__title">
+                                {formatSavedAddressTitle(address)}
+                              </div>
+                              <div className="profile-address-card__actions">
+                                <button
+                                  type="button"
+                                  className="profile-address-card__icon-button"
+                                  aria-label="Редактировать адрес"
+                                  onClick={() => handleOpenEditSavedAddress(address)}
+                                  disabled={savedAddressActionId === address.id}
+                                >
+                                  <Pencil size={18} strokeWidth={1.8} />
+                                </button>
+                                <button
+                                  type="button"
+                                  className="profile-address-card__icon-button"
+                                  aria-label="Удалить адрес"
+                                  onClick={() => handleDeleteSavedAddress(address.id)}
+                                  disabled={savedAddressActionId === address.id}
+                                >
+                                  <Trash2 size={18} strokeWidth={1.8} />
+                                </button>
+                              </div>
+                            </div>
+                            <div className="profile-address-card__meta">
+                              {formatSavedAddressMeta(address)}
+                            </div>
+                            {address.comment ? (
+                              <div className="profile-address-card__comment">
+                                Комментарий: {address.comment}
+                              </div>
+                            ) : null}
+                          </article>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>,
+                document.body
+              )}
+            {editingAddress &&
+              createPortal(
+                <div
+                  className="profile-modal"
+                  onMouseDown={(event) => {
+                    if (event.target === event.currentTarget) {
+                      handleSavedAddressEditClose();
+                    }
+                  }}
+                >
+                  <div className="profile-modal__dialog profile-modal__dialog--address-edit" onMouseDown={(event) => event.stopPropagation()}>
+                    <button
+                      type="button"
+                      className="profile-modal__close"
+                      onClick={handleSavedAddressEditClose}
+                      aria-label="Закрыть"
+                    >
+                      <ProfileModalCloseIcon />
+                    </button>
+                    <h3 className="profile-modal__title">РЕДАКТИРОВАТЬ АДРЕС</h3>
+                    <p className="profile-address-edit__city">{savedAddressDraft.city}</p>
+
+                    <div className="profile-address-edit__fields">
+                      <input
+                        type="text"
+                        className="profile-settings-input profile-address-edit__input"
+                        value={savedAddressDraft.street_house}
+                        onChange={handleSavedAddressDraftChange('street_house')}
+                        placeholder="Улица и дом"
+                      />
+                      <div className="profile-address-edit__grid">
+                        <input
+                          type="text"
+                          className="profile-settings-input profile-address-edit__input"
+                          value={savedAddressDraft.entrance}
+                          onChange={handleSavedAddressDraftChange('entrance')}
+                          placeholder="Подъезд"
+                        />
+                        <input
+                          type="text"
+                          className="profile-settings-input profile-address-edit__input"
+                          value={savedAddressDraft.floor}
+                          onChange={handleSavedAddressDraftChange('floor')}
+                          placeholder="Этаж"
+                        />
+                        <input
+                          type="text"
+                          className="profile-settings-input profile-address-edit__input"
+                          value={savedAddressDraft.apartment_office}
+                          onChange={handleSavedAddressDraftChange('apartment_office')}
+                          placeholder="Кв./офис"
+                        />
+                        <input
+                          type="text"
+                          className="profile-settings-input profile-address-edit__input"
+                          value={savedAddressDraft.intercom}
+                          onChange={handleSavedAddressDraftChange('intercom')}
+                          placeholder="Домофон"
+                        />
+                      </div>
+                      <input
+                        type="text"
+                        className="profile-settings-input profile-address-edit__input"
+                        value={savedAddressDraft.comment}
+                        onChange={handleSavedAddressDraftChange('comment')}
+                        placeholder="Комментарий"
+                      />
+                    </div>
+
+                    {savedAddressEditStatus.message ? (
+                      <div className={`profile-settings-status profile-settings-status--${savedAddressEditStatus.type}`}>
+                        {savedAddressEditStatus.message}
+                      </div>
+                    ) : null}
+
+                    <button
+                      type="button"
+                      className="profile-btn profile-btn--primary profile-btn--full profile-address-edit__submit"
+                      disabled={!isSavedAddressDraftComplete || savedAddressSubmitting}
+                      onClick={handleSaveEditedAddress}
+                    >
+                      {savedAddressSubmitting ? 'СОХРАНЕНИЕ...' : 'СОХРАНИТЬ ИЗМЕНЕНИЯ'}
                     </button>
                   </div>
                 </div>,

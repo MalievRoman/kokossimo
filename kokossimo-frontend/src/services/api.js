@@ -118,6 +118,22 @@ export const updateProfile = (token, payload) =>
   api.patch('/auth/profile/', payload, {
     headers: { Authorization: `Token ${token}` },
   });
+export const getSavedDeliveryAddresses = (token) =>
+  api.get('/auth/addresses/', {
+    headers: { Authorization: `Token ${token}` },
+  });
+export const saveDeliveryAddress = (token, payload) =>
+  api.post('/auth/addresses/', payload, {
+    headers: { Authorization: `Token ${token}` },
+  });
+export const updateSavedDeliveryAddress = (token, addressId, payload) =>
+  api.patch(`/auth/addresses/${addressId}/`, payload, {
+    headers: { Authorization: `Token ${token}` },
+  });
+export const deleteSavedDeliveryAddress = (token, addressId) =>
+  api.delete(`/auth/addresses/${addressId}/`, {
+    headers: { Authorization: `Token ${token}` },
+  });
 
 export const createOrder = (payload, token) =>
   api.post('/orders/', payload, {

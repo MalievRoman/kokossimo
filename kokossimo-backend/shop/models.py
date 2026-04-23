@@ -152,6 +152,32 @@ class Profile(models.Model):
         return f"{self.user.username}"
 
 
+class SavedDeliveryAddress(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='saved_delivery_addresses',
+        verbose_name="Пользователь",
+    )
+    city = models.CharField("Город", max_length=150)
+    street_house = models.CharField("Улица и дом", max_length=255)
+    entrance = models.CharField("Подъезд", max_length=50)
+    floor = models.CharField("Этаж", max_length=50)
+    apartment_office = models.CharField("Квартира / офис", max_length=100)
+    intercom = models.CharField("Домофон", max_length=100)
+    comment = models.TextField("Комментарий", blank=True, default="")
+    created_at = models.DateTimeField("Создан", auto_now_add=True)
+    updated_at = models.DateTimeField("Обновлен", auto_now=True)
+
+    class Meta:
+        verbose_name = "Сохраненный адрес доставки"
+        verbose_name_plural = "Сохраненные адреса доставки"
+        ordering = ["-updated_at", "-created_at", "-id"]
+
+    def __str__(self):
+        return f"{self.user_id}: {self.city}, {self.street_house}"
+
+
 class EmailVerificationCode(models.Model):
     PURPOSE_CHOICES = [
         ('login', 'Login'),

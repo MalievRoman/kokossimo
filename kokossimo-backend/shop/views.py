@@ -24,7 +24,7 @@ from decimal import ROUND_HALF_UP
 
 from yookassa import Configuration, Payment
 
-from .models import Product, Category, Profile, Order, EmailVerificationCode, ProductRating, ProductSubcategory, Cart, CartItem, FavoriteList, FavoriteItem
+from .models import Product, Category, Profile, Order, EmailVerificationCode, ProductRating, ProductSubcategory, Cart, CartItem, FavoriteList, FavoriteItem, SavedDeliveryAddress
 from .delivery_cities import DELIVERY_CITIES
 
 logger = logging.getLogger(__name__)
@@ -68,6 +68,7 @@ from .serializers import (
     ProductRatingCreateSerializer,
     CartSyncSerializer,
     FavoriteSyncSerializer,
+    SavedDeliveryAddressSerializer,
 )
 
 
@@ -1085,6 +1086,53 @@ def update_profile(request):
         "apartment": profile.apartment,
         "postal_code": profile.postal_code,
     })
+
+
+@api_view(['GET', 'POST'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def saved_delivery_addresses(request):
+    if request.method == 'GET':
+        addresses = SavedDeliveryAddress.objects.filter(user=request.user)
+        serializer = SavedDeliveryAddressSerializer(addresses, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    serializer = SavedDeliveryAddressSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    payload = serializer.validated_data
+    existing = SavedDeliveryAddress.objects.filter(user=request.user, **payload).first()
+    if existing:
+        existing.save()
+        return Response(
+            SavedDeliveryAddressSerializer(existing).data,
+            status=status.HTTP_200_OK,
+        )
+
+    address = SavedDeliveryAddress.objects.create(user=request.user, **payload)
+    return Response(
+        SavedDeliveryAddressSerializer(address).data,
+        status=status.HTTP_201_CREATED,
+    )
+
+
+@api_view(['PATCH', 'DELETE'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def saved_delivery_address_detail(request, address_id):
+    address = get_object_or_404(SavedDeliveryAddress, id=address_id, user=request.user)
+
+    if request.method == 'DELETE':
+        address.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    serializer = SavedDeliveryAddressSerializer(address, data=request.data, partial=True)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    serializer.save()
+    return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 @api_view(['GET', 'PUT'])
