@@ -8,6 +8,12 @@ import './CatalogPage.css';
 const CATALOG_PAGE_SIZE = 30;
 const CATALOG_STATE_STORAGE_KEY = 'catalog_state_v1';
 const CATALOG_SORT_STORAGE_KEY = 'catalog_sort_v1';
+const SORT_OPTIONS = [
+  { value: 'popular', label: 'По популярности' },
+  { value: 'price_asc', label: 'Сначала дешевые' },
+  { value: 'price_desc', label: 'Сначала дорогие' },
+  { value: 'new', label: 'Новинки' },
+];
 
 const CatalogChevron = ({ className = '' }) => (
   <svg
@@ -81,6 +87,7 @@ const CatalogPage = () => {
   const skipFirstFetchRef = useRef(false);
   const catalogFiltersContext = useCatalogFilters();
   const queryKey = `${searchParams.toString()}::${sortBy}`;
+  const currentSortLabel = SORT_OPTIONS.find((option) => option.value === sortBy)?.label || SORT_OPTIONS[0].label;
 
   useEffect(() => {
     try {
@@ -1018,17 +1025,24 @@ const CatalogPage = () => {
               </div>
 
               <div className="sort-wrapper">
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="sort-select"
-                  aria-label="Сортировка товаров"
-                >
-                  <option value="popular">По популярности</option>
-                  <option value="price_asc">Сначала дешевые</option>
-                  <option value="price_desc">Сначала дорогие</option>
-                  <option value="new">Новинки</option>
-                </select>
+                <div className="sort-select-shell">
+                  <span className="sort-select-value" aria-hidden="true">
+                    {currentSortLabel}
+                  </span>
+                  <CatalogChevron className="sort-select-chevron" />
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="sort-select"
+                    aria-label="Сортировка товаров"
+                  >
+                    {SORT_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 {!loading && (
                   <span className="catalog-count">
                     Найдено: {totalProducts}

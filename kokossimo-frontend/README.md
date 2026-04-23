@@ -8,7 +8,7 @@ Frontend часть интернет-магазина на React + Vite.
 
 - `VITE_API_URL` задает базовый URL API для dev-режима
 - `VITE_BACKEND_URL` используется Vite proxy для `/api`, `/media`, `/static`, `/admin`
-- `FRONTEND_URL` использует backend для CORS, CSRF и redirect URL
+- `FRONTEND_URL` использует backend для CORS, CSRF и redirect URL, а Vite dev server берёт из него `host` и `port`
 
 Vite читает переменные из корня репозитория через `envDir: '..'`.
 
@@ -21,7 +21,7 @@ npm install
 npm run dev
 ```
 
-По умолчанию приложение открывается на `http://localhost:5173`.
+Приложение открывается по адресу из `FRONTEND_URL` (по умолчанию `http://localhost:5173`).
 
 ## Проверка связки с backend
 
