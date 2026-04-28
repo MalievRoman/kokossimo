@@ -1,5 +1,6 @@
 import hashlib
 import json
+from datetime import date
 from decimal import Decimal, InvalidOperation
 
 from django.core.management.base import BaseCommand, CommandError
@@ -74,6 +75,18 @@ class Command(BaseCommand):
             action="store_true",
             help="Игнорировать checkpoint и перезагрузить все доступные данные.",
         )
+        parser.add_argument(
+            "--from-date",
+            type=str,
+            default="",
+            help="Дата начала выборки (YYYY-MM-DD), например 2025-01-01.",
+        )
+        parser.add_argument(
+            "--to-date",
+            type=str,
+            default="",
+            help="Дата конца выборки (YYYY-MM-DD). По умолчанию сегодня.",
+        )
 
     def _build_filter_expr(self, checkpoint_dt):
         if not checkpoint_dt:
@@ -81,6 +94,13 @@ class Command(BaseCommand):
         # Формат фильтра подходит для большинства сущностей remap API.
         stamp = checkpoint_dt.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
         return f"updated>{stamp}"
+
+    def _build_date_range_filter(self, from_date, to_date):
+        # Используем поле updated, чтобы диапазон совпадал с инкрементальной логикой.
+        return (
+            f"updated>={from_date.isoformat()} 00:00:00;"
+            f"updated<={to_date.isoformat()} 23:59:59"
+        )
 
     def _extract_clean_order(self, row):
         state = row.get("state") or {}
@@ -103,6 +123,8 @@ class Command(BaseCommand):
         page_size = max(1, min(int(options["page_size"]), 1000))
         max_pages = max(0, int(options["max_pages"]))
         full_refresh = bool(options["full_refresh"])
+        from_date_str = _safe_text(options["from_date"])
+        to_date_str = _safe_text(options["to_date"])
 
         try:
             client = MoySkladClient()
@@ -113,13 +135,35 @@ class Command(BaseCommand):
             entity=self.entity
         )
         filter_expr = ""
-        if not full_refresh:
+        from_date = None
+        to_date = None
+        if from_date_str:
+            try:
+                from_date = date.fromisoformat(from_date_str)
+            except ValueError as exc:
+                raise CommandError(f"Некорректный --from-date: {from_date_str}") from exc
+
+            if to_date_str:
+                try:
+                    to_date = date.fromisoformat(to_date_str)
+                except ValueError as exc:
+                    raise CommandError(f"Некорректный --to-date: {to_date_str}") from exc
+            else:
+                to_date = timezone.localdate()
+
+            if from_date > to_date:
+                raise CommandError("--from-date не может быть позже --to-date.")
+
+            filter_expr = self._build_date_range_filter(from_date, to_date)
+        elif not full_refresh:
             filter_expr = self._build_filter_expr(checkpoint.last_synced_at)
 
         self.stdout.write(
             f"Старт sync в '{self.analytics_alias}' для {self.entity}. "
             f"page_size={page_size}, filter={'on' if filter_expr else 'off'}"
         )
+        if from_date and to_date:
+            self.stdout.write(f"Диапазон дат: {from_date.isoformat()}..{to_date.isoformat()}")
 
         stats = {
             "pages": 0,
@@ -145,7 +189,7 @@ class Command(BaseCommand):
                         expand="state,organization,agent",
                     )
                 except MoySkladError:
-                    if filter_expr and offset == 0 and not filter_fallback_used:
+                    if filter_expr and offset == 0 and not filter_fallback_used and not from_date:
                         filter_expr = ""
                         filter_fallback_used = True
                         self.stdout.write(
