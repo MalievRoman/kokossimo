@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     'knox',
     'corsheaders',      # Чтобы React мог подключаться
     'shop.apps.ShopConfig',             # Наше приложение
+    'erp_analytics.apps.ErpAnalyticsConfig',
 ]
 
 
@@ -119,6 +120,23 @@ else:
             'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
+
+if os.getenv('ANALYTICS_POSTGRES_DB'):
+    DATABASES['analytics'] = {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv('ANALYTICS_POSTGRES_DB'),
+        'USER': os.getenv('ANALYTICS_POSTGRES_USER'),
+        'PASSWORD': os.getenv('ANALYTICS_POSTGRES_PASSWORD'),
+        'HOST': os.getenv('ANALYTICS_POSTGRES_HOST', 'localhost'),
+        'PORT': os.getenv('ANALYTICS_POSTGRES_PORT', '5432'),
+    }
+else:
+    DATABASES['analytics'] = {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'analytics.sqlite3',
+    }
+
+DATABASE_ROUTERS = ['config.db_routers.AnalyticsRouter']
 
 
 # Password validation
