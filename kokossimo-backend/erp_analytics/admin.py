@@ -72,6 +72,8 @@ class RawMoyskladRecordAdmin(admin.ModelAdmin):
     )
     list_filter = ("entity", "source_updated_at", "ingested_at")
     search_fields = ("external_id", "payload_hash")
+    list_display_links = None
+    list_per_page = 100
     readonly_fields = (
         "entity",
         "external_id",
@@ -96,6 +98,10 @@ class MoyskladCustomerOrderAdmin(admin.ModelAdmin):
         "external_id",
         "moment",
         "state_name",
+        "organization_name",
+        "agent_name",
+        "agent_email",
+        "agent_phone",
         "sum_total",
         "sum_paid",
         "source_updated_at",
@@ -124,6 +130,8 @@ class MoyskladCustomerOrderAdmin(admin.ModelAdmin):
         "synced_at",
     )
     ordering = ("-source_updated_at", "-id")
+    list_display_links = None
+    list_per_page = 100
 
     def has_add_permission(self, request):
         return False
@@ -140,7 +148,12 @@ class MoyskladOperationAdmin(admin.ModelAdmin):
         "document_number",
         "external_id",
         "moment",
+        "source_updated_at",
         "state_name",
+        "organization_name",
+        "agent_name",
+        "agent_email",
+        "agent_phone",
         "sum_total",
         "sum_total_signed",
         "sum_paid",
@@ -171,6 +184,8 @@ class MoyskladOperationAdmin(admin.ModelAdmin):
         "synced_at",
     )
     ordering = ("-moment", "-source_updated_at", "-id")
+    list_display_links = None
+    list_per_page = 100
 
     def has_add_permission(self, request):
         return False
