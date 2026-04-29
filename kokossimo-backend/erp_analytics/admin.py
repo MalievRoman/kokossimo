@@ -1,4 +1,10 @@
-from django.contrib import admin
+import threading
+
+from django.contrib import admin, messages
+from django.core.management import call_command
+from django.db import close_old_connections
+from django.http import HttpResponseRedirect
+from django.urls import path, reverse
 
 from .models import (
     MoyskladCustomerOrder,
@@ -32,6 +38,7 @@ class OperationPresetFilter(admin.SimpleListFilter):
 
 @admin.register(SyncCheckpoint)
 class SyncCheckpointAdmin(admin.ModelAdmin):
+    change_list_template = "admin/erp_analytics/synccheckpoint/change_list.html"
     list_display = (
         "entity",
         "last_status",
@@ -59,6 +66,52 @@ class SyncCheckpointAdmin(admin.ModelAdmin):
 
     def has_add_permission(self, request):
         return False
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                "sync/incremental/",
+                self.admin_site.admin_view(self.sync_incremental_view),
+                name="erp_analytics_synccheckpoint_sync_incremental",
+            ),
+        ]
+        return custom_urls + urls
+
+    def changelist_view(self, request, extra_context=None):
+        extra_context = extra_context or {}
+        extra_context["sync_incremental_url"] = reverse(
+            "admin:erp_analytics_synccheckpoint_sync_incremental"
+        )
+        return super().changelist_view(request, extra_context=extra_context)
+
+    def sync_incremental_view(self, request):
+        if SyncCheckpoint.objects.filter(last_status="running").exists():
+            self.message_user(
+                request,
+                "Синхронизация уже выполняется, дождитесь завершения.",
+                level=messages.WARNING,
+            )
+            return HttpResponseRedirect(reverse("admin:erp_analytics_synccheckpoint_changelist"))
+
+        SyncCheckpoint.objects.all().update(last_status="running", last_error="")
+
+        def _worker():
+            close_old_connections()
+            try:
+                call_command("sync_moysklad_analytics")
+            finally:
+                close_old_connections()
+
+        thread = threading.Thread(target=_worker, daemon=True)
+        thread.start()
+
+        self.message_user(
+            request,
+            "Инкрементальная синхронизация запущена в фоне (с последнего документа).",
+            level=messages.INFO,
+        )
+        return HttpResponseRedirect(reverse("admin:erp_analytics_synccheckpoint_changelist"))
 
 
 @admin.register(RawMoyskladRecord)
