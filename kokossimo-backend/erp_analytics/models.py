@@ -15,6 +15,10 @@ class SyncCheckpoint(models.Model):
     last_status = models.CharField(max_length=20, default="idle")
     last_error = models.TextField(blank=True, default="")
     rows_processed = models.PositiveIntegerField(default=0)
+    resume_filter_from = models.DateField(null=True, blank=True)
+    resume_filter_to = models.DateField(null=True, blank=True)
+    resume_next_offset = models.PositiveIntegerField(default=0)
+    resume_active = models.BooleanField(default=False)
 
     class Meta:
         verbose_name = "Checkpoint синхронизации ERP"

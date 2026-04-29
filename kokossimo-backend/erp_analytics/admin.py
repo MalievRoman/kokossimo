@@ -14,10 +14,12 @@ class SyncCheckpointAdmin(admin.ModelAdmin):
         "entity",
         "last_status",
         "last_synced_at",
+        "resume_active",
+        "resume_next_offset",
         "rows_processed",
         "last_run_at",
     )
-    list_filter = ("entity", "last_status", "last_run_at")
+    list_filter = ("entity", "last_status", "resume_active", "last_run_at")
     search_fields = ("entity", "last_error")
     readonly_fields = (
         "entity",
@@ -26,6 +28,10 @@ class SyncCheckpointAdmin(admin.ModelAdmin):
         "last_status",
         "last_error",
         "rows_processed",
+        "resume_filter_from",
+        "resume_filter_to",
+        "resume_next_offset",
+        "resume_active",
     )
     ordering = ("entity",)
 
