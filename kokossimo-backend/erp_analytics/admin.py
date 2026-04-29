@@ -1,6 +1,11 @@
 from django.contrib import admin
 
-from .models import MoyskladCustomerOrder, RawMoyskladRecord, SyncCheckpoint
+from .models import (
+    MoyskladCustomerOrder,
+    MoyskladOperation,
+    RawMoyskladRecord,
+    SyncCheckpoint,
+)
 
 
 @admin.register(SyncCheckpoint)
@@ -91,6 +96,52 @@ class MoyskladCustomerOrderAdmin(admin.ModelAdmin):
         "synced_at",
     )
     ordering = ("-source_updated_at", "-id")
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(MoyskladOperation)
+class MoyskladOperationAdmin(admin.ModelAdmin):
+    list_display = (
+        "operation_type",
+        "source_entity",
+        "document_number",
+        "external_id",
+        "moment",
+        "state_name",
+        "sum_total",
+        "sum_paid",
+    )
+    list_filter = ("operation_type", "source_entity", "state_name", "moment")
+    search_fields = (
+        "document_number",
+        "external_id",
+        "agent_name",
+        "agent_email",
+        "agent_phone",
+        "organization_name",
+    )
+    readonly_fields = (
+        "operation_type",
+        "source_entity",
+        "external_id",
+        "document_number",
+        "moment",
+        "source_updated_at",
+        "state_name",
+        "organization_name",
+        "agent_name",
+        "agent_email",
+        "agent_phone",
+        "sum_total",
+        "sum_paid",
+        "synced_at",
+    )
+    ordering = ("-moment", "-source_updated_at", "-id")
 
     def has_add_permission(self, request):
         return False
