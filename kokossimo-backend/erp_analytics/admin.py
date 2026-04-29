@@ -8,6 +8,28 @@ from .models import (
 )
 
 
+class OperationPresetFilter(admin.SimpleListFilter):
+    title = "Бизнес-срез"
+    parameter_name = "operation_preset"
+
+    def lookups(self, request, model_admin):
+        return (
+            ("retail_only", "Только retaildemand"),
+            ("purchases_no_orders", "Покупки без заказов (demand+retaildemand)"),
+            ("net_sales", "Нетто продажи (demand+retaildemand+salesreturn)"),
+        )
+
+    def queryset(self, request, queryset):
+        value = self.value()
+        if value == "retail_only":
+            return queryset.filter(source_entity="retaildemand")
+        if value == "purchases_no_orders":
+            return queryset.filter(source_entity__in=["demand", "retaildemand"])
+        if value == "net_sales":
+            return queryset.filter(source_entity__in=["demand", "retaildemand", "salesreturn"])
+        return queryset
+
+
 @admin.register(SyncCheckpoint)
 class SyncCheckpointAdmin(admin.ModelAdmin):
     list_display = (
@@ -120,9 +142,10 @@ class MoyskladOperationAdmin(admin.ModelAdmin):
         "moment",
         "state_name",
         "sum_total",
+        "sum_total_signed",
         "sum_paid",
     )
-    list_filter = ("operation_type", "source_entity", "state_name", "moment")
+    list_filter = (OperationPresetFilter, "operation_type", "source_entity", "state_name", "moment")
     search_fields = (
         "document_number",
         "external_id",
@@ -154,3 +177,9 @@ class MoyskladOperationAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+    @admin.display(description="Сумма (с учетом возврата)")
+    def sum_total_signed(self, obj):
+        if obj.source_entity == "salesreturn":
+            return -obj.sum_total
+        return obj.sum_total
