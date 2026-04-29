@@ -10,6 +10,7 @@ from django.utils.dateparse import parse_datetime
 
 from erp_analytics.models import (
     MoyskladCustomerOrder,
+    MoyskladOperation,
     RawMoyskladRecord,
     SyncCheckpoint,
 )
@@ -51,11 +52,16 @@ def _payload_hash(payload):
 class Command(BaseCommand):
     help = (
         "Изолированная синхронизация МойСклад в отдельную analytics-БД "
-        "(raw + очищенные заказы)."
+        "(raw + очищенные документы и операции)."
     )
 
     analytics_alias = "analytics"
-    entity = "customerorder"
+    entities = (
+        ("customerorder", "order", "get_customer_orders"),
+        ("demand", "sale", "get_demands"),
+        ("retaildemand", "sale_retail", "get_retail_demands"),
+        ("salesreturn", "return", "get_sales_returns"),
+    )
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -96,10 +102,10 @@ class Command(BaseCommand):
         return f"updated>{stamp}"
 
     def _build_date_range_filter(self, from_date, to_date):
-        # Используем поле updated, чтобы диапазон совпадал с инкрементальной логикой.
+        # Для ручного диапазона используем дату документа (moment), а не дату обновления.
         return (
-            f"updated>={from_date.isoformat()} 00:00:00;"
-            f"updated<={to_date.isoformat()} 23:59:59"
+            f"moment>={from_date.isoformat()} 00:00:00;"
+            f"moment<={to_date.isoformat()} 23:59:59"
         )
 
     def _extract_clean_order(self, row):
@@ -119,70 +125,66 @@ class Command(BaseCommand):
             "sum_paid": _to_money(row.get("payedSum")),
         }
 
-    def handle(self, *args, **options):
-        page_size = max(1, min(int(options["page_size"]), 1000))
-        max_pages = max(0, int(options["max_pages"]))
-        full_refresh = bool(options["full_refresh"])
-        from_date_str = _safe_text(options["from_date"])
-        to_date_str = _safe_text(options["to_date"])
+    def _extract_clean_operation(self, row, source_entity, operation_type):
+        state = row.get("state") or {}
+        organization = row.get("organization") or {}
+        agent = row.get("agent") or {}
+        return {
+            "operation_type": operation_type,
+            "document_number": _safe_text(row.get("name")),
+            "moment": _safe_datetime(row.get("moment")),
+            "source_updated_at": _safe_datetime(row.get("updated")),
+            "state_name": _safe_text(state.get("name")),
+            "organization_name": _safe_text(organization.get("name")),
+            "agent_name": _safe_text(agent.get("name")),
+            "agent_email": _safe_text(agent.get("email")),
+            "agent_phone": _safe_text(agent.get("phone")),
+            "sum_total": _to_money(row.get("sum")),
+            "sum_paid": _to_money(row.get("payedSum")),
+            "source_entity": source_entity,
+        }
 
-        try:
-            client = MoySkladClient()
-        except MoySkladConfigError as exc:
-            raise CommandError(str(exc)) from exc
-
+    def _sync_entity(
+        self,
+        client,
+        entity_name,
+        operation_type,
+        fetcher_name,
+        page_size,
+        max_pages,
+        full_refresh,
+        from_date=None,
+        to_date=None,
+    ):
         checkpoint, _ = SyncCheckpoint.objects.using(self.analytics_alias).get_or_create(
-            entity=self.entity
+            entity=entity_name
         )
         filter_expr = ""
-        from_date = None
-        to_date = None
-        if from_date_str:
-            try:
-                from_date = date.fromisoformat(from_date_str)
-            except ValueError as exc:
-                raise CommandError(f"Некорректный --from-date: {from_date_str}") from exc
-
-            if to_date_str:
-                try:
-                    to_date = date.fromisoformat(to_date_str)
-                except ValueError as exc:
-                    raise CommandError(f"Некорректный --to-date: {to_date_str}") from exc
-            else:
-                to_date = timezone.localdate()
-
-            if from_date > to_date:
-                raise CommandError("--from-date не может быть позже --to-date.")
-
+        if from_date and to_date:
             filter_expr = self._build_date_range_filter(from_date, to_date)
         elif not full_refresh:
             filter_expr = self._build_filter_expr(checkpoint.last_synced_at)
-
-        self.stdout.write(
-            f"Старт sync в '{self.analytics_alias}' для {self.entity}. "
-            f"page_size={page_size}, filter={'on' if filter_expr else 'off'}"
-        )
-        if from_date and to_date:
-            self.stdout.write(f"Диапазон дат: {from_date.isoformat()}..{to_date.isoformat()}")
 
         stats = {
             "pages": 0,
             "rows_seen": 0,
             "raw_created": 0,
             "raw_updated": 0,
-            "clean_created": 0,
-            "clean_updated": 0,
+            "orders_created": 0,
+            "orders_updated": 0,
+            "operations_created": 0,
+            "operations_updated": 0,
             "skipped_without_id": 0,
         }
         filter_fallback_used = False
-
-        offset = 0
         max_source_updated_at = checkpoint.last_synced_at
+        offset = 0
 
+        fetcher = getattr(client, fetcher_name)
         try:
             while True:
                 try:
-                    payload = client.get_customer_orders(
+                    payload = fetcher(
                         limit=page_size,
                         offset=offset,
                         filter_expr=filter_expr,
@@ -194,11 +196,13 @@ class Command(BaseCommand):
                         filter_fallback_used = True
                         self.stdout.write(
                             self.style.WARNING(
-                                "Инкрементальный filter не принят API, переключаюсь на полный проход."
+                                f"[{entity_name}] инкрементальный filter не принят API, "
+                                "переключаюсь на полный проход."
                             )
                         )
                         continue
                     raise
+
                 rows = payload.get("rows", []) or []
                 if not rows:
                     break
@@ -219,10 +223,9 @@ class Command(BaseCommand):
                         max_source_updated_at = row_updated
 
                     payload_hash = _payload_hash(row)
-
                     with transaction.atomic(using=self.analytics_alias):
                         _, raw_created = RawMoyskladRecord.objects.using(self.analytics_alias).update_or_create(
-                            entity=self.entity,
+                            entity=entity_name,
                             external_id=external_id,
                             defaults={
                                 "source_updated_at": row_updated,
@@ -235,29 +238,38 @@ class Command(BaseCommand):
                         else:
                             stats["raw_updated"] += 1
 
-                        _, clean_created = MoyskladCustomerOrder.objects.using(self.analytics_alias).update_or_create(
+                        if entity_name == "customerorder":
+                            _, order_created = MoyskladCustomerOrder.objects.using(self.analytics_alias).update_or_create(
+                                external_id=external_id,
+                                defaults=self._extract_clean_order(row),
+                            )
+                            if order_created:
+                                stats["orders_created"] += 1
+                            else:
+                                stats["orders_updated"] += 1
+
+                        _, op_created = MoyskladOperation.objects.using(self.analytics_alias).update_or_create(
+                            source_entity=entity_name,
                             external_id=external_id,
-                            defaults=self._extract_clean_order(row),
+                            defaults=self._extract_clean_operation(row, entity_name, operation_type),
                         )
-                        if clean_created:
-                            stats["clean_created"] += 1
+                        if op_created:
+                            stats["operations_created"] += 1
                         else:
-                            stats["clean_updated"] += 1
+                            stats["operations_updated"] += 1
 
                 self.stdout.write(
-                    f"Страница {stats['pages']}: +{len(rows)} строк, "
+                    f"[{entity_name}] стр. {stats['pages']}: +{len(rows)} строк, "
                     f"raw c/u={stats['raw_created']}/{stats['raw_updated']}, "
-                    f"clean c/u={stats['clean_created']}/{stats['clean_updated']}"
+                    f"ops c/u={stats['operations_created']}/{stats['operations_updated']}"
                 )
 
                 if max_pages and stats["pages"] >= max_pages:
-                    self.stdout.write("Остановлено по --max-pages.")
+                    self.stdout.write(f"[{entity_name}] остановлено по --max-pages.")
                     break
-
                 if len(rows) < page_size:
                     break
                 offset += page_size
-
         except MoySkladError as exc:
             checkpoint.last_status = "error"
             checkpoint.last_error = _safe_text(exc)
@@ -266,7 +278,7 @@ class Command(BaseCommand):
                 using=self.analytics_alias,
                 update_fields=["last_status", "last_error", "rows_processed", "last_run_at"],
             )
-            raise CommandError(f"Ошибка API МойСклад: {exc}") from exc
+            raise
 
         checkpoint.last_status = "success"
         checkpoint.last_error = ""
@@ -283,14 +295,83 @@ class Command(BaseCommand):
                 "last_synced_at",
             ],
         )
+        return stats
+
+    def handle(self, *args, **options):
+        page_size = max(1, min(int(options["page_size"]), 1000))
+        max_pages = max(0, int(options["max_pages"]))
+        full_refresh = bool(options["full_refresh"])
+        from_date_str = _safe_text(options["from_date"])
+        to_date_str = _safe_text(options["to_date"])
+
+        try:
+            client = MoySkladClient()
+        except MoySkladConfigError as exc:
+            raise CommandError(str(exc)) from exc
+        from_date = None
+        to_date = None
+        if from_date_str:
+            try:
+                from_date = date.fromisoformat(from_date_str)
+            except ValueError as exc:
+                raise CommandError(f"Некорректный --from-date: {from_date_str}") from exc
+
+            if to_date_str:
+                try:
+                    to_date = date.fromisoformat(to_date_str)
+                except ValueError as exc:
+                    raise CommandError(f"Некорректный --to-date: {to_date_str}") from exc
+            else:
+                to_date = timezone.localdate()
+
+            if from_date > to_date:
+                raise CommandError("--from-date не может быть позже --to-date.")
+
+        self.stdout.write(
+            f"Старт sync в '{self.analytics_alias}': page_size={page_size}, "
+            f"entities={', '.join(entity for entity, _, _ in self.entities)}"
+        )
+        if from_date and to_date:
+            self.stdout.write(f"Диапазон дат: {from_date.isoformat()}..{to_date.isoformat()}")
+
+        total_stats = {
+            "pages": 0,
+            "rows_seen": 0,
+            "raw_created": 0,
+            "raw_updated": 0,
+            "orders_created": 0,
+            "orders_updated": 0,
+            "operations_created": 0,
+            "operations_updated": 0,
+            "skipped_without_id": 0,
+        }
+        try:
+            for entity_name, operation_type, fetcher_name in self.entities:
+                entity_stats = self._sync_entity(
+                    client=client,
+                    entity_name=entity_name,
+                    operation_type=operation_type,
+                    fetcher_name=fetcher_name,
+                    page_size=page_size,
+                    max_pages=max_pages,
+                    full_refresh=full_refresh,
+                    from_date=from_date,
+                    to_date=to_date,
+                )
+                for key in total_stats:
+                    total_stats[key] += entity_stats.get(key, 0)
+
+        except MoySkladError as exc:
+            raise CommandError(f"Ошибка API МойСклад: {exc}") from exc
 
         self.stdout.write(
             self.style.SUCCESS(
                 "Готово: "
-                f"страниц {stats['pages']}, "
-                f"строк {stats['rows_seen']}, "
-                f"raw created/updated {stats['raw_created']}/{stats['raw_updated']}, "
-                f"clean created/updated {stats['clean_created']}/{stats['clean_updated']}, "
-                f"пропущено без id {stats['skipped_without_id']}."
+                f"страниц {total_stats['pages']}, "
+                f"строк {total_stats['rows_seen']}, "
+                f"raw created/updated {total_stats['raw_created']}/{total_stats['raw_updated']}, "
+                f"orders created/updated {total_stats['orders_created']}/{total_stats['orders_updated']}, "
+                f"operations created/updated {total_stats['operations_created']}/{total_stats['operations_updated']}, "
+                f"пропущено без id {total_stats['skipped_without_id']}."
             )
         )
