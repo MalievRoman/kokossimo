@@ -160,10 +160,54 @@ class Command(BaseCommand):
             entity=entity_name
         )
         filter_expr = ""
+        resume_mode = bool(from_date and to_date)
+        start_offset = 0
         if from_date and to_date:
             filter_expr = self._build_date_range_filter(from_date, to_date)
+            if (
+                checkpoint.resume_active
+                and checkpoint.resume_filter_from == from_date
+                and checkpoint.resume_filter_to == to_date
+                and checkpoint.resume_next_offset > 0
+            ):
+                start_offset = int(checkpoint.resume_next_offset)
+                self.stdout.write(
+                    self.style.WARNING(
+                        f"[{entity_name}] продолжаю с offset={start_offset} "
+                        f"для диапазона {from_date}..{to_date}"
+                    )
+                )
+            else:
+                checkpoint.resume_filter_from = from_date
+                checkpoint.resume_filter_to = to_date
+                checkpoint.resume_next_offset = 0
+                checkpoint.resume_active = True
         elif not full_refresh:
             filter_expr = self._build_filter_expr(checkpoint.last_synced_at)
+            checkpoint.resume_filter_from = None
+            checkpoint.resume_filter_to = None
+            checkpoint.resume_next_offset = 0
+            checkpoint.resume_active = False
+        else:
+            checkpoint.resume_filter_from = None
+            checkpoint.resume_filter_to = None
+            checkpoint.resume_next_offset = 0
+            checkpoint.resume_active = False
+
+        checkpoint.last_status = "running"
+        checkpoint.last_error = ""
+        checkpoint.save(
+            using=self.analytics_alias,
+            update_fields=[
+                "last_status",
+                "last_error",
+                "last_run_at",
+                "resume_filter_from",
+                "resume_filter_to",
+                "resume_next_offset",
+                "resume_active",
+            ],
+        )
 
         stats = {
             "pages": 0,
@@ -178,7 +222,7 @@ class Command(BaseCommand):
         }
         filter_fallback_used = False
         max_source_updated_at = checkpoint.last_synced_at
-        offset = 0
+        offset = start_offset
 
         fetcher = getattr(client, fetcher_name)
         try:
@@ -263,26 +307,50 @@ class Command(BaseCommand):
                     f"raw c/u={stats['raw_created']}/{stats['raw_updated']}, "
                     f"ops c/u={stats['operations_created']}/{stats['operations_updated']}"
                 )
+                next_offset = offset + len(rows)
+                checkpoint.rows_processed = stats["rows_seen"]
+                checkpoint.resume_next_offset = next_offset if resume_mode else 0
+                checkpoint.resume_active = bool(resume_mode)
+                checkpoint.save(
+                    using=self.analytics_alias,
+                    update_fields=[
+                        "rows_processed",
+                        "last_run_at",
+                        "resume_next_offset",
+                        "resume_active",
+                    ],
+                )
 
                 if max_pages and stats["pages"] >= max_pages:
                     self.stdout.write(f"[{entity_name}] остановлено по --max-pages.")
                     break
                 if len(rows) < page_size:
                     break
-                offset += page_size
+                offset = next_offset
         except MoySkladError as exc:
             checkpoint.last_status = "error"
             checkpoint.last_error = _safe_text(exc)
             checkpoint.rows_processed = stats["rows_seen"]
+            checkpoint.resume_active = bool(resume_mode)
+            checkpoint.resume_next_offset = offset
             checkpoint.save(
                 using=self.analytics_alias,
-                update_fields=["last_status", "last_error", "rows_processed", "last_run_at"],
+                update_fields=[
+                    "last_status",
+                    "last_error",
+                    "rows_processed",
+                    "last_run_at",
+                    "resume_active",
+                    "resume_next_offset",
+                ],
             )
             raise
 
         checkpoint.last_status = "success"
         checkpoint.last_error = ""
         checkpoint.rows_processed = stats["rows_seen"]
+        checkpoint.resume_active = False
+        checkpoint.resume_next_offset = 0
         if max_source_updated_at:
             checkpoint.last_synced_at = max_source_updated_at
         checkpoint.save(
@@ -293,6 +361,8 @@ class Command(BaseCommand):
                 "rows_processed",
                 "last_run_at",
                 "last_synced_at",
+                "resume_active",
+                "resume_next_offset",
             ],
         )
         return stats
