@@ -20,6 +20,7 @@ from django.http import JsonResponse, HttpResponse, HttpResponseRedirect
 import base64
 import logging
 import uuid
+import re
 from decimal import ROUND_HALF_UP
 
 from yookassa import Configuration, Payment
@@ -151,10 +152,20 @@ def _yookassa_receipt_customer(order):
     customer = {}
     email = str(getattr(order, "email", "") or "").strip()
     phone = str(getattr(order, "phone", "") or "").strip()
+
+    # YooKassa validates customer_phone strictly in E.164.
+    # Store raw phone in order as-is, but pass only normalized number to receipt.
+    digits = re.sub(r"\D+", "", phone)
+    if len(digits) == 10:
+        digits = f"7{digits}"
+    elif len(digits) == 11 and digits.startswith("8"):
+        digits = f"7{digits[1:]}"
+    normalized_phone = f"+{digits}" if len(digits) == 11 and digits.startswith("7") else ""
+
     if email:
         customer["email"] = email
-    if phone:
-        customer["phone"] = phone
+    if normalized_phone:
+        customer["phone"] = normalized_phone
     return customer
 
 
