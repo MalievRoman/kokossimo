@@ -147,6 +147,78 @@ def _yookassa_confirmation_url(payment):
     return getattr(confirmation, "confirmation_url", "") or ""
 
 
+def _yookassa_receipt_customer(order):
+    customer = {}
+    email = str(getattr(order, "email", "") or "").strip()
+    phone = str(getattr(order, "phone", "") or "").strip()
+    if email:
+        customer["email"] = email
+    if phone:
+        customer["phone"] = phone
+    return customer
+
+
+def _yookassa_receipt_items(order):
+    vat_code = int(getattr(settings, "YOOKASSA_RECEIPT_VAT_CODE", 1) or 1)
+    items = []
+    goods_total = Decimal("0.00")
+
+    for row in order.items.all():
+        quantity = Decimal(str(row.quantity or 0))
+        if quantity <= 0:
+            continue
+        unit_price = Decimal(str(row.price or 0)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        line_total = (unit_price * quantity).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        goods_total += line_total
+        title = (str(row.title or "").strip() or (row.product.name if row.product_id else "Товар"))[:128]
+        payment_subject = "payment" if row.is_gift_certificate else "commodity"
+        items.append(
+            {
+                "description": title,
+                "quantity": f"{quantity:.3f}",
+                "amount": {
+                    "value": _yookassa_amount(unit_price),
+                    "currency": "RUB",
+                },
+                "vat_code": vat_code,
+                "payment_mode": "full_payment",
+                "payment_subject": payment_subject,
+            }
+        )
+
+    delivery_amount = (Decimal(str(order.total_price or 0)) - goods_total).quantize(
+        Decimal("0.01"),
+        rounding=ROUND_HALF_UP,
+    )
+    if delivery_amount > 0:
+        items.append(
+            {
+                "description": "Доставка",
+                "quantity": "1.000",
+                "amount": {
+                    "value": _yookassa_amount(delivery_amount),
+                    "currency": "RUB",
+                },
+                "vat_code": vat_code,
+                "payment_mode": "full_payment",
+                "payment_subject": "service",
+            }
+        )
+
+    return items
+
+
+def _build_yookassa_receipt(order):
+    customer = _yookassa_receipt_customer(order)
+    items = _yookassa_receipt_items(order)
+    if not customer or not items:
+        return None
+    return {
+        "customer": customer,
+        "items": items,
+    }
+
+
 def _sync_yookassa_payment_state(order, payment):
     payment_status = str(getattr(payment, "status", "") or "")
     if not payment_status:
@@ -223,6 +295,9 @@ def _create_yookassa_payment(order, request):
             "user_id": str(order.user_id or ""),
         },
     }
+    receipt = _build_yookassa_receipt(order)
+    if receipt:
+        payment_request["receipt"] = receipt
 
     payment = Payment.create(payment_request, str(uuid.uuid4()))
     confirmation_url = _yookassa_confirmation_url(payment)
