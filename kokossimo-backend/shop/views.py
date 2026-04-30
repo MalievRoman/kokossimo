@@ -183,6 +183,28 @@ def _get_existing_yookassa_payment(order):
     return payment
 
 
+def _sync_order_payment_if_needed(order):
+    if not _yookassa_enabled():
+        return
+    if order.payment_method != "card_online":
+        return
+    if order.payment_provider and order.payment_provider != "yookassa":
+        return
+    if not order.payment_id:
+        return
+    if order.payment_status in ("succeeded", "canceled") or order.status in ("paid", "cancelled"):
+        return
+
+    try:
+        _get_existing_yookassa_payment(order)
+    except Exception:
+        logger.warning(
+            "Failed to sync YooKassa status for order %s",
+            order.id,
+            exc_info=True,
+        )
+
+
 def _create_yookassa_payment(order, request):
     _configure_yookassa()
     payment_request = {
@@ -1344,6 +1366,8 @@ def yookassa_webhook(request):
 @permission_classes([IsAuthenticated])
 def list_orders(request):
     orders = Order.objects.filter(user=request.user).prefetch_related('items__product').order_by('-created_at')
+    for order in orders:
+        _sync_order_payment_if_needed(order)
     return Response(OrderSerializer(orders, many=True, context={'request': request}).data)
 
 
@@ -1355,6 +1379,7 @@ def order_detail(request, order_id):
         order = Order.objects.prefetch_related('items__product').get(id=order_id, user=request.user)
     except Order.DoesNotExist:
         return Response({"detail": "Заказ не найден."}, status=status.HTTP_404_NOT_FOUND)
+    _sync_order_payment_if_needed(order)
     return Response(OrderSerializer(order, context={'request': request}).data)
 
 

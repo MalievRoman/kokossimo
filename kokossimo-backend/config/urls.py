@@ -135,6 +135,7 @@ urlpatterns = [
     path('api/orders/', create_order),
     path('api/payments/yookassa/create/', create_yookassa_payment),
     path('api/payments/yookassa/webhook/', yookassa_webhook),
+    path('api/payments/yookassa/webhook', yookassa_webhook),
     path('api/orders/list/', list_orders),
     path('api/orders/<int:order_id>/', order_detail),
     path('api/products/<int:product_id>/ratings/', product_ratings),
