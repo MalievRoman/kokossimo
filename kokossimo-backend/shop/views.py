@@ -224,10 +224,39 @@ def _build_yookassa_receipt(order):
     items = _yookassa_receipt_items(order)
     if not customer or not items:
         return None
-    return {
+    receipt = {
         "customer": customer,
         "items": items,
     }
+    tax_system_code = getattr(settings, "YOOKASSA_RECEIPT_TAX_SYSTEM_CODE", None)
+    if tax_system_code is not None:
+        receipt["tax_system_code"] = int(tax_system_code)
+    return receipt
+
+
+def _yookassa_receipt_validation_errors(order):
+    errors = []
+    customer = _yookassa_receipt_customer(order)
+    items = _yookassa_receipt_items(order)
+
+    if not items:
+        errors.append("В заказе нет позиций для чека.")
+
+    if not customer:
+        raw_phone = str(getattr(order, "phone", "") or "").strip()
+        if raw_phone:
+            errors.append(
+                "Телефон для чека должен быть в формате E.164 (например, +79991234567) либо укажите email."
+            )
+        else:
+            errors.append("Для чека нужен телефон или email покупателя.")
+
+    if customer and items and getattr(settings, "YOOKASSA_RECEIPT_TAX_SYSTEM_CODE", None) is None:
+        errors.append(
+            "Не задан YOOKASSA_RECEIPT_TAX_SYSTEM_CODE (код системы налогообложения для чека; при проверке чеков в ЮKassa он обычно обязателен)."
+        )
+
+    return errors
 
 
 def _sync_yookassa_payment_state(order, payment):
@@ -1340,6 +1369,16 @@ def create_yookassa_payment(request):
     if order.payment_method != "card_online":
         return Response({"detail": "Для заказа не выбрана онлайн-оплата."}, status=status.HTTP_400_BAD_REQUEST)
 
+    receipt_errors = _yookassa_receipt_validation_errors(order)
+    if receipt_errors:
+        return Response(
+            {
+                "detail": "Нельзя создать платеж: данные для чека не проходят валидацию.",
+                "receipt_errors": receipt_errors,
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
     # Уже оплачен: повторный checkout не создаем.
     if order.payment_status == "succeeded" or order.status == "paid":
         return Response(
@@ -1373,7 +1412,14 @@ def create_yookassa_payment(request):
         if not confirmation_url:
             payment, confirmation_url = _create_yookassa_payment(order, request)
     except Exception as exc:
-        logger.exception("Failed to create YooKassa payment for order %s", order.id)
+        extra = {}
+        for attr in ("status", "code", "message", "description", "response", "body"):
+            if hasattr(exc, attr):
+                try:
+                    extra[attr] = getattr(exc, attr)
+                except Exception:
+                    pass
+        logger.exception("Failed to create YooKassa payment for order %s extra=%s", order.id, extra)
         return Response({"detail": f"Не удалось создать платеж: {exc}"}, status=status.HTTP_502_BAD_GATEWAY)
 
     return Response(
