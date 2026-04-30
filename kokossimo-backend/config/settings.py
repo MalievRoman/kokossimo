@@ -239,6 +239,9 @@ YOOKASSA_RETURN_URL = os.getenv(
     'YOOKASSA_RETURN_URL',
     f'{FRONTEND_URL}/checkout/success',
 )
+# Код ставки НДС для позиций чека:
+# 1 — без НДС, 2 — НДС 0%, 3 — НДС 10%, 4 — НДС 20%, 5 — НДС 10/110, 6 — НДС 20/120.
+YOOKASSA_RECEIPT_VAT_CODE = int(os.getenv('YOOKASSA_RECEIPT_VAT_CODE', '1'))
 
 # Telegram-бот для обратной связи (отзывы, предложения, просьбы о связи)
 # Токен создаётся у @BotFather. Запуск: python manage.py run_telegram_bot
