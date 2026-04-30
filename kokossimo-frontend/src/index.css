@@ -37,24 +37,45 @@ body {
   background-color: #fff4d6;
   border-bottom: 1px solid #ead7a1;
   color: #6b4f1f;
+  overflow: hidden;
 }
 
-.development-notice .container {
+.development-notice__viewport {
+  width: 100%;
   padding-top: 0.75rem;
   padding-bottom: 0.75rem;
+  overflow: hidden;
 }
 
-.development-notice p {
+.development-notice__track {
+  display: flex;
+  align-items: center;
+  gap: 4rem;
+  width: max-content;
+  animation: developmentNoticeSlide 18s linear infinite;
+}
+
+.development-notice__text {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 1.425rem;
   line-height: 1.4;
-  text-align: center;
   font-weight: 600;
+  white-space: nowrap;
+  flex: 0 0 auto;
 }
 
 @media (max-width: 640px) {
-  .development-notice p {
-    font-size: 0.85rem;
+  .development-notice__text {
+    font-size: 1.275rem;
+  }
+}
+
+@keyframes developmentNoticeSlide {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
   }
 }
 

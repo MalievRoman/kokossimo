@@ -444,10 +444,15 @@ const Header = () => {
           </div>
         </div>
         <section className="development-notice" role="status" aria-live="polite">
-          <div className="container">
-            <p>
-              Сайт находится в разработке. Заказы временно не обрабатываются до полного запуска.
-            </p>
+          <div className="development-notice__viewport">
+            <div className="development-notice__track">
+              <p className="development-notice__text">
+                Сайт находится в разработке. Заказы временно не обрабатываются до полного запуска.
+              </p>
+              <p className="development-notice__text" aria-hidden="true">
+                Сайт находится в разработке. Заказы временно не обрабатываются до полного запуска.
+              </p>
+            </div>
           </div>
         </section>
       </header>
