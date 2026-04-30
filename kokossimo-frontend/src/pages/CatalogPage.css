@@ -733,6 +733,11 @@
   opacity: 0;
 }
 
+.sort-select option {
+  color: #240100;
+  background: #fcf8f7;
+}
+
 .sort-select-value {
   display: inline-block;
   min-width: 0;
