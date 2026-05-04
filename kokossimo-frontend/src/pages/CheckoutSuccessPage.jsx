@@ -10,6 +10,7 @@ const CheckoutSuccessPage = () => {
   const orderId = params.get('order');
   const orderHref = orderId ? `/profile?tab=orders&order=${orderId}` : '/profile?tab=orders';
   const [isCheckingPayment, setIsCheckingPayment] = useState(true);
+  const [isPaymentConfirmed, setIsPaymentConfirmed] = useState(false);
   const [checkError, setCheckError] = useState('');
 
   useEffect(() => {
@@ -28,6 +29,7 @@ const CheckoutSuccessPage = () => {
       }
 
       setIsCheckingPayment(true);
+      setIsPaymentConfirmed(false);
       setCheckError('');
 
       try {
@@ -42,11 +44,12 @@ const CheckoutSuccessPage = () => {
           const orderStatus = String(order.status || '').toLowerCase();
 
           if (paymentStatus === 'succeeded' || orderStatus === 'paid') {
+            setIsPaymentConfirmed(true);
             setIsCheckingPayment(false);
             return;
           }
 
-          if (paymentStatus === 'canceled' || orderStatus === 'cancelled') {
+          if (paymentStatus === 'canceled' || paymentStatus === 'cancelled' || orderStatus === 'cancelled') {
             navigate(`/checkout/failed?order=${orderId}`, { replace: true });
             return;
           }
@@ -113,6 +116,31 @@ const CheckoutSuccessPage = () => {
               НЕ УДАЛОСЬ ПРОВЕРИТЬ ОПЛАТУ
             </h1>
             <p className="checkout-success__text">{checkError}</p>
+            <div className="checkout-success__actions">
+              <Link to={orderHref} className="checkout-success__button checkout-success__button--solid">
+                ПЕРЕЙТИ К ЗАКАЗУ
+              </Link>
+              <Link to="/catalog" className="checkout-success__button checkout-success__button--outline">
+                ПРОДОЛЖИТЬ ПОКУПКИ
+              </Link>
+            </div>
+          </section>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isPaymentConfirmed) {
+    return (
+      <div className="checkout-success page-animation">
+        <div className="container">
+          <section className="checkout-success__content" aria-labelledby="checkout-success-title">
+            <h1 className="checkout-success__title" id="checkout-success-title">
+              НЕ УДАЛОСЬ ПОДТВЕРДИТЬ ОПЛАТУ
+            </h1>
+            <p className="checkout-success__text">
+              Мы не получили подтверждение успешной оплаты. Перейдите к заказу и попробуйте проверить статус позже.
+            </p>
             <div className="checkout-success__actions">
               <Link to={orderHref} className="checkout-success__button checkout-success__button--solid">
                 ПЕРЕЙТИ К ЗАКАЗУ
