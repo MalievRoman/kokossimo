@@ -21,6 +21,7 @@ import base64
 import logging
 import uuid
 import re
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from decimal import ROUND_HALF_UP
 
 from yookassa import Configuration, Payment
@@ -136,9 +137,11 @@ def _configure_yookassa():
 
 def _yookassa_return_url(request, order):
     configured = (getattr(settings, "YOOKASSA_RETURN_URL", "") or "").strip()
-    if configured:
-        return configured
-    return request.build_absolute_uri(f"/checkout/success?order={order.id}")
+    base_url = configured or request.build_absolute_uri("/checkout/success")
+    parsed = urlsplit(base_url)
+    query = dict(parse_qsl(parsed.query, keep_blank_values=True))
+    query["order"] = str(order.id)
+    return urlunsplit(parsed._replace(query=urlencode(query)))
 
 
 def _yookassa_confirmation_url(payment):
