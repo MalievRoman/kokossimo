@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { getOrderDetail } from '../services/api';
+import { refreshOrderPayment } from '../services/api';
 import './CheckoutSuccessPage.css';
 
 const CheckoutSuccessPage = () => {
@@ -34,22 +34,21 @@ const CheckoutSuccessPage = () => {
 
       try {
         for (let attempt = 0; attempt < 4; attempt += 1) {
-          const response = await getOrderDetail(authToken, orderId);
+          const response = await refreshOrderPayment(authToken, orderId);
           if (isCancelled) {
             return;
           }
 
           const order = response?.data || {};
           const paymentStatus = String(order.payment_status || '').toLowerCase();
-          const orderStatus = String(order.status || '').toLowerCase();
 
-          if (paymentStatus === 'succeeded' || orderStatus === 'paid') {
+          if (paymentStatus === 'succeeded') {
             setIsPaymentConfirmed(true);
             setIsCheckingPayment(false);
             return;
           }
 
-          if (paymentStatus === 'canceled' || paymentStatus === 'cancelled' || orderStatus === 'cancelled') {
+          if (paymentStatus === 'canceled' || paymentStatus === 'cancelled') {
             navigate(`/checkout/failed?order=${orderId}`, { replace: true });
             return;
           }

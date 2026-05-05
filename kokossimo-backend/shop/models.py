@@ -300,6 +300,7 @@ class FavoriteItem(models.Model):
 class Order(models.Model):
     STATUS_CHOICES = [
         ('new', 'Новый'),
+        ('awaiting_payment', 'Ожидает оплаты'),
         ('processing', 'В обработке'),
         ('paid', 'Оплачен'),
         ('shipped', 'Отправлен'),
