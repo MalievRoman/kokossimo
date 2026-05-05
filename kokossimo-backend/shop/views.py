@@ -10,7 +10,7 @@ from django.conf import settings
 from django.core.mail import send_mail
 from django.core import signing
 from django.utils import timezone
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone as dt_timezone
 import secrets
 from django.db.models import Q, Avg, Count, Min, Max, Prefetch
 from django.db import transaction
@@ -30,6 +30,7 @@ from .models import Product, Category, Profile, Order, EmailVerificationCode, Pr
 from .delivery_cities import DELIVERY_CITIES
 
 logger = logging.getLogger(__name__)
+_PENDING_PAYMENT_LINK_LIFETIME = timedelta(hours=1)
 # Миниатюра 1×1 прозрачный GIF — чтобы при ошибках отдавать изображение, а не JSON,
 # иначе браузер блокирует ответ (ERR_BLOCKED_BY_ORB) при запросе через <img src="...">.
 _PLACEHOLDER_IMAGE_GIF = base64.b64decode("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7")
@@ -149,6 +150,26 @@ def _yookassa_confirmation_url(payment):
     if confirmation is None:
         return ""
     return getattr(confirmation, "confirmation_url", "") or ""
+
+
+def _parse_yookassa_datetime(value):
+    raw = str(value or "").strip()
+    if not raw:
+        return None
+    try:
+        parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if timezone.is_naive(parsed):
+        return timezone.make_aware(parsed, timezone=dt_timezone.utc)
+    return parsed
+
+
+def _is_payment_link_alive(payment):
+    created_at = _parse_yookassa_datetime(getattr(payment, "created_at", None))
+    if created_at is None:
+        return False
+    return timezone.now() < (created_at + _PENDING_PAYMENT_LINK_LIFETIME)
 
 
 def _yookassa_receipt_customer(order):
@@ -273,10 +294,15 @@ def _sync_yookassa_payment_state(order, payment):
         "payment_status": payment_status,
     }
     if payment_status == "succeeded":
-        updates["status"] = "paid"
-        updates["yookassa_payment_id"] = updates["payment_id"]
-        if not order.paid_at:
-            updates["paid_at"] = timezone.now()
+        # Отмененный заказ никогда не переводим обратно в "оплачен".
+        if order.status != "cancelled":
+            updates["status"] = "paid"
+            updates["yookassa_payment_id"] = updates["payment_id"]
+            if not order.paid_at:
+                updates["paid_at"] = timezone.now()
+    elif payment_status == "pending":
+        if order.status != "cancelled":
+            updates["status"] = "awaiting_payment"
     elif payment_status == "canceled":
         updates["status"] = "cancelled"
 
@@ -307,9 +333,6 @@ def _sync_order_payment_if_needed(order):
         return
     if not order.payment_id:
         return
-    if order.payment_status in ("succeeded", "canceled") or order.status in ("paid", "cancelled"):
-        return
-
     try:
         _get_existing_yookassa_payment(order)
     except Exception:
@@ -348,7 +371,9 @@ def _create_yookassa_payment(order, request):
     order.payment_provider = "yookassa"
     order.payment_id = str(getattr(payment, "id", "") or "")
     order.payment_status = str(getattr(payment, "status", "") or "pending")
-    order.save(update_fields=["payment_provider", "payment_id", "payment_status"])
+    if order.status != "cancelled":
+        order.status = "awaiting_payment"
+    order.save(update_fields=["payment_provider", "payment_id", "payment_status", "status"])
 
     return payment, confirmation_url
 
@@ -1394,10 +1419,16 @@ def create_yookassa_payment(request):
             status=status.HTTP_200_OK,
         )
 
+    if order.status == "cancelled":
+        return Response(
+            {"detail": "Отмененный заказ нельзя оплатить повторно."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
     try:
         payment = None
         confirmation_url = ""
-        if order.payment_id and order.payment_status not in ("canceled", "succeeded"):
+        if order.payment_id:
             payment = _get_existing_yookassa_payment(order)
             if order.payment_status == "succeeded" or order.status == "paid":
                 return Response(
@@ -1409,11 +1440,31 @@ def create_yookassa_payment(request):
                     },
                     status=status.HTTP_200_OK,
                 )
-            if order.payment_status != "canceled":
-                confirmation_url = _yookassa_confirmation_url(payment)
 
-        if not confirmation_url:
-            payment, confirmation_url = _create_yookassa_payment(order, request)
+            payment_status = str(getattr(payment, "status", "") or order.payment_status or "")
+            if payment_status == "pending" and _is_payment_link_alive(payment):
+                confirmation_url = _yookassa_confirmation_url(payment)
+                if confirmation_url:
+                    return Response(
+                        {
+                            "order_id": order.id,
+                            "payment_id": str(getattr(payment, "id", "") or ""),
+                            "payment_status": payment_status,
+                            "confirmation_url": confirmation_url,
+                        },
+                        status=status.HTTP_200_OK,
+                    )
+
+            if payment_status in ("pending", "canceled", "cancelled"):
+                if order.status != "cancelled":
+                    order.status = "cancelled"
+                    order.save(update_fields=["status"])
+                return Response(
+                    {"detail": "Срок действия ссылки на оплату истек или платеж отменен."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        payment, confirmation_url = _create_yookassa_payment(order, request)
     except Exception as exc:
         extra = {}
         for attr in ("status", "code", "message", "description", "response", "body"):
@@ -1481,10 +1532,16 @@ def yookassa_webhook(request):
     }
 
     if payment_status == "succeeded":
-        updates["status"] = "paid"
-        updates["yookassa_payment_id"] = payment_id
-        if not order.paid_at:
-            updates["paid_at"] = timezone.now()
+        if order.status != "cancelled":
+            updates["status"] = "paid"
+            updates["yookassa_payment_id"] = payment_id
+            if not order.paid_at:
+                updates["paid_at"] = timezone.now()
+        else:
+            logger.warning("Ignoring succeeded payment for cancelled order %s", order.id)
+    elif payment_status == "pending":
+        if order.status != "cancelled":
+            updates["status"] = "awaiting_payment"
     elif payment_status == "canceled":
         # Бизнес-логика может отличаться; для стейджа помечаем как отмененный.
         updates["status"] = "cancelled"
@@ -1516,6 +1573,16 @@ def order_detail(request, order_id):
         return Response({"detail": "Заказ не найден."}, status=status.HTTP_404_NOT_FOUND)
     _sync_order_payment_if_needed(order)
     return Response(OrderSerializer(order, context={'request': request}).data)
+
+
+@api_view(['POST'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def refresh_order_payment(request, order_id):
+    order = get_object_or_404(Order, id=order_id, user=request.user)
+    _sync_order_payment_if_needed(order)
+    order.refresh_from_db()
+    return Response(OrderSerializer(order, context={'request': request}).data, status=status.HTTP_200_OK)
 
 
 @api_view(['GET'])

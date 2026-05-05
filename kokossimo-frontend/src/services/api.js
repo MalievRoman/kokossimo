@@ -155,6 +155,14 @@ export const getOrderDetail = (token, orderId) =>
   api.get(`/orders/${orderId}/`, {
     headers: { Authorization: `Token ${token}` },
   });
+export const refreshOrderPayment = (token, orderId) =>
+  api.post(
+    `/orders/${orderId}/refresh-payment/`,
+    {},
+    {
+      headers: { Authorization: `Token ${token}` },
+    }
+  );
 
 // Специальные фильтры
 export const getBestsellers = () => api.get('/products/', { params: { is_bestseller: 'true', page_size: 12 } });

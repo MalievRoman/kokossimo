@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import { Pencil, Trash2 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
-import { deleteSavedDeliveryAddress, getCurrentUser, getMyOrders, getSavedDeliveryAddresses, logoutUser, updateProfile, updateSavedDeliveryAddress } from '../services/api';
+import { createYooKassaPayment, deleteSavedDeliveryAddress, getCurrentUser, getMyOrders, getSavedDeliveryAddresses, logoutUser, updateProfile, updateSavedDeliveryAddress } from '../services/api';
 import { formatRuPhone, isPhoneInputKeyAllowed } from '../utils/phone';
 import './ProfilePage.css';
 
@@ -18,6 +18,7 @@ const PROFILE_TABS = [
 
 const STATUS_LABELS = {
   new: 'Новый',
+  awaiting_payment: 'Ожидает оплаты',
   processing: 'В обработке',
   paid: 'Оплачен',
   shipped: 'Отправлен',
@@ -169,6 +170,7 @@ const ProfilePage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orders, setOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
+  const [payingOrderId, setPayingOrderId] = useState(null);
   const [detailsOrder, setDetailsOrder] = useState(null);
   const [savedAddressesOpen, setSavedAddressesOpen] = useState(false);
   const [savedAddresses, setSavedAddresses] = useState([]);
@@ -652,6 +654,49 @@ const ProfilePage = () => {
     showTemporaryStatus('success', `Товары из заказа №${order.id} добавлены в корзину.`);
   };
 
+  const canPayOrder = (order) =>
+    order?.payment_method === 'card_online' && order?.status === 'awaiting_payment';
+
+  const handlePayOrder = async (order) => {
+    if (!order?.id || !canPayOrder(order)) {
+      return;
+    }
+    if (!authToken) {
+      resetAuthState('Сессия истекла. Войдите в аккаунт заново.');
+      return;
+    }
+
+    try {
+      setPayingOrderId(order.id);
+      const response = await createYooKassaPayment(order.id, authToken);
+      const confirmationUrl = response?.data?.confirmation_url;
+
+      if (confirmationUrl) {
+        window.location.href = confirmationUrl;
+        return;
+      }
+
+      const paymentStatus = String(response?.data?.payment_status || '').toLowerCase();
+      if (paymentStatus === 'succeeded') {
+        navigate(`/checkout/success?order=${order.id}`);
+        return;
+      }
+
+      throw new Error('Не удалось получить ссылку на оплату.');
+    } catch (error) {
+      if (error?.__kokoAuthRedirect) {
+        return;
+      }
+      const message =
+        error?.response?.data?.detail ||
+        error?.message ||
+        'Не удалось перейти к оплате. Попробуйте позже.';
+      showTemporaryStatus('error', message);
+    } finally {
+      setPayingOrderId(null);
+    }
+  };
+
   const handleAddFavoriteToCart = (favoriteItem) => {
     const stock = Number(favoriteItem?.stock);
     const isOutOfStock =
@@ -862,6 +907,16 @@ const ProfilePage = () => {
                         <span className="profile-order-total-text">Итог: {formatPrice(order.total_price)} ₽</span>
                       </div>
                       <div className="profile-order-actions profile-order-actions--list">
+                        {canPayOrder(order) ? (
+                          <button
+                            type="button"
+                            className="profile-btn profile-btn--primary profile-btn--details"
+                            onClick={() => handlePayOrder(order)}
+                            disabled={payingOrderId === order.id}
+                          >
+                            {payingOrderId === order.id ? 'ПЕРЕХОД...' : 'ОПЛАТИТЬ'}
+                          </button>
+                        ) : null}
                         <button
                           type="button"
                           className="profile-btn profile-btn--outline profile-btn--details"
@@ -1206,6 +1261,16 @@ const ProfilePage = () => {
                     >
                       ПОВТОРИТЬ ЗАКАЗ
                     </button>
+                    {canPayOrder(detailsOrder) ? (
+                      <button
+                        type="button"
+                        className="profile-btn profile-btn--primary profile-modal__repeat-btn"
+                        onClick={() => handlePayOrder(detailsOrder)}
+                        disabled={payingOrderId === detailsOrder.id}
+                      >
+                        {payingOrderId === detailsOrder.id ? 'ПЕРЕХОД...' : 'ОПЛАТИТЬ'}
+                      </button>
+                    ) : null}
                   </div>
                 </div>,
                 document.body
