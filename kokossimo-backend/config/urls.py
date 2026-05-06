@@ -37,6 +37,7 @@ from shop.views import (
     moysklad_status,
     moysklad_assortment,
     delivery_cities_config,
+    cdek_widget_service,
 )
 
 # Оформление админки для сотрудников магазина
@@ -148,6 +149,7 @@ urlpatterns = [
     path('api/integrations/moysklad/assortment/', moysklad_assortment),
     path('api/legal/<str:slug>/', legal_document_view),
     path('api/delivery/cities/', delivery_cities_config),
+    path('api/delivery/cdek/service/', cdek_widget_service),
 ]
 
 # Отдача React приложения для всех остальных маршрутов (SPA)

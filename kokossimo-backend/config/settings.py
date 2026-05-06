@@ -250,6 +250,12 @@ YOOKASSA_RECEIPT_TAX_SYSTEM_CODE = int(_raw_tax_system_code) if _raw_tax_system_
 # Токен создаётся у @BotFather. Запуск: python manage.py run_telegram_bot
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', '')
 
+# CDEK widget (PVZ map) service credentials
+# Used by frontend widget to proxy requests to CDEK API v2.
+CDEK_WIDGET_CLIENT_ID = os.getenv('CDEK_WIDGET_CLIENT_ID', '')
+CDEK_WIDGET_CLIENT_SECRET = os.getenv('CDEK_WIDGET_CLIENT_SECRET', '')
+CDEK_WIDGET_API_BASE_URL = os.getenv('CDEK_WIDGET_API_BASE_URL', 'https://api.cdek.ru/v2')
+
 # МойСклад API settings
 MOYSKLAD_API_BASE_URL = os.getenv('MOYSKLAD_API_BASE_URL', 'https://api.moysklad.ru/api/remap/1.2')
 MOYSKLAD_TOKEN = os.getenv('MOYSKLAD_TOKEN', '')

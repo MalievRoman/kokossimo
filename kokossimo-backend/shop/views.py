@@ -22,6 +22,11 @@ import logging
 import uuid
 import re
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+from urllib.parse import urlencode as _urlencode
+from urllib.request import Request as _UrlRequest, urlopen as _urlopen
+from urllib.error import HTTPError as _HTTPError, URLError as _URLError
+import json
+import time
 from decimal import ROUND_HALF_UP
 
 from yookassa import Configuration, Payment
@@ -31,6 +36,9 @@ from .delivery_cities import DELIVERY_CITIES
 
 logger = logging.getLogger(__name__)
 _PENDING_PAYMENT_LINK_LIFETIME = timedelta(hours=1)
+# service.php from cdek-it/widget (ported to Django)
+_CDEK_WIDGET_SERVICE_VERSION = "3.11.1"
+_CDEK_TOKEN_CACHE = {"token": "", "expires_at": 0.0}
 # Миниатюра 1×1 прозрачный GIF — чтобы при ошибках отдавать изображение, а не JSON,
 # иначе браузер блокирует ответ (ERR_BLOCKED_BY_ORB) при запросе через <img src="...">.
 _PLACEHOLDER_IMAGE_GIF = base64.b64decode("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7")
@@ -863,6 +871,137 @@ def product_ratings(request, product_id):
 def delivery_cities_config(request):
     """Публичный конфиг городов доставки для оформления заказа (единый источник с расчётом суммы)."""
     return Response(DELIVERY_CITIES, status=status.HTTP_200_OK)
+
+
+def _cdek_widget_get_token():
+    client_id = (getattr(settings, "CDEK_WIDGET_CLIENT_ID", "") or "").strip()
+    client_secret = (getattr(settings, "CDEK_WIDGET_CLIENT_SECRET", "") or "").strip()
+    base_url = (getattr(settings, "CDEK_WIDGET_API_BASE_URL", "") or "https://api.cdek.ru/v2").rstrip("/")
+
+    if not client_id or not client_secret:
+        raise RuntimeError("CDEK widget credentials are not configured")
+
+    now = time.time()
+    cached_token = _CDEK_TOKEN_CACHE.get("token") or ""
+    cached_expires_at = float(_CDEK_TOKEN_CACHE.get("expires_at") or 0.0)
+    if cached_token and cached_expires_at - 10 > now:
+        return cached_token, base_url
+
+    data = _urlencode(
+        {
+            "grant_type": "client_credentials",
+            "client_id": client_id,
+            "client_secret": client_secret,
+        }
+    ).encode("utf-8")
+
+    req = _UrlRequest(
+        f"{base_url}/oauth/token",
+        data=data,
+        method="POST",
+        headers={
+            "Accept": "application/json",
+            "X-App-Name": "widget_pvz",
+            "X-App-Version": _CDEK_WIDGET_SERVICE_VERSION,
+            "User-Agent": f"widget/{_CDEK_WIDGET_SERVICE_VERSION}",
+        },
+    )
+    with _urlopen(req, timeout=20) as resp:
+        raw = resp.read().decode("utf-8")
+        payload = json.loads(raw or "{}")
+
+    token = str(payload.get("access_token") or "").strip()
+    expires_in = int(payload.get("expires_in") or 0)
+    if not token:
+        raise RuntimeError("CDEK API auth failed")
+
+    _CDEK_TOKEN_CACHE["token"] = token
+    _CDEK_TOKEN_CACHE["expires_at"] = now + max(expires_in, 60)
+    return token, base_url
+
+
+def _cdek_widget_proxy_request(method, path, *, token, base_url, query=None, json_body=None):
+    query = query or {}
+    url = f"{base_url}/{path.lstrip('/')}"
+    if query:
+        url = f"{url}?{_urlencode(query, doseq=True)}"
+
+    headers = {
+        "Accept": "application/json",
+        "X-App-Name": "widget_pvz",
+        "X-App-Version": _CDEK_WIDGET_SERVICE_VERSION,
+        "User-Agent": f"widget/{_CDEK_WIDGET_SERVICE_VERSION}",
+        "Authorization": f"Bearer {token}",
+    }
+
+    data = None
+    if json_body is not None:
+        data = json.dumps(json_body).encode("utf-8")
+        headers["Content-Type"] = "application/json"
+
+    req = _UrlRequest(url, data=data, method=method.upper(), headers=headers)
+    with _urlopen(req, timeout=30) as resp:
+        body = resp.read()
+        response_headers = dict(resp.headers.items())
+        status_code = int(getattr(resp, "status", 200) or 200)
+    return status_code, body, response_headers
+
+
+@api_view(["GET", "POST"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def cdek_widget_service(request):
+    """
+    Backend for https://widget.cdek.ru/ (cdek-it/widget).
+    Mirrors dist/service.php behavior: merges query + JSON body and proxies to CDEK API v2.
+    """
+    try:
+        query = dict(request.query_params.items())
+        body_raw = request.body.decode("utf-8") if request.body else ""
+        body_json = json.loads(body_raw) if body_raw else {}
+        if not isinstance(body_json, dict):
+            body_json = {}
+        request_data = {**query, **body_json}
+
+        action = str(request_data.get("action") or "").strip()
+        if not action:
+            return Response({"message": "Action is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        token, base_url = _cdek_widget_get_token()
+
+        proxied_data = {k: v for k, v in request_data.items() if k != "action"}
+
+        if action == "offices":
+            status_code, body, resp_headers = _cdek_widget_proxy_request(
+                "GET",
+                "deliverypoints",
+                token=token,
+                base_url=base_url,
+                query=proxied_data,
+            )
+        elif action == "calculate":
+            status_code, body, resp_headers = _cdek_widget_proxy_request(
+                "POST",
+                "calculator/tarifflist",
+                token=token,
+                base_url=base_url,
+                json_body=proxied_data,
+            )
+        else:
+            return Response({"message": "Unknown action"}, status=status.HTTP_400_BAD_REQUEST)
+
+        content_type = resp_headers.get("Content-Type", "application/json")
+        response = HttpResponse(body, content_type=content_type, status=status_code)
+        response["X-Service-Version"] = _CDEK_WIDGET_SERVICE_VERSION
+
+        for header_name, header_value in resp_headers.items():
+            if header_name.lower().startswith("x-"):
+                response[header_name] = header_value
+
+        return response
+    except (_HTTPError, _URLError, TimeoutError, ValueError, RuntimeError) as exc:
+        logger.exception("CDEK widget proxy error: %s", exc)
+        return Response({"message": "CDEK widget service error"}, status=status.HTTP_502_BAD_GATEWAY)
 
 
 @api_view(['POST'])

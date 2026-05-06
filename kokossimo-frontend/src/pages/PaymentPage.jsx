@@ -141,6 +141,40 @@ const getAddressFieldLabel = (deliveryMethod, selectedPickupPoint) => {
   return 'Адрес';
 };
 
+const loadExternalScriptOnce = (src) => {
+  if (!src) {
+    return Promise.reject(new Error('Script src is required'));
+  }
+
+  const existing = document.querySelector(`script[src="${src}"]`);
+  if (existing) {
+    if (existing.dataset.loaded === 'true') {
+      return Promise.resolve();
+    }
+    return new Promise((resolve, reject) => {
+      existing.addEventListener('load', () => resolve(), { once: true });
+      existing.addEventListener('error', () => reject(new Error(`Failed to load ${src}`)), { once: true });
+    });
+  }
+
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = src;
+    script.async = true;
+    script.dataset.loaded = 'false';
+    script.addEventListener(
+      'load',
+      () => {
+        script.dataset.loaded = 'true';
+        resolve();
+      },
+      { once: true }
+    );
+    script.addEventListener('error', () => reject(new Error(`Failed to load ${src}`)), { once: true });
+    document.head.appendChild(script);
+  });
+};
+
 const PaymentPage = ({ modalMode = false }) => {
   const { cartItems, getTotalPrice, clearCart } = useCart();
   const navigate = useNavigate();
@@ -170,6 +204,8 @@ const PaymentPage = ({ modalMode = false }) => {
   const [paymentOption, setPaymentOption] = useState('');
   const [pickupModalOpen, setPickupModalOpen] = useState(false);
   const [pickupDraftId, setPickupDraftId] = useState('');
+  const [cdekDraftOffice, setCdekDraftOffice] = useState(null);
+  const [cdekSelectedOffice, setCdekSelectedOffice] = useState(null);
   const [courierDrawerOpen, setCourierDrawerOpen] = useState(false);
   const [courierHintOpen, setCourierHintOpen] = useState(false);
   const [courierDraft, setCourierDraft] = useState(emptyCourierDraft);
@@ -205,8 +241,9 @@ const PaymentPage = ({ modalMode = false }) => {
   const pickupPoints = currentCity?.pickupPoints || [];
   const selectedPickupPoint = pickupPoints.find((point) => point.id === delivery.pickupPointId) || null;
   const pickupDraftPoint = pickupPoints.find((point) => point.id === pickupDraftId) || null;
+  const cdekEnabled = delivery.method === 'pickup' && currentCity?.pickupProvider === 'СДЭК';
   const addressFieldLabel = getAddressFieldLabel(delivery.method, selectedPickupPoint);
-  const pickupProviderLabel = getPickupProviderLabel(selectedPickupPoint, currentCity?.pickupProvider);
+  const pickupProviderLabel = cdekSelectedOffice ? 'СДЭК' : getPickupProviderLabel(selectedPickupPoint, currentCity?.pickupProvider);
 
   const deliveryFee = useMemo(() => {
     if (!currentCity || !delivery.method) return 0;
@@ -239,10 +276,10 @@ const PaymentPage = ({ modalMode = false }) => {
   const addressComplete = useMemo(() => {
     if (!currentCity || !delivery.method) return false;
     if (delivery.method === 'pickup') {
-      return Boolean(selectedPickupPoint);
+      return Boolean(selectedPickupPoint || cdekSelectedOffice);
     }
     return Boolean(delivery.courierAddress && delivery.deliveryDate && delivery.deliveryTime);
-  }, [currentCity, delivery, selectedPickupPoint]);
+  }, [cdekSelectedOffice, currentCity, delivery, selectedPickupPoint]);
 
   const readyToPay = addressComplete && recipientComplete && Boolean(paymentOption);
 
@@ -376,6 +413,8 @@ const PaymentPage = ({ modalMode = false }) => {
       deliveryTime: '',
     });
     setPickupDraftId('');
+    setCdekDraftOffice(null);
+    setCdekSelectedOffice(null);
     setCourierDraft(emptyCourierDraft);
     setIsCourierAddressSaved(false);
     setExpandedStep('address');
@@ -397,6 +436,8 @@ const PaymentPage = ({ modalMode = false }) => {
     }));
     setCourierDraft(emptyCourierDraft);
     setIsCourierAddressSaved(false);
+    setCdekDraftOffice(null);
+    setCdekSelectedOffice(null);
     setExpandedStep('address');
     setStatus({ type: '', message: '' });
     setCourierHintOpen(false);
@@ -404,6 +445,7 @@ const PaymentPage = ({ modalMode = false }) => {
 
   const openPickupModal = () => {
     setPickupDraftId(delivery.pickupPointId || pickupPoints[0]?.id || '');
+    setCdekDraftOffice(cdekSelectedOffice);
     setPickupModalOpen(true);
   };
 
@@ -416,9 +458,82 @@ const PaymentPage = ({ modalMode = false }) => {
       deliveryDate: '',
       deliveryTime: '',
     }));
+    setCdekSelectedOffice(null);
     setPickupModalOpen(false);
     setExpandedStep('recipient');
   };
+
+  const confirmCdekOffice = useCallback(
+    (office) => {
+      if (!office) return;
+      setCdekSelectedOffice(office);
+      setDelivery((prev) => ({
+        ...prev,
+        pickupPointId: String(office.code || office.name || ''),
+        courierAddress: null,
+        deliveryDate: '',
+        deliveryTime: '',
+      }));
+      setPickupModalOpen(false);
+      setExpandedStep('recipient');
+    },
+    [setDelivery]
+  );
+
+  useEffect(() => {
+    if (!pickupModalOpen || !cdekEnabled) return;
+
+    const mapRootId = 'cdek-pvz-map';
+    const apiKey = import.meta.env.VITE_YANDEX_MAPS_API_KEY;
+    const backendBase = import.meta.env.VITE_BACKEND_URL || window.location.origin;
+    const servicePath = new URL('/api/delivery/cdek/service/', backendBase).toString();
+    const fromCity = import.meta.env.VITE_CDEK_FROM_CITY || 'Элиста';
+    const widgetSrc = 'https://widget.cdek.ru/widget/cdek-widget.umd.js';
+
+    if (!apiKey) {
+      setStatus({ type: 'error', message: 'Для карты ПВЗ нужен ключ Яндекс.Карт (VITE_YANDEX_MAPS_API_KEY).' });
+      return;
+    }
+
+    const rootEl = document.getElementById(mapRootId);
+    if (rootEl) {
+      rootEl.innerHTML = '';
+    }
+
+    let cancelled = false;
+
+    loadExternalScriptOnce(widgetSrc)
+      .then(() => {
+        if (cancelled) return;
+        if (!window.CDEKWidget) {
+          throw new Error('CDEKWidget is not available');
+        }
+
+        // eslint-disable-next-line no-new
+        new window.CDEKWidget({
+          from: fromCity,
+          root: mapRootId,
+          apiKey,
+          canChoose: true,
+          servicePath,
+          defaultLocation: currentCity?.label || '',
+          hideDeliveryOptions: { door: true, office: false },
+          onChoose: (_deliveryMode, _tariff, address) => {
+            if (cancelled) return;
+            if (!address) return;
+            setCdekDraftOffice(address);
+          },
+        });
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setStatus({ type: 'error', message: 'Не удалось загрузить карту пунктов выдачи.' });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [cdekEnabled, currentCity?.label, pickupModalOpen]);
 
   const openCourierDrawer = () => {
     setCourierDraft(emptyCourierDraft);
@@ -521,7 +636,13 @@ const PaymentPage = ({ modalMode = false }) => {
     let orderHouse = '';
     let orderApartment = '';
 
-    if (delivery.method === 'pickup' && selectedPickupPoint) {
+    if (delivery.method === 'pickup' && cdekSelectedOffice) {
+      orderStreet = cdekSelectedOffice.address || '';
+      orderHouse = cdekSelectedOffice.name || String(cdekSelectedOffice.code || '');
+      orderApartment = cdekSelectedOffice.type || 'Пункт выдачи';
+      commentParts.push(`Самовывоз: ${orderStreet}`);
+      commentParts.push(`СДЭК: ${orderHouse}`);
+    } else if (delivery.method === 'pickup' && selectedPickupPoint) {
       orderStreet = selectedPickupPoint.address;
       orderHouse = selectedPickupPoint.name;
       orderApartment = selectedPickupPoint.type;
@@ -761,11 +882,13 @@ const PaymentPage = ({ modalMode = false }) => {
                       ВЫБРАТЬ
                     </button>
                   ) : delivery.method === 'pickup' ? (
-                    selectedPickupPoint ? (
+                    selectedPickupPoint || cdekSelectedOffice ? (
                       <div className="payment-address-block">
                         <span className="payment-address-block__provider">{pickupProviderLabel}</span>
                         <div className="payment-address-block__actions">
-                          <div className="payment-address-block__value">{selectedPickupPoint.address}</div>
+                          <div className="payment-address-block__value">
+                            {cdekSelectedOffice ? cdekSelectedOffice.address : selectedPickupPoint.address}
+                          </div>
                           <button type="button" className="payment-secondary-button" onClick={openPickupModal}>
                             ИЗМЕНИТЬ
                           </button>
@@ -993,46 +1116,68 @@ const PaymentPage = ({ modalMode = false }) => {
       {pickupModalOpen
         ? createPortal(
             <div className="payment-pickup-modal" role="dialog" aria-modal="true" aria-label="Выбор пункта самовывоза">
-              <div className="payment-pickup-modal__map" aria-hidden="true">
-                <div className="payment-pickup-modal__map-placeholder">
-                  <span>ЗАГЛУШКА</span>
-                </div>
+              <div className="payment-pickup-modal__map">
+                {cdekEnabled ? <div id="cdek-pvz-map" className="payment-pickup-modal__cdek" /> : null}
+                {!cdekEnabled ? (
+                  <div className="payment-pickup-modal__map-placeholder" aria-hidden="true">
+                    <span>КАРТА</span>
+                  </div>
+                ) : null}
               </div>
               <div className="payment-pickup-modal__panel">
                 <button type="button" className="payment-shell__close payment-pickup-modal__close" onClick={() => setPickupModalOpen(false)} aria-label="Закрыть выбор пункта самовывоза">
                   <MobileMenuCloseIcon />
                 </button>
                 <h2>САМОВЫВОЗ</h2>
-                <div className="payment-input">
-                  <span>Пункт выдачи</span>
-                  <label className="payment-select payment-select--light">
-                    <select value={pickupDraftId} onChange={(event) => setPickupDraftId(event.target.value)}>
-                      <option value="">Выберите вариант</option>
-                      {pickupPoints.map((point) => (
-                        <option key={point.id} value={point.id}>
-                          {point.address}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
+                {cdekEnabled ? (
+                  <>
+                    <div className="payment-pickup-modal__details">
+                      <p>{cdekDraftOffice?.address ? `Адрес: ${cdekDraftOffice.address}` : 'Выберите пункт на карте.'}</p>
+                      {cdekDraftOffice?.work_time ? <p>Время работы: {cdekDraftOffice.work_time}</p> : null}
+                    </div>
+                    <button
+                      type="button"
+                      className={`payment-primary-button ${cdekDraftOffice ? 'payment-primary-button--active' : ''}`}
+                      disabled={!cdekDraftOffice}
+                      onClick={() => confirmCdekOffice(cdekDraftOffice)}
+                    >
+                      ПОДТВЕРДИТЬ АДРЕС
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="payment-input">
+                      <span>Пункт выдачи</span>
+                      <label className="payment-select payment-select--light">
+                        <select value={pickupDraftId} onChange={(event) => setPickupDraftId(event.target.value)}>
+                          <option value="">Выберите вариант</option>
+                          {pickupPoints.map((point) => (
+                            <option key={point.id} value={point.id}>
+                              {point.address}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
 
-                {pickupDraftPoint ? (
-                  <div className="payment-pickup-modal__details">
-                    <p>Тип: {pickupDraftPoint.type}</p>
-                    <p>Вес: {pickupDraftPoint.weight}</p>
-                    <p>Время работы: {pickupDraftPoint.hours}</p>
-                  </div>
-                ) : null}
+                    {pickupDraftPoint ? (
+                      <div className="payment-pickup-modal__details">
+                        <p>Тип: {pickupDraftPoint.type}</p>
+                        <p>Вес: {pickupDraftPoint.weight}</p>
+                        <p>Время работы: {pickupDraftPoint.hours}</p>
+                      </div>
+                    ) : null}
 
-                <button
-                  type="button"
-                  className={`payment-primary-button ${pickupDraftId ? 'payment-primary-button--active' : ''}`}
-                  disabled={!pickupDraftId}
-                  onClick={confirmPickupAddress}
-                >
-                  ПОДТВЕРДИТЬ АДРЕС
-                </button>
+                    <button
+                      type="button"
+                      className={`payment-primary-button ${pickupDraftId ? 'payment-primary-button--active' : ''}`}
+                      disabled={!pickupDraftId}
+                      onClick={confirmPickupAddress}
+                    >
+                      ПОДТВЕРДИТЬ АДРЕС
+                    </button>
+                  </>
+                )}
               </div>
             </div>,
             document.body
