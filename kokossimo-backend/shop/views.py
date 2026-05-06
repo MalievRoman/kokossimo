@@ -874,9 +874,9 @@ def delivery_cities_config(request):
 
 
 def _cdek_widget_get_token():
-    client_id = (getattr(settings, "CDEK_WIDGET_CLIENT_ID", "") or "").strip()
-    client_secret = (getattr(settings, "CDEK_WIDGET_CLIENT_SECRET", "") or "").strip()
-    base_url = (getattr(settings, "CDEK_WIDGET_API_BASE_URL", "") or "https://api.cdek.ru/v2").rstrip("/")
+    client_id = (getattr(settings, "CDEK_CLIENT_ID", "") or "").strip()
+    client_secret = (getattr(settings, "CDEK_CLIENT_SECRET", "") or "").strip()
+    base_url = (getattr(settings, "CDEK_API_BASE_URL", "") or "https://api.cdek.ru/v2").rstrip("/")
 
     if not client_id or not client_secret:
         raise RuntimeError("CDEK widget credentials are not configured")
