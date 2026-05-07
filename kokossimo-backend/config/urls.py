@@ -121,6 +121,7 @@ router.register(r'product-subcategories', ProductSubcategoryViewSet, basename='p
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('staff/certificates/', staff_certificate_lookup, name='staff_certificate_lookup'),
+    path('staff/certificates', staff_certificate_lookup),
     path('api/', include(router.urls)), # Все API будут начинаться с /api/
     path('api/auth/register/', register_user),
     path('api/auth/login/', login_user),

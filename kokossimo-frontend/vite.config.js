@@ -34,6 +34,11 @@ export default defineConfig(({ mode }) => {
           target: backendUrl,
           changeOrigin: true,
         },
+        // Служебные Django-страницы (проверка сертификата и т.п.), без React
+        '/staff': {
+          target: backendUrl,
+          changeOrigin: true,
+        },
         '/static': {
           target: backendUrl,
           changeOrigin: true,
