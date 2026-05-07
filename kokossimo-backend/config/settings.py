@@ -136,6 +136,21 @@ else:
         'NAME': BASE_DIR / 'analytics.sqlite3',
     }
 
+if os.getenv('CERTIFICATES_POSTGRES_DB'):
+    DATABASES['certificates'] = {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv('CERTIFICATES_POSTGRES_DB'),
+        'USER': os.getenv('CERTIFICATES_POSTGRES_USER'),
+        'PASSWORD': os.getenv('CERTIFICATES_POSTGRES_PASSWORD'),
+        'HOST': os.getenv('CERTIFICATES_POSTGRES_HOST', 'localhost'),
+        'PORT': os.getenv('CERTIFICATES_POSTGRES_PORT', '5432'),
+    }
+else:
+    DATABASES['certificates'] = {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'certificates.sqlite3',
+    }
+
 DATABASE_ROUTERS = ['config.db_routers.AnalyticsRouter']
 
 
