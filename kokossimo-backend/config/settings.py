@@ -151,7 +151,10 @@ else:
         'NAME': BASE_DIR / 'certificates.sqlite3',
     }
 
-DATABASE_ROUTERS = ['config.db_routers.AnalyticsRouter']
+DATABASE_ROUTERS = [
+    'config.db_routers.AnalyticsRouter',
+    'config.db_routers.CertificatesRouter',
+]
 
 
 # Password validation
