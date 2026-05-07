@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Проверка сертификата — Kokossimo</title>
+  <style>
+    :root {
+      --bg: #f6f4f1;
+      --card: #fff;
+      --text: #1a1a1a;
+      --muted: #5c5c5c;
+      --border: #e0dcd4;
+      --accent: #2d6a4f;
+      --warn: #b45309;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .wrap {
+      max-width: 40rem;
+      margin: 0 auto;
+      padding: 2rem 1.25rem 3rem;
+    }
+    h1 {
+      font-size: 1.35rem;
+      font-weight: 600;
+      margin: 0 0 0.35rem;
+    }
+    .sub {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin: 0 0 1.5rem;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.25rem 1.35rem;
+      margin-bottom: 1.25rem;
+    }
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 500;
+      margin-bottom: 0.4rem;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 0.55rem 0.65rem;
+      font-size: 1rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
+    input[type="text"]:focus {
+      outline: 2px solid rgba(45, 106, 79, 0.25);
+      border-color: var(--accent);
+    }
+    .row-actions {
+      margin-top: 1rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      align-items: center;
+    }
+    button {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 0.55rem 1.1rem;
+      font-size: 0.95rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    button:hover { filter: brightness(1.06); }
+    dl {
+      margin: 0;
+      display: grid;
+      grid-template-columns: 10rem 1fr;
+      gap: 0.5rem 1rem;
+      font-size: 0.95rem;
+    }
+    dt {
+      margin: 0;
+      color: var(--muted);
+      font-weight: 500;
+    }
+    dd { margin: 0; }
+    .msg {
+      padding: 0.85rem 1rem;
+      border-radius: 8px;
+      font-size: 0.92rem;
+    }
+    .msg-warn {
+      background: #fff8e6;
+      border: 1px solid #fcd34d;
+      color: var(--warn);
+    }
+    .msg-muted {
+      background: #f3f4f6;
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+    @media (max-width: 520px) {
+      dl { grid-template-columns: 1fr; }
+      dt { margin-top: 0.35rem; }
+      dt:first-child { margin-top: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Проверка подарочного сертификата</h1>
+    <p class="sub">Служебная страница магазина для проверки номера сертификата.</p>
+
+    <div class="card">
+      <form method="post" action="">
+        {% csrf_token %}
+        <label for="certificate_number">Номер сертификата</label>
+        <input
+          type="text"
+          id="certificate_number"
+          name="certificate_number"
+          value="{{ certificate_number }}"
+          autocomplete="off"
+          maxlength="32"
+          placeholder="Введите номер"
+          autofocus
+        >
+        <div class="row-actions">
+          <button type="submit">Проверить</button>
+        </div>
+      </form>
+    </div>
+
+    {% if submitted and certificate %}
+      <div class="card">
+        <h2 style="margin: 0 0 1rem; font-size: 1.05rem;">Данные сертификата</h2>
+        <dl>
+          <dt>Номер</dt><dd>{{ certificate.id }}</dd>
+          <dt>Получатель</dt><dd>{{ certificate.recipient_name }}</dd>
+          <dt>Дата выдачи</dt><dd>{{ certificate.issue_date|date:"d.m.Y" }}</dd>
+          <dt>Номинал</dt><dd>{{ certificate.denomination }} ₽</dd>
+          <dt>Email</dt><dd>{{ certificate.email }}</dd>
+        </dl>
+      </div>
+    {% elif submitted and not_found %}
+      <div class="msg msg-warn">Сертификата с таким номером нет в базе.</div>
+    {% elif not submitted %}
+      <div class="msg msg-muted">Укажите номер сертификата и нажмите «Проверить».</div>
+    {% endif %}
+  </div>
+</body>
+</html>

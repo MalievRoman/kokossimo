@@ -1,0 +1,60 @@
+import django.core.validators
+import django.utils.timezone
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ("shop", "0031_order_awaiting_payment_status"),
+    ]
+
+    operations = [
+        migrations.CreateModel(
+            name="Certificate",
+            fields=[
+                (
+                    "id",
+                    models.CharField(
+                        max_length=16,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "recipient_name",
+                    models.CharField(max_length=255, verbose_name="Получатель"),
+                ),
+                (
+                    "issue_date",
+                    models.DateField(
+                        default=django.utils.timezone.localdate,
+                        verbose_name="Дата выдачи",
+                    ),
+                ),
+                (
+                    "denomination",
+                    models.DecimalField(
+                        decimal_places=2,
+                        max_digits=10,
+                        validators=[
+                            django.core.validators.MinValueValidator(0.01),
+                        ],
+                        verbose_name="Номинал",
+                    ),
+                ),
+                (
+                    "email",
+                    models.EmailField(max_length=255, verbose_name="Email"),
+                ),
+            ],
+            options={
+                "verbose_name": "Сертификат",
+                "verbose_name_plural": "Сертификаты",
+                "db_table": "certificates",
+                "ordering": ("-issue_date", "-id"),
+                "managed": False,
+            },
+        ),
+    ]
