@@ -48,8 +48,14 @@ Authorization: Token <токен_пользователя>
 | GET | `/api/categories/<id>/` | Нет | Категория по ID |
 | GET | `/api/products/` | Нет | Список товаров (с фильтрами) |
 | GET | `/api/products/<id>/` | Нет | Товар по ID |
+| GET | `/api/products/price-range/` | Нет | Мин/макс цена по текущим фильтрам |
+| GET | `/api/product-subcategories/` | Нет | Список подкатегорий |
+| GET | `/api/product-subcategories/<id>/` | Нет | Подкатегория по ID |
+| GET | `/api/product-subcategories/tree/` | Нет | Дерево подкатегорий |
 | GET | `/api/products/<id>/ratings/` | Нет | Отзывы по товару |
+| GET | `/api/products/<id>/image/` | Нет | Прокси изображения товара |
 | POST | `/api/products/<id>/rate/` | Да | Поставить оценку/отзыв |
+| POST | `/api/products/<id>/rate` | Нет | Неверный URL без `/` (возвращает 404) |
 | POST | `/api/auth/register/` | Нет | Регистрация (email/phone) |
 | POST | `/api/auth/login/` | Нет | Вход по логину и паролю |
 | POST | `/api/auth/email/send/` | Нет | Отправка кода на email |
@@ -57,9 +63,27 @@ Authorization: Token <токен_пользователя>
 | POST | `/api/auth/logout/` | Да | Выход (инвалидация токена) |
 | GET | `/api/auth/me/` | Да | Текущий пользователь |
 | PATCH | `/api/auth/profile/` | Да | Обновление профиля |
+| GET | `/api/auth/addresses/` | Да | Список сохранённых адресов |
+| POST | `/api/auth/addresses/` | Да | Создать сохранённый адрес |
+| PATCH | `/api/auth/addresses/<id>/` | Да | Обновить сохранённый адрес |
+| DELETE | `/api/auth/addresses/<id>/` | Да | Удалить сохранённый адрес |
+| GET | `/api/cart/` | Да | Получить корзину пользователя |
+| PUT | `/api/cart/` | Да | Полная синхронизация корзины |
+| POST | `/api/cart/merge/` | Да | Слияние гостевой корзины с пользовательской |
+| GET | `/api/favorites/` | Да | Получить избранное |
+| PUT | `/api/favorites/` | Да | Полная синхронизация избранного |
+| POST | `/api/favorites/merge/` | Да | Слияние избранного |
 | POST | `/api/orders/` | Да | Создание заказа |
 | GET | `/api/orders/list/` | Да | Список заказов пользователя |
 | GET | `/api/orders/<id>/` | Да | Детали заказа |
+| POST | `/api/orders/<id>/refresh-payment/` | Да | Обновить платежный статус заказа |
+| POST | `/api/payments/yookassa/create/` | Да | Создать/получить ссылку на оплату |
+| POST | `/api/payments/yookassa/webhook/` | Нет | Вебхук ЮKassa |
+| POST | `/api/payments/yookassa/webhook` | Нет | Вебхук ЮKassa (без завершающего `/`) |
+| GET | `/api/integrations/moysklad/status/` | Admin | Статус интеграции МойСклад |
+| GET | `/api/integrations/moysklad/assortment/` | Admin | Ассортимент МойСклад |
+| GET | `/api/legal/<slug>/` | Нет | Юридический документ (`privacy/offer/subscription`) |
+| GET | `/api/delivery/cities/` | Нет | Публичный конфиг городов доставки |
 
 ---
 
@@ -102,6 +126,15 @@ Authorization: Token <токен_пользователя>
 | `is_new` | `true` | Только новинки |
 | `is_bestseller` | `true` | Только бестселлеры |
 | `category` | slug категории (напр. `face`) | Товары категории |
+| `subcategory` | код подкатегории (можно несколько) | Фильтр по подкатегориям |
+| `parent` | код родителя подкатегории (можно несколько) | Фильтр по группе |
+| `q` | строка | Поиск по названию/описанию |
+| `price_min` | число | Минимальная цена |
+| `price_max` | число | Максимальная цена |
+| `ordering` | `price`, `created_at`, `id`, `is_new`, `is_bestseller` | Сортировка (`-` для DESC) |
+| `in_stock` | `true` | Только товары в наличии |
+| `page` | integer | Номер страницы |
+| `page_size` | integer | Размер страницы (до 60) |
 
 **Примеры:**
 - `/api/products/`
@@ -133,6 +166,7 @@ Authorization: Token <токен_пользователя>
 - `price` — строка с двумя знаками после запятой.
 - `rating_avg` — средняя оценка (1–5), `rating_count` — количество отзывов.
 - `user_rating` — оценка текущего пользователя или `null` (если не авторизован или не оценивал).
+- Ответ эндпоинта пагинированный (DRF): `count`, `next`, `previous`, `results`.
 
 #### GET `/api/products/<id>/`
 
@@ -462,7 +496,7 @@ Authorization: Token <токен_пользователя>
 | `street` | string | max 200 |
 | `house` | string | max 50 |
 | `delivery_method` | string | `courier`, `pickup` |
-| `payment_method` | string | `cash_on_delivery`, `cash_pickup` |
+| `payment_method` | string | `cash_on_delivery`, `cash_pickup`, `card_online` |
 | `items` | array | минимум 1 элемент |
 
 **Необязательные:** `email`, `apartment`, `postal_code`, `comment`.
@@ -536,9 +570,260 @@ Authorization: Token <токен_пользователя>
 }
 ```
 
-**Статусы заказа:** `new`, `processing`, `paid`, `shipped`, `delivered`, `cancelled`.
+**Статусы заказа:** `new`, `awaiting_payment`, `processing`, `paid`, `shipped`, `delivered`, `cancelled`.
 
 **Ошибки:** `404` — заказ не найден или принадлежит другому пользователю. `401` — не авторизован.
+
+---
+
+### 3.9 Сохраненные адреса
+
+#### GET `/api/auth/addresses/`
+
+**Аутентификация:** обязательна.
+
+**Успех:** `200 OK` — массив адресов пользователя.
+
+#### POST `/api/auth/addresses/`
+
+**Аутентификация:** обязательна.
+
+**Тело запроса:**
+
+```json
+{
+  "city": "Москва",
+  "street_house": "ул. Ленина, д. 1",
+  "entrance": "2",
+  "floor": "8",
+  "apartment_office": "80",
+  "intercom": "80В",
+  "comment": "Позвонить за 10 минут"
+}
+```
+
+**Успех:**  
+- `201 Created` — новый адрес создан  
+- `200 OK` — такой же адрес уже был (возвращается существующий)
+
+**Ошибки:** `400`, `401`
+
+#### PATCH `/api/auth/addresses/<address_id>/`
+
+**Аутентификация:** обязательна.
+
+Частичное обновление полей адреса.
+
+**Успех:** `200 OK`  
+**Ошибки:** `400`, `401`, `404`
+
+#### DELETE `/api/auth/addresses/<address_id>/`
+
+**Аутентификация:** обязательна.
+
+**Успех:** `204 No Content`  
+**Ошибки:** `401`, `404`
+
+---
+
+### 3.10 Корзина
+
+#### GET `/api/cart/`
+
+**Аутентификация:** обязательна.
+
+Возвращает корзину пользователя и позиции.
+
+**Успех:** `200 OK`
+
+#### PUT `/api/cart/`
+
+**Аутентификация:** обязательна.
+
+Полная синхронизация корзины (заменяет текущее состояние на присланное).
+
+**Тело запроса:**
+
+```json
+{
+  "items": [
+    {
+      "id": "12",
+      "quantity": 2,
+      "name": "Подарочный сертификат",
+      "price": "3000.00",
+      "is_gift_certificate": true
+    }
+  ]
+}
+```
+
+**Успех:** `200 OK`  
+**Ошибки:** `400`, `401`
+
+#### POST `/api/cart/merge/`
+
+**Аутентификация:** обязательна.
+
+Слияние присланной корзины с текущей пользовательской (используется при логине).
+
+**Тело:** как у `PUT /api/cart/`
+
+**Успех:** `200 OK`  
+**Ошибки:** `400`, `401`
+
+---
+
+### 3.11 Избранное
+
+#### GET `/api/favorites/`
+
+**Аутентификация:** обязательна.
+
+**Успех:** `200 OK`
+
+#### PUT `/api/favorites/`
+
+**Аутентификация:** обязательна.
+
+Полная синхронизация избранного.
+
+**Тело запроса:**
+
+```json
+{
+  "items": [1, 2, 3]
+}
+```
+
+**Успех:** `200 OK`  
+**Ошибки:** `400`, `401`
+
+#### POST `/api/favorites/merge/`
+
+**Аутентификация:** обязательна.
+
+Слияние присланного списка с текущим избранным.
+
+**Успех:** `200 OK`  
+**Ошибки:** `400`, `401`
+
+---
+
+### 3.12 Оплаты (ЮKassa)
+
+#### POST `/api/payments/yookassa/create/`
+
+**Аутентификация:** обязательна.
+
+Создание платежа/получение ссылки на оплату для заказа.
+
+**Тело запроса:**
+
+```json
+{
+  "order_id": 123
+}
+```
+
+**Успех:** `200 OK`  
+(в т.ч. если заказ уже оплачен, или если уже есть живой pending-платеж)
+
+**Ошибки:** `400`, `401`, `404`, `502`, `503`
+
+#### POST `/api/payments/yookassa/webhook/`
+#### POST `/api/payments/yookassa/webhook`
+
+**Аутентификация:** не требуется (вебхук внешней системы).
+
+Обновляет статус заказа по событиям платежа.
+
+**Успех:** `200 OK`  
+**Ошибки:** `400`, `404`
+
+#### POST `/api/orders/<order_id>/refresh-payment/`
+
+**Аутентификация:** обязательна.
+
+Принудительная синхронизация статуса платежа конкретного заказа.
+
+**Успех:** `200 OK`  
+**Ошибки:** `401`, `404`
+
+---
+
+### 3.13 Интеграции и служебные публичные эндпоинты
+
+#### GET `/api/integrations/moysklad/status/`
+
+**Аутентификация:** обязательна, только admin.
+
+Проверка доступности интеграции с МойСклад.
+
+**Успех:** `200 OK`  
+**Ошибки:** `401`, `403`, `502`, `503`
+
+#### GET `/api/integrations/moysklad/assortment/`
+
+**Аутентификация:** обязательна, только admin.
+
+Параметры:
+- `limit` (integer, по умолчанию 20)
+- `offset` (integer, по умолчанию 0)
+- `search` (string, опционально)
+
+**Успех:** `200 OK`  
+**Ошибки:** `400`, `401`, `403`, `502`, `503`
+
+#### GET `/api/legal/<slug>/`
+
+**Аутентификация:** не требуется.
+
+Допустимые `slug`: `privacy`, `offer`, `subscription`.
+
+**Успех:** `200 OK` (`title`, `content`)  
+**Ошибки:** `404`, `500`
+
+#### GET `/api/delivery/cities/`
+
+**Аутентификация:** не требуется.
+
+Публичный конфиг городов доставки.
+
+**Успех:** `200 OK`
+
+#### GET `/api/products/price-range/`
+
+**Аутентификация:** не требуется.
+
+Диапазон цен (`min_price`, `max_price`) для текущего набора фильтров каталога.
+
+**Успех:** `200 OK`
+
+#### GET `/api/product-subcategories/`
+#### GET `/api/product-subcategories/<id>/`
+#### GET `/api/product-subcategories/tree/`
+
+**Аутентификация:** не требуется.
+
+Эндпоинты для фильтра каталога по дереву подкатегорий.
+
+**Успех:** `200 OK`  
+**Ошибки:** `404` для `/<id>/`
+
+#### GET `/api/products/<product_id>/image/`
+
+**Аутентификация:** не требуется.
+
+Прокси изображений товаров (включая внешние источники).  
+При отсутствии изображения может вернуть 1x1 GIF-плейсхолдер; с `?debug=1` возвращает JSON с причиной.
+
+#### POST `/api/products/<product_id>/rate`
+
+**Аутентификация:** не требуется.
+
+Специальный обработчик неверного URL без завершающего `/`.  
+Всегда возвращает `404`, чтобы клиент корректно обрабатывал ошибочный маршрут.
 
 ---
 
@@ -571,9 +856,9 @@ Authorization: Token <токен_пользователя>
 
 | Поле | Тип | Допустимые значения |
 |------|-----|---------------------|
-| status | string | `new`, `processing`, `paid`, `shipped`, `delivered`, `cancelled` |
+| status | string | `new`, `awaiting_payment`, `processing`, `paid`, `shipped`, `delivered`, `cancelled` |
 | delivery_method | string | `courier`, `pickup` |
-| payment_method | string | `cash_on_delivery`, `cash_pickup` |
+| payment_method | string | `cash_on_delivery`, `cash_pickup`, `card_online` |
 
 ### Код подтверждения email (EmailVerificationCode)
 
@@ -591,9 +876,13 @@ Authorization: Token <токен_пользователя>
 |-----|----------|
 | 200 | OK |
 | 201 | Created (регистрация, создание заказа, новая оценка) |
+| 204 | No Content (успешное удаление) |
 | 400 | Bad Request — ошибки валидации или бизнес-логики (тело с полями ошибок или `detail`) |
 | 401 | Unauthorized — нет или неверный токен |
+| 403 | Forbidden — недостаточно прав (например, не admin) |
 | 404 | Not Found — ресурс не найден |
+| 502 | Bad Gateway — ошибка внешнего сервиса (ЮKassa/МойСклад) |
+| 503 | Service Unavailable — сервис не сконфигурирован или недоступен |
 
 При 400 тело ответа — JSON: либо `{"detail": "сообщение"}`, либо `{"field_name": ["сообщение"]}`.
 
@@ -643,6 +932,18 @@ Authorization: Token <токен_пользователя>
 - [ ] PATCH профиля с токеном — 200, обновлённые поля в ответе.
 - [ ] POST logout с токеном — 200; повторный запрос с тем же токеном — 401.
 
+### Адреса, корзина и избранное
+
+- [ ] GET /api/auth/addresses/ без токена — 401; с токеном — 200.
+- [ ] POST /api/auth/addresses/ валидный адрес — 201; повтор того же адреса — 200.
+- [ ] PATCH /api/auth/addresses/<id>/ своего адреса — 200; чужого/несуществующего — 404.
+- [ ] DELETE /api/auth/addresses/<id>/ своего адреса — 204.
+- [ ] GET /api/cart/ с токеном — 200.
+- [ ] PUT /api/cart/ с валидным payload — 200; невалидный payload — 400.
+- [ ] POST /api/cart/merge/ с валидным payload — 200.
+- [ ] GET /api/favorites/ с токеном — 200.
+- [ ] PUT /api/favorites/ + POST /api/favorites/merge/ — 200, корректная синхронизация.
+
 ### Заказы
 
 - [ ] POST заказа без токена — 401.
@@ -651,6 +952,23 @@ Authorization: Token <токен_пользователя>
 - [ ] POST с несуществующим product_id — 400.
 - [ ] GET list заказов с токеном — 200, только заказы текущего пользователя.
 - [ ] GET заказа по id своего заказа — 200; по id чужого — 404; без токена — 401.
+- [ ] POST /api/orders/<id>/refresh-payment/ для своего заказа — 200.
+
+### Оплаты и интеграции
+
+- [ ] POST /api/payments/yookassa/create/ без order_id — 400.
+- [ ] POST /api/payments/yookassa/create/ для `payment_method != card_online` — 400.
+- [ ] POST /api/payments/yookassa/webhook/ с некорректным payload — 400.
+- [ ] GET /api/integrations/moysklad/status/ без токена — 401, с не-admin токеном — 403.
+- [ ] GET /api/integrations/moysklad/assortment/?limit=abc — 400.
+
+### Подкатегории, legal и служебные endpoint-ы
+
+- [ ] GET /api/product-subcategories/ и /tree/ — 200.
+- [ ] GET /api/products/price-range/ — 200 и корректные `min_price`/`max_price`.
+- [ ] GET /api/legal/privacy/ (`offer/`, `subscription/`) — 200; неизвестный slug — 404.
+- [ ] GET /api/delivery/cities/ — 200.
+- [ ] POST /api/products/<id>/rate (без `/`) — 404.
 
 ### Общее
 
