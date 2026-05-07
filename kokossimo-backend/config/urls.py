@@ -7,6 +7,7 @@ from django.http import HttpResponse, JsonResponse
 from django.template.loader import render_to_string
 import os
 from rest_framework.routers import DefaultRouter
+from shop.staff_views import staff_certificate_lookup
 from shop.views import (
     ProductViewSet,
     CategoryViewSet,
@@ -119,6 +120,7 @@ router.register(r'product-subcategories', ProductSubcategoryViewSet, basename='p
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('staff/certificates/', staff_certificate_lookup, name='staff_certificate_lookup'),
     path('api/', include(router.urls)), # Все API будут начинаться с /api/
     path('api/auth/register/', register_user),
     path('api/auth/login/', login_user),
@@ -153,7 +155,7 @@ urlpatterns = [
 # Отдача React приложения для всех остальных маршрутов (SPA)
 # Это должно быть в конце, чтобы не перехватывать API маршруты
 urlpatterns += [
-    re_path(r'^(?!api|admin|static|media).*', react_app_view),
+    re_path(r'^(?!api|admin|staff|static|media).*', react_app_view),
 ]
 
 # Это нужно, чтобы Django раздавал картинки (media) в режиме разработки
