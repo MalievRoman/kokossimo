@@ -1,5 +1,6 @@
 import re
 
+from django.db import transaction
 from django.shortcuts import render
 from django.views.decorators.http import require_http_methods
 
@@ -15,6 +16,37 @@ def _strip_certificate_input(raw: str) -> str:
 @require_http_methods(["GET", "POST"])
 def staff_certificate_lookup(request):
     """Проверка сертификата по номеру. Закрывайте URL на периметре (например, auth_basic в nginx)."""
+    if request.method == "POST" and request.POST.get("action") == "destroy":
+        destroyed = False
+        destroy_missing = False
+        d_id = _strip_certificate_input(request.POST.get("destroy_id", ""))
+        if _CERT_NUMBER_RE.fullmatch(d_id):
+            cert = Certificate.objects.filter(pk=d_id).first()
+            if cert is None:
+                cert = Certificate.objects.filter(pk__iexact=d_id).first()
+            if cert is not None:
+                with transaction.atomic(using="certificates"):
+                    cert.delete()
+                destroyed = True
+            else:
+                destroy_missing = True
+        else:
+            destroy_missing = True
+
+        return render(
+            request,
+            "shop/staff_certificate_lookup.html",
+            {
+                "certificate": None,
+                "not_found": False,
+                "invalid_format": False,
+                "empty_input": False,
+                "certificate_number": "",
+                "destroyed": destroyed,
+                "destroy_missing": destroy_missing,
+            },
+        )
+
     certificate = None
     not_found = False
     invalid_format = False
@@ -60,5 +92,7 @@ def staff_certificate_lookup(request):
             "invalid_format": invalid_format,
             "empty_input": empty_input,
             "certificate_number": input_value,
+            "destroyed": False,
+            "destroy_missing": False,
         },
     )

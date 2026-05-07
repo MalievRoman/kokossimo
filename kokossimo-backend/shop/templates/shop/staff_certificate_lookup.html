@@ -13,6 +13,10 @@
       --border: #e0dcd4;
       --accent: #2d6a4f;
       --warn: #b45309;
+      --danger: #b91c1c;
+      --success-bg: #ecfdf5;
+      --success-border: #6ee7b7;
+      --success-text: #047857;
     }
     * { box-sizing: border-box; }
     body {
@@ -80,6 +84,10 @@
       font-weight: 500;
     }
     button:hover { filter: brightness(1.06); }
+    button.btn-destroy {
+      background: var(--danger);
+    }
+    button.btn-destroy:hover { filter: brightness(1.08); }
     dl {
       margin: 0;
       display: grid;
@@ -107,6 +115,11 @@
       background: #f3f4f6;
       border: 1px solid var(--border);
       color: var(--muted);
+    }
+    .msg-success {
+      background: var(--success-bg);
+      border: 1px solid var(--success-border);
+      color: var(--success-text);
     }
     .field-hint {
       margin: 0.35rem 0 0;
@@ -155,7 +168,11 @@
       </form>
     </div>
 
-    {% if certificate %}
+    {% if destroyed %}
+      <div class="msg msg-success">Сертификат удалён из базы данных.</div>
+    {% elif destroy_missing %}
+      <div class="msg msg-warn">Удалить не удалось: сертификат не найден (возможно, уже удалён).</div>
+    {% elif certificate %}
       <div class="card">
         <h2 style="margin: 0 0 1rem; font-size: 1.05rem;">Данные сертификата</h2>
         <dl>
@@ -165,6 +182,12 @@
           <dt>Номинал</dt><dd>{{ certificate.denomination }} ₽</dd>
           <dt>Email</dt><dd>{{ certificate.email }}</dd>
         </dl>
+        <form method="post" action="" class="destroy-form" style="margin-top: 1.25rem;" onsubmit="return confirm('Удалить сертификат {{ certificate.id|escapejs }} из базы? Это действие нельзя отменить.');">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="destroy">
+          <input type="hidden" name="destroy_id" value="{{ certificate.id }}">
+          <button type="submit" class="btn-destroy">Уничтожить</button>
+        </form>
       </div>
     {% elif not_found %}
       <div class="msg msg-warn">Сертификата с таким номером нет в базе.</div>
