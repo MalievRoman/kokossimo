@@ -59,7 +59,9 @@ class CertificatesRouter:
 
     def allow_migrate(self, db, app_label, model_name=None, **hints):
         if app_label == "shop" and model_name == "certificate":
-            return db == self.certificates_alias
+            # История Django — в default; модель unmanaged, DDL не нужен.
+            # Данные читаются с БД aliases "certificates" через db_router при queries.
+            return db == "default"
         if db == self.certificates_alias:
             return False
         return None
