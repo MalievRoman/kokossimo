@@ -108,6 +108,14 @@
       border: 1px solid var(--border);
       color: var(--muted);
     }
+    .field-hint {
+      margin: 0.35rem 0 0;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    input[type="text"].input-invalid {
+      border-color: #d97706;
+    }
     @media (max-width: 520px) {
       dl { grid-template-columns: 1fr; }
       dt { margin-top: 0.35rem; }
@@ -130,17 +138,24 @@
           name="certificate_number"
           value="{{ certificate_number }}"
           autocomplete="off"
-          maxlength="32"
-          placeholder="Введите номер"
+          maxlength="16"
+          minlength="16"
+          pattern="[A-Za-z0-9]{16}"
+          inputmode="text"
+          spellcheck="false"
+          class="{% if invalid_format or empty_input %}input-invalid{% endif %}"
+          placeholder="16 символов: A–Z, a–z, 0–9"
+          title="Ровно 16 символов: латинские буквы и цифры"
           autofocus
         >
+        <p class="field-hint">Ровно 16 символов: только латинские буквы (A–Z, a–z) и цифры (0–9).</p>
         <div class="row-actions">
           <button type="submit">Проверить</button>
         </div>
       </form>
     </div>
 
-    {% if submitted and certificate %}
+    {% if certificate %}
       <div class="card">
         <h2 style="margin: 0 0 1rem; font-size: 1.05rem;">Данные сертификата</h2>
         <dl>
@@ -151,11 +166,36 @@
           <dt>Email</dt><dd>{{ certificate.email }}</dd>
         </dl>
       </div>
-    {% elif submitted and not_found %}
+    {% elif not_found %}
       <div class="msg msg-warn">Сертификата с таким номером нет в базе.</div>
-    {% elif not submitted %}
+    {% elif invalid_format %}
+      <div class="msg msg-warn">Номер должен состоять ровно из 16 символов: только латинские буквы и цифры.</div>
+    {% elif empty_input %}
+      <div class="msg msg-warn">Введите номер сертификата.</div>
+    {% else %}
       <div class="msg msg-muted">Укажите номер сертификата и нажмите «Проверить».</div>
     {% endif %}
   </div>
+  <script>
+    (function () {
+      var el = document.getElementById("certificate_number");
+      if (!el) return;
+
+      function filterValue(s) {
+        return s.replace(/[^A-Za-z0-9]/g, "").slice(0, 16);
+      }
+
+      el.addEventListener("input", function () {
+        var next = filterValue(el.value);
+        if (el.value !== next) el.value = next;
+      });
+
+      el.addEventListener("paste", function (ev) {
+        ev.preventDefault();
+        var t = (ev.clipboardData || window.clipboardData).getData("text") || "";
+        el.value = filterValue(el.value + t);
+      });
+    })();
+  </script>
 </body>
 </html>
