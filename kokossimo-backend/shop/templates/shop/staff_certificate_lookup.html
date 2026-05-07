@@ -13,7 +13,6 @@
       --border: #e0dcd4;
       --accent: #2d6a4f;
       --warn: #b45309;
-      --danger: #b91c1c;
       --success-bg: #ecfdf5;
       --success-border: #6ee7b7;
       --success-text: #047857;
@@ -84,16 +83,13 @@
       font-weight: 500;
     }
     button:hover { filter: brightness(1.06); }
-    button.btn-destroy {
-      background: var(--danger);
-    }
-    button.btn-destroy:hover { filter: brightness(1.08); }
     dl {
       margin: 0;
       display: grid;
       grid-template-columns: 10rem 1fr;
       gap: 0.5rem 1rem;
       font-size: 0.95rem;
+      align-items: center;
     }
     dt {
       margin: 0;
@@ -101,6 +97,23 @@
       font-weight: 500;
     }
     dd { margin: 0; }
+    .status-pill {
+      display: inline-block;
+      padding: 0.28rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+    .status-pill--avail {
+      background: #d1fae5;
+      color: #047857;
+    }
+    .status-pill--used {
+      background: #f9fafb;
+      color: #4b5563;
+      border: 1px solid #e5e7eb;
+    }
     .msg {
       padding: 0.85rem 1rem;
       border-radius: 8px;
@@ -168,26 +181,38 @@
       </form>
     </div>
 
-    {% if destroyed %}
-      <div class="msg msg-success">Сертификат удалён из базы данных.</div>
-    {% elif destroy_missing %}
-      <div class="msg msg-warn">Удалить не удалось: сертификат не найден (возможно, уже удалён).</div>
+    {% if marked_used %}
+      <div class="msg msg-success">Сертификат отмечен как использованный.</div>
+    {% elif already_used_notice %}
+      <div class="msg msg-warn">Этот сертификат уже был использован ранее.</div>
+    {% elif mark_missing %}
+      <div class="msg msg-warn">Не удалось обработать запрос: сертификат не найден.</div>
     {% elif certificate %}
       <div class="card">
         <h2 style="margin: 0 0 1rem; font-size: 1.05rem;">Данные сертификата</h2>
         <dl>
           <dt>Номер</dt><dd>{{ certificate.id }}</dd>
+          <dt>Статус</dt>
+          <dd>
+            {% if certificate.is_used %}
+              <span class="status-pill status-pill--used">Использован</span>
+            {% else %}
+              <span class="status-pill status-pill--avail">Доступен к списанию</span>
+            {% endif %}
+          </dd>
           <dt>Получатель</dt><dd>{{ certificate.recipient_name }}</dd>
           <dt>Дата выдачи</dt><dd>{{ certificate.issue_date|date:"d.m.Y" }}</dd>
           <dt>Номинал</dt><dd>{{ certificate.denomination }} ₽</dd>
           <dt>Email</dt><dd>{{ certificate.email }}</dd>
         </dl>
-        <form method="post" action="" class="destroy-form" style="margin-top: 1.25rem;" onsubmit="return confirm('Удалить сертификат {{ certificate.id|escapejs }} из базы? Это действие нельзя отменить.');">
+        {% if not certificate.is_used %}
+        <form method="post" action="" style="margin-top: 1.25rem;" onsubmit="return confirm('Отметить сертификат {{ certificate.id|escapejs }} как использованный?');">
           {% csrf_token %}
-          <input type="hidden" name="action" value="destroy">
-          <input type="hidden" name="destroy_id" value="{{ certificate.id }}">
-          <button type="submit" class="btn-destroy">Уничтожить</button>
+          <input type="hidden" name="action" value="mark_used">
+          <input type="hidden" name="certificate_id" value="{{ certificate.id }}">
+          <button type="submit">Использовать</button>
         </form>
+        {% endif %}
       </div>
     {% elif not_found %}
       <div class="msg msg-warn">Сертификата с таким номером нет в базе.</div>

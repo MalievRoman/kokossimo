@@ -429,6 +429,7 @@ class Certificate(models.Model):
         validators=[MinValueValidator(0.01)],
     )
     email = models.EmailField("Email", max_length=255)
+    is_used = models.BooleanField("Использован", default=False)
 
     class Meta:
         db_table = "certificates"

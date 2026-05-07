@@ -13,37 +13,59 @@ def _strip_certificate_input(raw: str) -> str:
     return (raw or "").strip().replace(" ", "").replace("\u00a0", "")
 
 
+def _get_certificate_by_id(cert_id: str):
+    c = Certificate.objects.filter(pk=cert_id).first()
+    if c is None:
+        c = Certificate.objects.filter(pk__iexact=cert_id).first()
+    return c
+
+
 @require_http_methods(["GET", "POST"])
 def staff_certificate_lookup(request):
     """Проверка сертификата по номеру. Закрывайте URL на периметре (например, auth_basic в nginx)."""
-    if request.method == "POST" and request.POST.get("action") == "destroy":
-        destroyed = False
-        destroy_missing = False
-        d_id = _strip_certificate_input(request.POST.get("destroy_id", ""))
-        if _CERT_NUMBER_RE.fullmatch(d_id):
-            cert = Certificate.objects.filter(pk=d_id).first()
-            if cert is None:
-                cert = Certificate.objects.filter(pk__iexact=d_id).first()
-            if cert is not None:
-                with transaction.atomic(using="certificates"):
-                    cert.delete()
-                destroyed = True
-            else:
-                destroy_missing = True
+    if request.method == "POST" and request.POST.get("action") == "mark_used":
+        marked_used = False
+        already_used_notice = False
+        mark_missing = False
+        certificate = None
+
+        cid = _strip_certificate_input(request.POST.get("certificate_id", ""))
+        if not _CERT_NUMBER_RE.fullmatch(cid):
+            mark_missing = True
         else:
-            destroy_missing = True
+            certificate = _get_certificate_by_id(cid)
+            if certificate is None:
+                mark_missing = True
+            else:
+                with transaction.atomic(using="certificates"):
+                    updated = Certificate.objects.filter(
+                        pk=certificate.pk,
+                        is_used=False,
+                    ).update(is_used=True)
+                if updated:
+                    marked_used = True
+                else:
+                    already_used_notice = True
+                certificate = _get_certificate_by_id(certificate.pk)
+
+        cert_num_field = ""
+        if certificate is not None:
+            cert_num_field = certificate.id
+        elif _CERT_NUMBER_RE.fullmatch(cid):
+            cert_num_field = cid
 
         return render(
             request,
             "shop/staff_certificate_lookup.html",
             {
-                "certificate": None,
+                "certificate": certificate,
                 "not_found": False,
                 "invalid_format": False,
                 "empty_input": False,
-                "certificate_number": "",
-                "destroyed": destroyed,
-                "destroy_missing": destroy_missing,
+                "certificate_number": cert_num_field[:16],
+                "marked_used": marked_used,
+                "already_used_notice": already_used_notice,
+                "mark_missing": mark_missing,
             },
         )
 
@@ -68,9 +90,7 @@ def staff_certificate_lookup(request):
             invalid_format = True
 
     if cert_id:
-        certificate = Certificate.objects.filter(pk=cert_id).first()
-        if certificate is None:
-            certificate = Certificate.objects.filter(pk__iexact=cert_id).first()
+        certificate = _get_certificate_by_id(cert_id)
         if certificate is None:
             not_found = True
 
@@ -92,7 +112,8 @@ def staff_certificate_lookup(request):
             "invalid_format": invalid_format,
             "empty_input": empty_input,
             "certificate_number": input_value,
-            "destroyed": False,
-            "destroy_missing": False,
+            "marked_used": False,
+            "already_used_notice": False,
+            "mark_missing": False,
         },
     )
