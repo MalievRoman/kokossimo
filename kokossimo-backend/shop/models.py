@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.utils import timezone
 
 class Category(models.Model):
     name = models.CharField("Название", max_length=100)
@@ -415,3 +416,26 @@ class Feedback(models.Model):
 
     def __str__(self):
         return f"{self.get_feedback_type_display()} — {self.created_at.strftime('%d.%m.%Y %H:%M')}"
+
+
+class Certificate(models.Model):
+    id = models.CharField("ID", max_length=16, primary_key=True)
+    recipient_name = models.CharField("Получатель", max_length=255)
+    issue_date = models.DateField("Дата выдачи", default=timezone.localdate)
+    denomination = models.DecimalField(
+        "Номинал",
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(0.01)],
+    )
+    email = models.EmailField("Email", max_length=255)
+
+    class Meta:
+        db_table = "certificates"
+        managed = False
+        verbose_name = "Сертификат"
+        verbose_name_plural = "Сертификаты"
+        ordering = ["-issue_date", "-id"]
+
+    def __str__(self):
+        return f"{self.id} — {self.recipient_name}"

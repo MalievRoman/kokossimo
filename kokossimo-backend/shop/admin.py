@@ -11,7 +11,19 @@ from django.urls import path, reverse
 from django.utils.html import format_html
 import threading
 import time
-from .models import Category, Product, ProductSubcategory, Profile, Order, OrderItem, ProductRating, Feedback, SyncLog, SavedDeliveryAddress
+from .models import (
+    Category,
+    Product,
+    ProductSubcategory,
+    Profile,
+    Order,
+    OrderItem,
+    ProductRating,
+    Feedback,
+    SyncLog,
+    SavedDeliveryAddress,
+    Certificate,
+)
 from .moysklad import MoySkladConfigError, MoySkladError
 from .moysklad_sync import sync_product_stocks, sync_single_product, sync_site_products, SyncStoppedError
 
@@ -465,3 +477,12 @@ class FeedbackAdmin(admin.ModelAdmin):
         return (obj.text[:50] + "…") if len(obj.text) > 50 else obj.text
 
     text_short.short_description = "Текст"
+
+
+@admin.register(Certificate)
+class CertificateAdmin(admin.ModelAdmin):
+    list_display = ("id", "recipient_name", "issue_date", "denomination", "email")
+    list_filter = ("issue_date",)
+    search_fields = ("id", "recipient_name", "email")
+    ordering = ("-issue_date", "-id")
+    list_per_page = 50
