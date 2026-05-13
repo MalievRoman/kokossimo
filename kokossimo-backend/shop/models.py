@@ -490,3 +490,84 @@ class Certificate(models.Model):
 
     def __str__(self):
         return self.display_id or str(self.pk)
+
+
+class CertificateTransaction(models.Model):
+    """Таблица `certificate_transactions` в БД certificates (managed=False)."""
+
+    class TransactionType(models.TextChoices):
+        """
+        Значения поля `type` в БД.
+        issue — выпуск; redeem — списание; refund — возврат на сертификат;
+        adjustment — ручная корректировка; block / unblock — блокировка / разблокировка;
+        expire — истечение срока.
+        """
+
+        ISSUE = "issue", "issue"
+        REDEEM = "redeem", "redeem"
+        REFUND = "refund", "refund"
+        ADJUSTMENT = "adjustment", "adjustment"
+        BLOCK = "block", "block"
+        UNBLOCK = "unblock", "unblock"
+        EXPIRE = "expire", "expire"
+
+    id = models.AutoField(primary_key=True)
+    certificate = models.ForeignKey(
+        Certificate,
+        on_delete=models.DO_NOTHING,
+        db_column="certificate_id",
+        to_field="id",
+        null=True,
+        blank=True,
+        related_name="transactions",
+        verbose_name="Сертификат",
+    )
+    type = models.CharField(
+        "Тип операции",
+        max_length=50,
+        choices=TransactionType.choices,
+        null=True,
+        blank=True,
+    )
+    amount = models.DecimalField(
+        "Сумма",
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+    balance_before = models.DecimalField(
+        "Остаток до",
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+    balance_after = models.DecimalField(
+        "Остаток после",
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+    currency = models.CharField("Валюта", max_length=3, default="RUB")
+    order_id = models.IntegerField("Заказ (id)", null=True, blank=True)
+    payment_id = models.IntegerField("Платёж (id)", null=True, blank=True)
+    store_id = models.IntegerField("Магазин (id)", null=True, blank=True)
+    cash_register_id = models.IntegerField("Касса (id)", null=True, blank=True)
+    channel = models.IntegerField("Канал", null=True, blank=True)
+    performed_by = models.IntegerField("Кто выполнил (user id)", null=True, blank=True)
+    reason = models.CharField("Причина", max_length=200, null=True, blank=True)
+    idempotency_key = models.CharField("Ключ идемпотентности", max_length=255)
+    created_at = models.DateTimeField("Создан", default=timezone.now)
+    metadata = models.JSONField("Метаданные", default=dict, blank=True)
+
+    class Meta:
+        db_table = "certificate_transactions"
+        managed = False
+        verbose_name = "Операция по сертификату"
+        verbose_name_plural = "Операции по сертификатам"
+        ordering = ["-created_at", "-id"]
+
+    def __str__(self):
+        return f"#{self.pk} {self.type or '?'} {self.amount or ''}"
