@@ -184,29 +184,44 @@
     {% if marked_used %}
       <div class="msg msg-success">Сертификат отмечен как использованный.</div>
     {% elif already_used_notice %}
-      <div class="msg msg-warn">Этот сертификат уже был использован ранее.</div>
+      <div class="msg msg-warn">Этот сертификат уже полностью списан.</div>
+    {% elif blocked_notice %}
+      <div class="msg msg-warn">Сертификат заблокирован, списание невозможно.</div>
+    {% elif expired_notice %}
+      <div class="msg msg-warn">Срок действия сертификата истёк, списание невозможно.</div>
     {% elif mark_missing %}
       <div class="msg msg-warn">Не удалось обработать запрос: сертификат не найден.</div>
     {% elif certificate %}
       <div class="card">
         <h2 style="margin: 0 0 1rem; font-size: 1.05rem;">Данные сертификата</h2>
         <dl>
-          <dt>Номер</dt><dd>{{ certificate.id }}</dd>
+          <dt>Номер</dt><dd>{{ certificate.display_id }}</dd>
           <dt>Статус</dt>
           <dd>
-            {% if certificate.is_used %}
-              <span class="status-pill status-pill--used">Использован</span>
-            {% else %}
+            {% if certificate.status == 'blocked' %}
+              <span class="status-pill status-pill--used">Заблокирован</span>
+            {% elif certificate.status == 'redeemed' or certificate.status == 'used' %}
+              <span class="status-pill status-pill--used">Полностью списан</span>
+            {% elif certificate.status == 'partially_redeemed' %}
+              <span class="status-pill status-pill--avail">Частично списан</span>
+            {% elif certificate.is_expired %}
+              <span class="status-pill status-pill--used">Истёк срок</span>
+            {% elif certificate.status == 'created' %}
               <span class="status-pill status-pill--avail">Доступен к списанию</span>
+            {% else %}
+              <span class="status-pill status-pill--used">Неизвестный статус</span>
             {% endif %}
+            <span style="color: var(--muted); font-size: 0.85rem; margin-left: 0.35rem;">({{ certificate.get_status_display }})</span>
           </dd>
-          <dt>Получатель</dt><dd>{{ certificate.recipient_name }}</dd>
-          <dt>Дата выдачи</dt><dd>{{ certificate.issue_date|date:"d.m.Y" }}</dd>
-          <dt>Номинал</dt><dd>{{ certificate.denomination }} ₽</dd>
-          <dt>Email</dt><dd>{{ certificate.email }}</dd>
+          <dt>Валюта</dt><dd>{{ certificate.currency }}</dd>
+          <dt>Исходный номинал</dt><dd>{% if certificate.initial_amount is not None %}{{ certificate.initial_amount }} {{ certificate.currency }}{% else %}—{% endif %}</dd>
+          <dt>Текущий остаток</dt><dd>{% if certificate.current_balance is not None %}{{ certificate.current_balance }} {{ certificate.currency }}{% else %}—{% endif %}</dd>
+          <dt>Истекает</dt><dd>{% if certificate.expires_at %}{{ certificate.expires_at|date:"d.m.Y H:i" }}{% else %}—{% endif %}</dd>
+          <dt>Создан</dt><dd>{{ certificate.created_at|date:"d.m.Y H:i" }}</dd>
+          <dt>Клиент (id)</dt><dd>{% if certificate.owner_customer_id %}{{ certificate.owner_customer_id }}{% else %}—{% endif %}</dd>
         </dl>
-        {% if not certificate.is_used %}
-        <form method="post" action="" style="margin-top: 1.25rem;" onsubmit="return confirm('Отметить сертификат {{ certificate.id|escapejs }} как использованный?');">
+        {% if certificate.can_redeem_in_pos %}
+        <form method="post" action="" style="margin-top: 1.25rem;" onsubmit="return confirm('Отметить сертификат {{ certificate.display_id|escapejs }} как полностью списанный?');">
           {% csrf_token %}
           <input type="hidden" name="action" value="mark_used">
           <input type="hidden" name="certificate_id" value="{{ certificate.id }}">

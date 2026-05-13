@@ -419,24 +419,80 @@ class Feedback(models.Model):
 
 
 class Certificate(models.Model):
+    """Таблица `certificates` в отдельной БД; схема задаётся в PostgreSQL (managed=False)."""
+
+    class Status(models.TextChoices):
+        CREATED = (
+            "created",
+            "Создан — в UI введены номинал, получатель и срок действия",
+        )
+        PARTIALLY_REDEEMED = (
+            "partially_redeemed",
+            "Частично списан — использован не полностью",
+        )
+        REDEEMED = ("redeemed", "Полностью списан")
+        EXPIRED = ("expired", "Истёк срок действия")
+        BLOCKED = ("blocked", "Заблокирован")
+
     id = models.CharField("ID", max_length=16, primary_key=True)
-    recipient_name = models.CharField("Получатель", max_length=255)
-    issue_date = models.DateField("Дата выдачи", default=timezone.localdate)
-    denomination = models.DecimalField(
-        "Номинал",
+    status = models.CharField(
+        "Статус",
+        max_length=50,
+        choices=Status.choices,
+        default=Status.CREATED,
+    )
+    currency = models.CharField("Валюта", max_length=3, default="RUB")
+    initial_amount = models.DecimalField(
+        "Исходный номинал",
         max_digits=10,
         decimal_places=2,
-        validators=[MinValueValidator(0.01)],
+        null=True,
+        blank=True,
     )
-    email = models.EmailField("Email", max_length=255)
-    is_used = models.BooleanField("Использован", default=False)
+    current_balance = models.DecimalField(
+        "Текущий остаток",
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+    expires_at = models.DateTimeField("Истекает", null=True, blank=True)
+    created_at = models.DateTimeField("Создан", default=timezone.now)
+    updated_at = models.DateTimeField("Обновлён", default=timezone.now)
+    created_by = models.IntegerField("Кем создан (user id)", null=True, blank=True)
+    owner_customer_id = models.IntegerField("ID клиента-владельца", null=True, blank=True)
+    source_channel = models.IntegerField("Канал выпуска", null=True, blank=True)
+    metadata = models.JSONField("Метаданные", default=dict, blank=True)
 
     class Meta:
         db_table = "certificates"
         managed = False
         verbose_name = "Сертификат"
         verbose_name_plural = "Сертификаты"
-        ordering = ["-issue_date", "-id"]
+        ordering = ["-created_at", "-id"]
+
+    @property
+    def display_id(self) -> str:
+        return (self.id or "").strip()
+
+    @property
+    def is_past_validity_date(self) -> bool:
+        if self.expires_at is None:
+            return False
+        return timezone.now() >= self.expires_at
+
+    @property
+    def is_expired(self) -> bool:
+        """Истёк по полю `status` или по календарной дате `expires_at`."""
+        return self.status == self.Status.EXPIRED or self.is_past_validity_date
+
+    @property
+    def can_redeem_in_pos(self) -> bool:
+        if self.status not in (self.Status.CREATED, self.Status.PARTIALLY_REDEEMED):
+            return False
+        if self.is_past_validity_date:
+            return False
+        return True
 
     def __str__(self):
-        return f"{self.id} — {self.recipient_name}"
+        return self.display_id or str(self.pk)

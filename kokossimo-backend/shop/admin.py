@@ -481,8 +481,17 @@ class FeedbackAdmin(admin.ModelAdmin):
 
 @admin.register(Certificate)
 class CertificateAdmin(admin.ModelAdmin):
-    list_display = ("id", "recipient_name", "issue_date", "denomination", "email", "is_used")
-    list_filter = ("issue_date", "is_used")
-    search_fields = ("id", "recipient_name", "email")
-    ordering = ("-issue_date", "-id")
+    list_display = (
+        "id",
+        "status",
+        "currency",
+        "initial_amount",
+        "current_balance",
+        "expires_at",
+        "owner_customer_id",
+        "created_at",
+    )
+    list_filter = ("status", "currency")
+    search_fields = ("id",)
+    ordering = ("-created_at", "-id")
     list_per_page = 50
