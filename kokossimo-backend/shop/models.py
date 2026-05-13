@@ -422,17 +422,11 @@ class Certificate(models.Model):
     """Таблица `certificates` в отдельной БД; схема задаётся в PostgreSQL (managed=False)."""
 
     class Status(models.TextChoices):
-        CREATED = (
-            "created",
-            "Создан — в UI введены номинал, получатель и срок действия",
-        )
-        PARTIALLY_REDEEMED = (
-            "partially_redeemed",
-            "Частично списан — использован не полностью",
-        )
-        REDEEMED = ("redeemed", "Полностью списан")
-        EXPIRED = ("expired", "Истёк срок действия")
-        BLOCKED = ("blocked", "Заблокирован")
+        CREATED = "created", "created"
+        PARTIALLY_REDEEMED = "partially_redeemed", "partially_redeemed"
+        REDEEMED = "redeemed", "redeemed"
+        EXPIRED = "expired", "expired"
+        BLOCKED = "blocked", "blocked"
 
     id = models.CharField("ID", max_length=16, primary_key=True)
     status = models.CharField(
