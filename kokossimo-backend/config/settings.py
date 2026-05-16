@@ -137,14 +137,15 @@ else:
         'NAME': BASE_DIR / 'analytics.sqlite3',
     }
 
-if os.getenv('CERTIFICATES_POSTGRES_DB'):
+# Сертификаты: отдельная БД (CERTIFICATES_POSTGRES_*) или та же PostgreSQL, что и default.
+if os.getenv('CERTIFICATES_POSTGRES_DB') or os.getenv('POSTGRES_DB'):
     DATABASES['certificates'] = {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('CERTIFICATES_POSTGRES_DB'),
-        'USER': os.getenv('CERTIFICATES_POSTGRES_USER'),
-        'PASSWORD': os.getenv('CERTIFICATES_POSTGRES_PASSWORD'),
-        'HOST': os.getenv('CERTIFICATES_POSTGRES_HOST', 'localhost'),
-        'PORT': os.getenv('CERTIFICATES_POSTGRES_PORT', '5432'),
+        'NAME': os.getenv('CERTIFICATES_POSTGRES_DB') or os.getenv('POSTGRES_DB'),
+        'USER': os.getenv('CERTIFICATES_POSTGRES_USER') or os.getenv('POSTGRES_USER'),
+        'PASSWORD': os.getenv('CERTIFICATES_POSTGRES_PASSWORD') or os.getenv('POSTGRES_PASSWORD'),
+        'HOST': os.getenv('CERTIFICATES_POSTGRES_HOST') or os.getenv('POSTGRES_HOST', 'localhost'),
+        'PORT': os.getenv('CERTIFICATES_POSTGRES_PORT') or os.getenv('POSTGRES_PORT', '5432'),
     }
 else:
     DATABASES['certificates'] = {
