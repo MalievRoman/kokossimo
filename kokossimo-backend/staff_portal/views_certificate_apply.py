@@ -4,14 +4,6 @@ from django.views.decorators.http import require_http_methods
 
 from shop.models import OrderCertificateApplication
 
-from .certificate_application_db import (
-    certificate_application_db_error_message,
-    certificate_application_table_status,
-)
-from .certificates_db import (
-    certificates_database_error_message,
-    certificates_db_ready,
-)
 from .certificate_redeem import (
     CertificateRedeemError,
     apply_certificate,
@@ -41,8 +33,6 @@ def _base_form(
 
 
 def _load_pending_applications() -> list[OrderCertificateApplication]:
-    if certificate_application_table_status() != "ready":
-        return []
     return list(
         OrderCertificateApplication.objects.filter(
             status=OrderCertificateApplication.Status.PENDING,
@@ -60,19 +50,9 @@ def certificate_apply(request):
     application = None
     finalized_certificate = None
     success_message = None
-
-    certs_ready, certs_error = certificates_db_ready()
-    if not certs_ready and certs_error:
-        errors.append(certs_error)
-
-    table_status = certificate_application_table_status()
-    if table_status != "ready":
-        errors.append(certificate_application_db_error_message(table_status))
-
-    db_ready = certs_ready and table_status == "ready"
     performed_by = request.user.pk if request.user.is_authenticated else None
 
-    if request.method == "POST" and db_ready:
+    if request.method == "POST":
         action = (request.POST.get("action") or "check_certificate").strip()
         form = _base_form(
             certificate_number=request.POST.get("certificate_number", ""),
@@ -90,7 +70,7 @@ def certificate_apply(request):
             except (ValueError, OrderCertificateApplication.DoesNotExist):
                 errors.append("Применение не найдено или уже обработано.")
             except _DB_ERRORS:
-                errors.append(certificate_application_db_error_message("outdated"))
+                errors.append("Ошибка базы данных.")
             else:
                 try:
                     cancel_certificate_application(application)
@@ -111,7 +91,7 @@ def certificate_apply(request):
             except (ValueError, OrderCertificateApplication.DoesNotExist):
                 errors.append("Применение не найдено или уже обработано.")
             except _DB_ERRORS:
-                errors.append(certificate_application_db_error_message("outdated"))
+                errors.append("Ошибка базы данных.")
             else:
                 try:
                     finalized_certificate = finalize_certificate_application(
@@ -123,7 +103,7 @@ def certificate_apply(request):
                     certificate = get_certificate_by_id(application.certificate_id)
                     certificate_owner = certificate_owner_info(certificate)
                 except _DB_ERRORS:
-                    errors.append(certificate_application_db_error_message("outdated"))
+                    errors.append("Ошибка базы данных.")
                 else:
                     success_message = (
                         f"Баланс списан. Списано {application.amount} {application.currency}. "
@@ -152,16 +132,8 @@ def certificate_apply(request):
                         )
                     except CertificateRedeemError as exc:
                         errors.append(str(exc))
-                    except _DB_ERRORS as exc:
-                        if "certificates" in str(exc).lower():
-                            _, certs_err = certificates_db_ready()
-                            errors.append(
-                                certs_err or certificates_database_error_message()
-                            )
-                        else:
-                            errors.append(
-                                certificate_application_db_error_message("outdated")
-                            )
+                    except _DB_ERRORS:
+                        errors.append("Ошибка базы данных.")
                     else:
                         success_message = (
                             f"Сертификат применён. К списанию: {application.amount} "
@@ -210,6 +182,5 @@ def certificate_apply(request):
             "finalized_certificate": finalized_certificate,
             "success_message": success_message,
             "pending_applications": pending_applications,
-            "db_ready": db_ready,
         },
     )
