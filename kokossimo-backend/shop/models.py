@@ -473,7 +473,11 @@ class Certificate(models.Model):
     def is_past_validity_date(self) -> bool:
         if self.expires_at is None:
             return False
-        return timezone.now() >= self.expires_at
+        expires_at = self.expires_at
+        if timezone.is_naive(expires_at):
+            # certificates DB хранит naive UTC; Django с USE_TZ отдаёт aware now.
+            expires_at = timezone.make_aware(expires_at, timezone.utc)
+        return timezone.now() >= expires_at
 
     @property
     def is_expired(self) -> bool:
