@@ -137,7 +137,6 @@ else:
         'NAME': BASE_DIR / 'analytics.sqlite3',
     }
 
-# Сертификаты: отдельная БД (CERTIFICATES_POSTGRES_*) или та же PostgreSQL, что и default.
 if os.getenv('CERTIFICATES_POSTGRES_DB') or os.getenv('POSTGRES_DB'):
     DATABASES['certificates'] = {
         'ENGINE': 'django.db.backends.postgresql',

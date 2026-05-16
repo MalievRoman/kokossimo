@@ -10,7 +10,7 @@ from .certificate_application_db import (
 )
 from .certificates_db import (
     certificates_database_error_message,
-    certificates_table_exists,
+    certificates_db_ready,
 )
 from .certificate_redeem import (
     CertificateRedeemError,
@@ -61,9 +61,9 @@ def certificate_apply(request):
     finalized_certificate = None
     success_message = None
 
-    certs_ready = certificates_table_exists()
-    if not certs_ready:
-        errors.append(certificates_database_error_message())
+    certs_ready, certs_error = certificates_db_ready()
+    if not certs_ready and certs_error:
+        errors.append(certs_error)
 
     table_status = certificate_application_table_status()
     if table_status != "ready":
@@ -154,7 +154,10 @@ def certificate_apply(request):
                         errors.append(str(exc))
                     except _DB_ERRORS as exc:
                         if "certificates" in str(exc).lower():
-                            errors.append(certificates_database_error_message())
+                            _, certs_err = certificates_db_ready()
+                            errors.append(
+                                certs_err or certificates_database_error_message()
+                            )
                         else:
                             errors.append(
                                 certificate_application_db_error_message("outdated")
