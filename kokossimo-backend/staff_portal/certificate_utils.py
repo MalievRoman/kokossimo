@@ -8,6 +8,11 @@ from django.db.models.functions import RTrim
 from shop.models import Certificate
 
 _CERT_NUMBER_RE = re.compile(r"^[A-Za-z0-9]{16}$")
+_CERTIFICATES_DB = "certificates"
+
+
+def _certificates_qs():
+    return Certificate.objects.using(_CERTIFICATES_DB)
 
 
 def strip_certificate_input(raw: str) -> str:
@@ -19,18 +24,19 @@ def is_valid_certificate_number(raw: str) -> bool:
 
 
 def get_certificate_by_id(cert_id: str) -> Certificate | None:
-    c = Certificate.objects.filter(pk=cert_id).first()
+    qs = _certificates_qs()
+    c = qs.filter(pk=cert_id).first()
     if c is None:
-        c = Certificate.objects.filter(pk__iexact=cert_id).first()
+        c = qs.filter(pk__iexact=cert_id).first()
     if c is None and cert_id:
         c = (
-            Certificate.objects.annotate(_rid=RTrim(F("id")))
+            qs.annotate(_rid=RTrim(F("id")))
             .filter(_rid=cert_id)
             .first()
         )
         if c is None:
             c = (
-                Certificate.objects.annotate(_rid=RTrim(F("id")))
+                qs.annotate(_rid=RTrim(F("id")))
                 .filter(_rid__iexact=cert_id)
                 .first()
             )

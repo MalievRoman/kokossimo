@@ -65,7 +65,7 @@ def certificate_lookup(request):
                     already_used_notice = True
             else:
                 with transaction.atomic(using="certificates"):
-                    updated = Certificate.objects.filter(
+                    updated = Certificate.objects.using("certificates").filter(
                         pk=certificate.pk,
                         status__in=(
                             Certificate.Status.CREATED,

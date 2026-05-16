@@ -30,18 +30,19 @@ def _table_columns(table: str) -> set[str]:
         return {row[0] for row in cursor.fetchall()}
 
 
+def _table_exists(table: str) -> bool:
+    names = connection.introspection.table_names()
+    table_lower = table.lower()
+    return any(name.lower() == table_lower for name in names)
+
+
 def certificate_application_table_status() -> str:
-    """
-    ready — таблица есть и схема актуальна;
-    missing — таблицы нет;
-    outdated — таблица есть, но не хватает колонок (нужен migrate).
-    """
     table = OrderCertificateApplication._meta.db_table
-    if table not in connection.introspection.table_names():
+    if not _table_exists(table):
         return "missing"
 
     columns = _table_columns(table)
-    if _REQUIRED_COLUMNS.issubset(columns):
+    if _REQUIRED_COLUMNS.issubset(columns) and "order_id" not in columns:
         return "ready"
     return "outdated"
 
@@ -50,7 +51,7 @@ def certificate_application_db_error_message(status: str) -> str:
     if status == "missing":
         return (
             "Таблица применений сертификатов не создана. "
-            "На сервере выполните: python manage.py migrate shop"
+            "Выполните: python manage.py migrate shop"
         )
     if status == "outdated":
         return (

@@ -8,6 +8,10 @@ from .certificate_application_db import (
     certificate_application_db_error_message,
     certificate_application_table_status,
 )
+from .certificates_db import (
+    certificates_database_error_message,
+    certificates_table_exists,
+)
 from .certificate_redeem import (
     CertificateRedeemError,
     apply_certificate,
@@ -57,13 +61,18 @@ def certificate_apply(request):
     finalized_certificate = None
     success_message = None
 
+    certs_ready = certificates_table_exists()
+    if not certs_ready:
+        errors.append(certificates_database_error_message())
+
     table_status = certificate_application_table_status()
     if table_status != "ready":
         errors.append(certificate_application_db_error_message(table_status))
 
+    db_ready = certs_ready and table_status == "ready"
     performed_by = request.user.pk if request.user.is_authenticated else None
 
-    if request.method == "POST" and table_status == "ready":
+    if request.method == "POST" and db_ready:
         action = (request.POST.get("action") or "check_certificate").strip()
         form = _base_form(
             certificate_number=request.POST.get("certificate_number", ""),
@@ -143,8 +152,13 @@ def certificate_apply(request):
                         )
                     except CertificateRedeemError as exc:
                         errors.append(str(exc))
-                    except _DB_ERRORS:
-                        errors.append(certificate_application_db_error_message("outdated"))
+                    except _DB_ERRORS as exc:
+                        if "certificates" in str(exc).lower():
+                            errors.append(certificates_database_error_message())
+                        else:
+                            errors.append(
+                                certificate_application_db_error_message("outdated")
+                            )
                     else:
                         success_message = (
                             f"Сертификат применён. К списанию: {application.amount} "
@@ -193,6 +207,6 @@ def certificate_apply(request):
             "finalized_certificate": finalized_certificate,
             "success_message": success_message,
             "pending_applications": pending_applications,
-            "db_ready": table_status == "ready",
+            "db_ready": db_ready,
         },
     )

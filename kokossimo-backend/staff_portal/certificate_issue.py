@@ -23,7 +23,7 @@ def generate_certificate_id() -> str:
 def allocate_certificate_id(max_attempts: int = 25) -> str:
     for _ in range(max_attempts):
         cert_id = generate_certificate_id()
-        if not Certificate.objects.filter(pk=cert_id).exists():
+        if not Certificate.objects.using("certificates").filter(pk=cert_id).exists():
             return cert_id
     raise RuntimeError("Не удалось сгенерировать уникальный номер сертификата")
 

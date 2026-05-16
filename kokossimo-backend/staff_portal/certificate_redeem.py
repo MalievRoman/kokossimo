@@ -191,7 +191,7 @@ def finalize_certificate_application(
     now = _certificates_now()
 
     with transaction.atomic(using="certificates"):
-        updated = Certificate.objects.filter(
+        updated = Certificate.objects.using("certificates").filter(
             pk=certificate.pk,
             status__in=(
                 Certificate.Status.CREATED,
