@@ -7,6 +7,7 @@ from .certificate_redeem import (
     parse_purchase_total,
     redeem_certificate,
     validate_certificate_for_apply,
+    validate_purchase_total_within_balance,
 )
 from .certificate_utils import (
     certificate_owner_info,
@@ -71,7 +72,10 @@ def certificate_apply(request):
                         purchase_total = validation.balance
                     else:
                         try:
-                            purchase_total = parse_purchase_total(form["purchase_total"])
+                            purchase_total = validate_purchase_total_within_balance(
+                                validation,
+                                parse_purchase_total(form["purchase_total"]),
+                            )
                         except CertificateRedeemError as exc:
                             errors.append(str(exc))
 

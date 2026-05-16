@@ -67,6 +67,21 @@ def parse_purchase_total(raw: str) -> Decimal:
         ) from exc
 
 
+def validate_purchase_total_within_balance(
+    validation: CertificateValidation,
+    purchase_total: Decimal,
+) -> Decimal:
+    total = Decimal(purchase_total).quantize(Decimal("0.01"))
+    if total <= 0:
+        raise CertificateRedeemError("Сумма списания должна быть больше нуля.")
+    if total > validation.balance:
+        raise CertificateRedeemError(
+            f"Сумма списания не может быть больше остатка на сертификате "
+            f"({validation.balance} {validation.currency})."
+        )
+    return total
+
+
 def validate_certificate_for_apply(certificate: Certificate) -> CertificateValidation:
     if certificate.status == Certificate.Status.BLOCKED:
         raise CertificateRedeemError("Сертификат заблокирован.")
@@ -109,13 +124,10 @@ def build_redeem_preview(
     certificate: Certificate,
     purchase_total: Decimal,
 ) -> RedeemPreview:
-    validate_certificate_for_apply(certificate)
+    validation = validate_certificate_for_apply(certificate)
+    total = validate_purchase_total_within_balance(validation, purchase_total)
 
-    total = Decimal(purchase_total).quantize(Decimal("0.01"))
-    if total <= 0:
-        raise CertificateRedeemError("Сумма покупки должна быть больше нуля.")
-
-    balance = _certificate_balance(certificate)
+    balance = validation.balance
     redeemable = calculate_redeemable_amount(certificate, total)
     if redeemable <= 0:
         raise CertificateRedeemError("Сертификат не покрывает покупку.")

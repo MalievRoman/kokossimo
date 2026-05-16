@@ -159,10 +159,15 @@
           value="{{ form.purchase_total }}"
           inputmode="decimal"
           placeholder="5000"
+          data-max-balance="{{ certificate.current_balance }}"
           autofocus
           required
         >
-        <p class="field-hint">После подтверждения баланс спишется сразу.</p>
+        <p class="field-hint">
+          Не больше остатка на сертификате
+          ({% if certificate.current_balance is not None %}{{ certificate.current_balance }} {{ certificate.currency }}{% else %}—{% endif %}).
+          После подтверждения баланс спишется сразу.
+        </p>
       </div>
       <div class="row-actions">
         <button type="submit" name="action" value="redeem">Списать с сертификата</button>
@@ -191,8 +196,22 @@
       var redeemForm = document.getElementById("redeem-form");
       if (redeemForm) {
         redeemForm.addEventListener("submit", function (e) {
-          var cert = (redeemForm.querySelector('[name="certificate_number"]') || {}).value || "";
           var action = e.submitter && e.submitter.name === "action" ? e.submitter.value : "redeem";
+          if (action === "redeem") {
+            var totalEl = document.getElementById("purchase_total");
+            var maxRaw = totalEl && totalEl.getAttribute("data-max-balance");
+            var maxBal = maxRaw ? parseFloat(String(maxRaw).replace(",", ".")) : NaN;
+            var totalRaw = totalEl ? String(totalEl.value || "").replace(",", ".").trim() : "";
+            var totalVal = parseFloat(totalRaw);
+            if (!isNaN(maxBal) && !isNaN(totalVal) && totalVal > maxBal) {
+              e.preventDefault();
+              alert(
+                "Сумма списания не может быть больше остатка на сертификате (" + maxRaw + " ₽)."
+              );
+              return;
+            }
+          }
+          var cert = (redeemForm.querySelector('[name="certificate_number"]') || {}).value || "";
           var msg = action === "redeem_all"
             ? "Списать весь остаток с сертификата " + cert + "?"
             : "Списать средства с сертификата " + cert + " по чеку на "
