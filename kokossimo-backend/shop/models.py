@@ -1,3 +1,5 @@
+from datetime import timezone as dt_timezone
+
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
@@ -476,7 +478,7 @@ class Certificate(models.Model):
         expires_at = self.expires_at
         if timezone.is_naive(expires_at):
             # certificates DB хранит naive UTC; Django с USE_TZ отдаёт aware now.
-            expires_at = timezone.make_aware(expires_at, timezone.utc)
+            expires_at = timezone.make_aware(expires_at, dt_timezone.utc)
         return timezone.now() >= expires_at
 
     @property
