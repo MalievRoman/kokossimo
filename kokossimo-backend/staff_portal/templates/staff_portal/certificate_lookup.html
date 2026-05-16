@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Проверка сертификата — Kokossimo</title>
+  <style>
+    :root {
+      --bg: #f6f4f1;
+      --card: #fff;
+      --text: #1a1a1a;
+      --muted: #5c5c5c;
+      --border: #e0dcd4;
+      --accent: #2d6a4f;
+      --warn: #b45309;
+      --success-bg: #ecfdf5;
+      --success-border: #6ee7b7;
+      --success-text: #047857;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .wrap {
+      max-width: 40rem;
+      margin: 0 auto;
+      padding: 2rem 1.25rem 3rem;
+    }
+    h1 {
+      font-size: 1.35rem;
+      font-weight: 600;
+      margin: 0 0 0.35rem;
+    }
+    .sub {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin: 0 0 1.5rem;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.25rem 1.35rem;
+      margin-bottom: 1.25rem;
+    }
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 500;
+      margin-bottom: 0.4rem;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 0.55rem 0.65rem;
+      font-size: 1rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
+    input[type="text"]:focus {
+      outline: 2px solid rgba(45, 106, 79, 0.25);
+      border-color: var(--accent);
+    }
+    .row-actions {
+      margin-top: 1rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      align-items: center;
+    }
+    button {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 0.55rem 1.1rem;
+      font-size: 0.95rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    button:hover { filter: brightness(1.06); }
+    dl {
+      margin: 0;
+      display: grid;
+      grid-template-columns: 10rem 1fr;
+      gap: 0.5rem 1rem;
+      font-size: 0.95rem;
+      align-items: center;
+    }
+    dt {
+      margin: 0;
+      color: var(--muted);
+      font-weight: 500;
+    }
+    dd { margin: 0; }
+    .status-pill {
+      display: inline-block;
+      padding: 0.28rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+    .status-pill--avail {
+      background: #d1fae5;
+      color: #047857;
+    }
+    .status-pill--used {
+      background: #f9fafb;
+      color: #4b5563;
+      border: 1px solid #e5e7eb;
+    }
+    .msg {
+      padding: 0.85rem 1rem;
+      border-radius: 8px;
+      font-size: 0.92rem;
+    }
+    .msg-warn {
+      background: #fff8e6;
+      border: 1px solid #fcd34d;
+      color: var(--warn);
+    }
+    .msg-muted {
+      background: #f3f4f6;
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+    .msg-success {
+      background: var(--success-bg);
+      border: 1px solid var(--success-border);
+      color: var(--success-text);
+    }
+    .field-hint {
+      margin: 0.35rem 0 0;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    input[type="text"].input-invalid {
+      border-color: #d97706;
+    }
+    @media (max-width: 520px) {
+      dl { grid-template-columns: 1fr; }
+      dt { margin-top: 0.35rem; }
+      dt:first-child { margin-top: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Проверка подарочного сертификата</h1>
+    <p class="sub">Служебная страница магазина для проверки номера сертификата.</p>
+
+    <div class="card">
+      <form method="post" action="">
+        {% csrf_token %}
+        <label for="certificate_number">Номер сертификата</label>
+        <input
+          type="text"
+          id="certificate_number"
+          name="certificate_number"
+          value="{{ certificate_number }}"
+          autocomplete="off"
+          maxlength="16"
+          minlength="16"
+          pattern="[A-Za-z0-9]{16}"
+          inputmode="text"
+          spellcheck="false"
+          class="{% if invalid_format or empty_input %}input-invalid{% endif %}"
+          placeholder="16 символов: A–Z, a–z, 0–9"
+          title="Ровно 16 символов: латинские буквы и цифры"
+          autofocus
+        >
+        <p class="field-hint">Ровно 16 символов: только латинские буквы (A–Z, a–z) и цифры (0–9).</p>
+        <div class="row-actions">
+          <button type="submit">Проверить</button>
+        </div>
+      </form>
+    </div>
+
+    {% if marked_used %}
+      <div class="msg msg-success">Сертификат отмечен как использованный.</div>
+    {% elif already_used_notice %}
+      <div class="msg msg-warn">Этот сертификат уже полностью списан.</div>
+    {% elif blocked_notice %}
+      <div class="msg msg-warn">Сертификат заблокирован, списание невозможно.</div>
+    {% elif expired_notice %}
+      <div class="msg msg-warn">Срок действия сертификата истёк, списание невозможно.</div>
+    {% elif mark_missing %}
+      <div class="msg msg-warn">Не удалось обработать запрос: сертификат не найден.</div>
+    {% elif certificate %}
+      <div class="card">
+        <h2 style="margin: 0 0 1rem; font-size: 1.05rem;">Данные сертификата</h2>
+        <dl>
+          <dt>Номер</dt><dd>{{ certificate.display_id }}</dd>
+          <dt>Статус</dt>
+          <dd>
+            {% if certificate.status == 'blocked' %}
+              <span class="status-pill status-pill--used">Заблокирован</span>
+            {% elif certificate.status == 'redeemed' or certificate.status == 'used' %}
+              <span class="status-pill status-pill--used">Полностью списан</span>
+            {% elif certificate.status == 'partially_redeemed' %}
+              <span class="status-pill status-pill--avail">Частично списан</span>
+            {% elif certificate.is_expired %}
+              <span class="status-pill status-pill--used">Истёк срок</span>
+            {% elif certificate.status == 'created' %}
+              <span class="status-pill status-pill--avail">Доступен к списанию</span>
+            {% else %}
+              <span class="status-pill status-pill--used">Неизвестный статус</span>
+            {% endif %}
+            <span style="color: var(--muted); font-size: 0.85rem; margin-left: 0.35rem;">({{ certificate.get_status_display }})</span>
+          </dd>
+          <dt>Валюта</dt><dd>{{ certificate.currency }}</dd>
+          <dt>Исходный номинал</dt><dd>{% if certificate.initial_amount is not None %}{{ certificate.initial_amount }} {{ certificate.currency }}{% else %}—{% endif %}</dd>
+          <dt>Текущий остаток</dt><dd>{% if certificate.current_balance is not None %}{{ certificate.current_balance }} {{ certificate.currency }}{% else %}—{% endif %}</dd>
+          <dt>Истекает</dt><dd>{% if certificate.expires_at %}{{ certificate.expires_at|date:"d.m.Y H:i" }}{% else %}—{% endif %}</dd>
+          <dt>Создан</dt><dd>{{ certificate.created_at|date:"d.m.Y H:i" }}</dd>
+          <dt>Клиент (id)</dt><dd>{% if certificate.owner_customer_id %}{{ certificate.owner_customer_id }}{% else %}—{% endif %}</dd>
+        </dl>
+        {% if certificate.can_redeem_in_pos %}
+        <form method="post" action="" style="margin-top: 1.25rem;" onsubmit="return confirm('Отметить сертификат {{ certificate.display_id|escapejs }} как полностью списанный?');">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="mark_used">
+          <input type="hidden" name="certificate_id" value="{{ certificate.id }}">
+          <button type="submit">Использовать</button>
+        </form>
+        {% endif %}
+      </div>
+    {% elif not_found %}
+      <div class="msg msg-warn">Сертификата с таким номером нет в базе.</div>
+    {% elif invalid_format %}
+      <div class="msg msg-warn">Номер должен состоять ровно из 16 символов: только латинские буквы и цифры.</div>
+    {% elif empty_input %}
+      <div class="msg msg-warn">Введите номер сертификата.</div>
+    {% else %}
+      <div class="msg msg-muted">Укажите номер сертификата и нажмите «Проверить».</div>
+    {% endif %}
+  </div>
+  <script>
+    (function () {
+      var el = document.getElementById("certificate_number");
+      if (!el) return;
+
+      function filterValue(s) {
+        return s.replace(/[^A-Za-z0-9]/g, "").slice(0, 16);
+      }
+
+      el.addEventListener("input", function () {
+        var next = filterValue(el.value);
+        if (el.value !== next) el.value = next;
+      });
+
+      el.addEventListener("paste", function (ev) {
+        ev.preventDefault();
+        var t = (ev.clipboardData || window.clipboardData).getData("text") || "";
+        el.value = filterValue(el.value + t);
+      });
+    })();
+  </script>
+</body>
+</html>
