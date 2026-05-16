@@ -159,7 +159,6 @@
           value="{{ form.purchase_total }}"
           inputmode="decimal"
           placeholder="5000"
-          data-max-balance="{{ certificate.current_balance }}"
           autofocus
           required
         >
@@ -197,20 +196,6 @@
       if (redeemForm) {
         redeemForm.addEventListener("submit", function (e) {
           var action = e.submitter && e.submitter.name === "action" ? e.submitter.value : "redeem";
-          if (action === "redeem") {
-            var totalEl = document.getElementById("purchase_total");
-            var maxRaw = totalEl && totalEl.getAttribute("data-max-balance");
-            var maxBal = maxRaw ? parseFloat(String(maxRaw).replace(",", ".")) : NaN;
-            var totalRaw = totalEl ? String(totalEl.value || "").replace(",", ".").trim() : "";
-            var totalVal = parseFloat(totalRaw);
-            if (!isNaN(maxBal) && !isNaN(totalVal) && totalVal > maxBal) {
-              e.preventDefault();
-              alert(
-                "Сумма списания не может быть больше остатка на сертификате (" + maxRaw + " ₽)."
-              );
-              return;
-            }
-          }
           var cert = (redeemForm.querySelector('[name="certificate_number"]') || {}).value || "";
           var msg = action === "redeem_all"
             ? "Списать весь остаток с сертификата " + cert + "?"
