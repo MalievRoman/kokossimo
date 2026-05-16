@@ -1,53 +1,13 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Проверка сертификата — Kokossimo</title>
+{% extends "staff_portal/base.html" %}
+
+{% block title %}Проверка сертификата — Kokossimo{% endblock %}
+
+{% block nav %}
+  <p class="nav-back"><a href="{% url 'staff_portal:hub' %}">← Портал сотрудников</a></p>
+{% endblock %}
+
+{% block extra_css %}
   <style>
-    :root {
-      --bg: #f6f4f1;
-      --card: #fff;
-      --text: #1a1a1a;
-      --muted: #5c5c5c;
-      --border: #e0dcd4;
-      --accent: #2d6a4f;
-      --warn: #b45309;
-      --success-bg: #ecfdf5;
-      --success-border: #6ee7b7;
-      --success-text: #047857;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      min-height: 100vh;
-      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      line-height: 1.5;
-    }
-    .wrap {
-      max-width: 40rem;
-      margin: 0 auto;
-      padding: 2rem 1.25rem 3rem;
-    }
-    h1 {
-      font-size: 1.35rem;
-      font-weight: 600;
-      margin: 0 0 0.35rem;
-    }
-    .sub {
-      color: var(--muted);
-      font-size: 0.9rem;
-      margin: 0 0 1.5rem;
-    }
-    .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 1.25rem 1.35rem;
-      margin-bottom: 1.25rem;
-    }
     label {
       display: block;
       font-size: 0.85rem;
@@ -72,17 +32,6 @@
       gap: 0.75rem;
       align-items: center;
     }
-    button {
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      padding: 0.55rem 1.1rem;
-      font-size: 0.95rem;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 500;
-    }
-    button:hover { filter: brightness(1.06); }
     dl {
       margin: 0;
       display: grid;
@@ -148,112 +97,114 @@
       dt:first-child { margin-top: 0; }
     }
   </style>
-</head>
-<body>
-  <div class="wrap">
-    <h1>Проверка подарочного сертификата</h1>
-    <p class="sub">Служебная страница магазина для проверки номера сертификата.</p>
+{% endblock %}
 
+{% block content %}
+  <h1>Проверка подарочного сертификата</h1>
+  <p class="sub">Поиск по номеру, данные и списание в точке продаж.</p>
+
+  <div class="card">
+    <form method="post" action="">
+      {% csrf_token %}
+      <label for="certificate_number">Номер сертификата</label>
+      <input
+        type="text"
+        id="certificate_number"
+        name="certificate_number"
+        value="{{ certificate_number }}"
+        autocomplete="off"
+        maxlength="16"
+        minlength="16"
+        pattern="[A-Za-z0-9]{16}"
+        inputmode="text"
+        spellcheck="false"
+        class="{% if invalid_format or empty_input %}input-invalid{% endif %}"
+        placeholder="16 символов: A–Z, a–z, 0–9"
+        title="Ровно 16 символов: латинские буквы и цифры"
+        autofocus
+      >
+      <p class="field-hint">Ровно 16 символов: только латинские буквы (A–Z, a–z) и цифры (0–9).</p>
+      <div class="row-actions">
+        <button type="submit">Проверить</button>
+      </div>
+    </form>
+  </div>
+
+  {% if marked_used %}
+    <div class="msg msg-success">Сертификат отмечен как использованный.</div>
+  {% elif already_used_notice %}
+    <div class="msg msg-warn">Этот сертификат уже полностью списан.</div>
+  {% elif blocked_notice %}
+    <div class="msg msg-warn">Сертификат заблокирован, списание невозможно.</div>
+  {% elif expired_notice %}
+    <div class="msg msg-warn">Срок действия сертификата истёк, списание невозможно.</div>
+  {% elif mark_missing %}
+    <div class="msg msg-warn">Не удалось обработать запрос: сертификат не найден.</div>
+  {% elif certificate %}
     <div class="card">
-      <form method="post" action="">
-        {% csrf_token %}
-        <label for="certificate_number">Номер сертификата</label>
-        <input
-          type="text"
-          id="certificate_number"
-          name="certificate_number"
-          value="{{ certificate_number }}"
-          autocomplete="off"
-          maxlength="16"
-          minlength="16"
-          pattern="[A-Za-z0-9]{16}"
-          inputmode="text"
-          spellcheck="false"
-          class="{% if invalid_format or empty_input %}input-invalid{% endif %}"
-          placeholder="16 символов: A–Z, a–z, 0–9"
-          title="Ровно 16 символов: латинские буквы и цифры"
-          autofocus
-        >
-        <p class="field-hint">Ровно 16 символов: только латинские буквы (A–Z, a–z) и цифры (0–9).</p>
-        <div class="row-actions">
-          <button type="submit">Проверить</button>
-        </div>
-      </form>
-    </div>
-
-    {% if marked_used %}
-      <div class="msg msg-success">Сертификат отмечен как использованный.</div>
-    {% elif already_used_notice %}
-      <div class="msg msg-warn">Этот сертификат уже полностью списан.</div>
-    {% elif blocked_notice %}
-      <div class="msg msg-warn">Сертификат заблокирован, списание невозможно.</div>
-    {% elif expired_notice %}
-      <div class="msg msg-warn">Срок действия сертификата истёк, списание невозможно.</div>
-    {% elif mark_missing %}
-      <div class="msg msg-warn">Не удалось обработать запрос: сертификат не найден.</div>
-    {% elif certificate %}
-      <div class="card">
-        <h2 style="margin: 0 0 1rem; font-size: 1.05rem;">Данные сертификата</h2>
-        <dl>
-          <dt>Номер</dt><dd>{{ certificate.display_id }}</dd>
-          <dt>Статус</dt>
-          <dd>
-            {% if certificate.status == 'blocked' %}
-              <span class="status-pill status-pill--used">Заблокирован</span>
-            {% elif certificate.status == 'redeemed' or certificate.status == 'used' %}
-              <span class="status-pill status-pill--used">Полностью списан</span>
-            {% elif certificate.status == 'partially_redeemed' %}
-              <span class="status-pill status-pill--avail">Частично списан</span>
-            {% elif certificate.is_expired %}
-              <span class="status-pill status-pill--used">Истёк срок</span>
-            {% elif certificate.status == 'created' %}
-              <span class="status-pill status-pill--avail">Доступен к списанию</span>
-            {% else %}
-              <span class="status-pill status-pill--used">Неизвестный статус</span>
-            {% endif %}
-            <span style="color: var(--muted); font-size: 0.85rem; margin-left: 0.35rem;">({{ certificate.get_status_display }})</span>
-          </dd>
-          <dt>Валюта</dt><dd>{{ certificate.currency }}</dd>
-          <dt>Исходный номинал</dt><dd>{% if certificate.initial_amount is not None %}{{ certificate.initial_amount }} {{ certificate.currency }}{% else %}—{% endif %}</dd>
-          <dt>Текущий остаток</dt><dd>{% if certificate.current_balance is not None %}{{ certificate.current_balance }} {{ certificate.currency }}{% else %}—{% endif %}</dd>
-          <dt>Истекает</dt><dd>{% if certificate.expires_at %}{{ certificate.expires_at|date:"d.m.Y H:i" }}{% else %}—{% endif %}</dd>
-          <dt>Создан</dt><dd>{{ certificate.created_at|date:"d.m.Y H:i" }}</dd>
-          <dt>Клиент</dt>
-          <dd>
-            {% if certificate_owner %}
-              {% if certificate_owner.found %}
-                {% if certificate_owner.last_name or certificate_owner.first_name %}
-                  {{ certificate_owner.last_name }}{% if certificate_owner.last_name and certificate_owner.first_name %} {% endif %}{{ certificate_owner.first_name }}
-                {% else %}
-                  <span style="color: var(--muted);">имя не указано</span>
-                {% endif %}
+      <h2 style="margin: 0 0 1rem; font-size: 1.05rem;">Данные сертификата</h2>
+      <dl>
+        <dt>Номер</dt><dd>{{ certificate.display_id }}</dd>
+        <dt>Статус</dt>
+        <dd>
+          {% if certificate.status == 'blocked' %}
+            <span class="status-pill status-pill--used">Заблокирован</span>
+          {% elif certificate.status == 'redeemed' or certificate.status == 'used' %}
+            <span class="status-pill status-pill--used">Полностью списан</span>
+          {% elif certificate.status == 'partially_redeemed' %}
+            <span class="status-pill status-pill--avail">Частично списан</span>
+          {% elif certificate.is_expired %}
+            <span class="status-pill status-pill--used">Истёк срок</span>
+          {% elif certificate.status == 'created' %}
+            <span class="status-pill status-pill--avail">Доступен к списанию</span>
+          {% else %}
+            <span class="status-pill status-pill--used">Неизвестный статус</span>
+          {% endif %}
+          <span style="color: var(--muted); font-size: 0.85rem; margin-left: 0.35rem;">({{ certificate.get_status_display }})</span>
+        </dd>
+        <dt>Валюта</dt><dd>{{ certificate.currency }}</dd>
+        <dt>Исходный номинал</dt><dd>{% if certificate.initial_amount is not None %}{{ certificate.initial_amount }} {{ certificate.currency }}{% else %}—{% endif %}</dd>
+        <dt>Текущий остаток</dt><dd>{% if certificate.current_balance is not None %}{{ certificate.current_balance }} {{ certificate.currency }}{% else %}—{% endif %}</dd>
+        <dt>Истекает</dt><dd>{% if certificate.expires_at %}{{ certificate.expires_at|date:"d.m.Y H:i" }}{% else %}—{% endif %}</dd>
+        <dt>Создан</dt><dd>{{ certificate.created_at|date:"d.m.Y H:i" }}</dd>
+        <dt>Клиент</dt>
+        <dd>
+          {% if certificate_owner %}
+            {% if certificate_owner.found %}
+              {% if certificate_owner.last_name or certificate_owner.first_name %}
+                {{ certificate_owner.last_name }}{% if certificate_owner.last_name and certificate_owner.first_name %} {% endif %}{{ certificate_owner.first_name }}
               {% else %}
-                <span style="color: var(--muted);">пользователь не найден</span>
+                <span style="color: var(--muted);">имя не указано</span>
               {% endif %}
             {% else %}
-              —
+              <span style="color: var(--muted);">пользователь не найден</span>
             {% endif %}
-          </dd>
-        </dl>
-        {% if certificate.can_redeem_in_pos %}
-        <form method="post" action="" style="margin-top: 1.25rem;" onsubmit="return confirm('Отметить сертификат {{ certificate.display_id|escapejs }} как полностью списанный?');">
-          {% csrf_token %}
-          <input type="hidden" name="action" value="mark_used">
-          <input type="hidden" name="certificate_id" value="{{ certificate.id }}">
-          <button type="submit">Использовать</button>
-        </form>
-        {% endif %}
-      </div>
-    {% elif not_found %}
-      <div class="msg msg-warn">Сертификата с таким номером нет в базе.</div>
-    {% elif invalid_format %}
-      <div class="msg msg-warn">Номер должен состоять ровно из 16 символов: только латинские буквы и цифры.</div>
-    {% elif empty_input %}
-      <div class="msg msg-warn">Введите номер сертификата.</div>
-    {% else %}
-      <div class="msg msg-muted">Укажите номер сертификата и нажмите «Проверить».</div>
-    {% endif %}
-  </div>
+          {% else %}
+            —
+          {% endif %}
+        </dd>
+      </dl>
+      {% if certificate.can_redeem_in_pos %}
+      <form method="post" action="" style="margin-top: 1.25rem;" onsubmit="return confirm('Отметить сертификат {{ certificate.display_id|escapejs }} как полностью списанный?');">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="mark_used">
+        <input type="hidden" name="certificate_id" value="{{ certificate.id }}">
+        <button type="submit">Использовать</button>
+      </form>
+      {% endif %}
+    </div>
+  {% elif not_found %}
+    <div class="msg msg-warn">Сертификата с таким номером нет в базе.</div>
+  {% elif invalid_format %}
+    <div class="msg msg-warn">Номер должен состоять ровно из 16 символов: только латинские буквы и цифры.</div>
+  {% elif empty_input %}
+    <div class="msg msg-warn">Введите номер сертификата.</div>
+  {% else %}
+    <div class="msg msg-muted">Укажите номер сертификата и нажмите «Проверить».</div>
+  {% endif %}
+{% endblock %}
+
+{% block extra_js %}
   <script>
     (function () {
       var el = document.getElementById("certificate_number");
@@ -275,5 +226,4 @@
       });
     })();
   </script>
-</body>
-</html>
+{% endblock %}

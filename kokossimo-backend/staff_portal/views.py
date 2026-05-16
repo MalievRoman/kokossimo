@@ -11,6 +11,8 @@ from django.views.decorators.http import require_http_methods
 
 from shop.models import Certificate
 
+from .hub import staff_hub_links
+
 _CERT_NUMBER_RE = re.compile(r"^[A-Za-z0-9]{16}$")
 
 
@@ -71,6 +73,16 @@ def _lookup_context(**context: Any) -> dict[str, Any]:
         "certificate_owner": _certificate_owner_info(certificate),
         **context,
     }
+
+
+@require_http_methods(["GET"])
+def hub(request):
+    """Главная страница портала сотрудников."""
+    return render(
+        request,
+        "staff_portal/hub.html",
+        {"links": staff_hub_links()},
+    )
 
 
 @require_http_methods(["GET", "POST"])
