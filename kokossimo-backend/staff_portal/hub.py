@@ -1,0 +1,20 @@
+from django.urls import reverse
+
+STAFF_HUB_ITEMS = (
+    {
+        "title": "Проверка сертификатов",
+        "description": "Поиск по номеру, данные и списание в точке продаж",
+        "url_name": "certificate_lookup",
+    },
+)
+
+
+def staff_hub_links() -> list[dict[str, str]]:
+    return [
+        {
+            "title": item["title"],
+            "description": item.get("description", ""),
+            "href": reverse(f"staff_portal:{item['url_name']}"),
+        }
+        for item in STAFF_HUB_ITEMS
+    ]

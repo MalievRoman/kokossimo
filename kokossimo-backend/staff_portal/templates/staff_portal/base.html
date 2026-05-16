@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Kokossimo — сотрудники{% endblock %}</title>
+  <style>
+    :root {
+      --bg: #f6f4f1;
+      --card: #fff;
+      --text: #1a1a1a;
+      --muted: #5c5c5c;
+      --border: #e0dcd4;
+      --accent: #2d6a4f;
+      --warn: #b45309;
+      --success-bg: #ecfdf5;
+      --success-border: #6ee7b7;
+      --success-text: #047857;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .wrap {
+      max-width: 40rem;
+      margin: 0 auto;
+      padding: 2rem 1.25rem 3rem;
+    }
+    h1 {
+      font-size: 1.35rem;
+      font-weight: 600;
+      margin: 0 0 0.35rem;
+    }
+    .sub {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin: 0 0 1.5rem;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.25rem 1.35rem;
+      margin-bottom: 1.25rem;
+    }
+    button,
+    .btn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 0.55rem 1.1rem;
+      font-size: 0.95rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      text-decoration: none;
+      display: inline-block;
+    }
+    button:hover,
+    .btn:hover { filter: brightness(1.06); }
+    .nav-back {
+      margin: 0 0 1.25rem;
+      font-size: 0.9rem;
+    }
+    .nav-back a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    .nav-back a:hover { text-decoration: underline; }
+    .hub-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .hub-link {
+      display: block;
+      padding: 1rem 1.2rem;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      text-decoration: none;
+      color: var(--text);
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .hub-link:hover {
+      border-color: var(--accent);
+      box-shadow: 0 2px 8px rgba(45, 106, 79, 0.12);
+    }
+    .hub-link-title {
+      font-weight: 600;
+      font-size: 1rem;
+      margin: 0 0 0.25rem;
+    }
+    .hub-link-desc {
+      margin: 0;
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+  </style>
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+  <div class="wrap">
+    {% block nav %}{% endblock %}
+    {% block content %}{% endblock %}
+  </div>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,21 @@
+{% extends "staff_portal/base.html" %}
+
+{% block title %}Портал сотрудников — Kokossimo{% endblock %}
+
+{% block content %}
+  <h1>Портал сотрудников</h1>
+  <p class="sub">Служебные инструменты магазина Kokossimo.</p>
+
+  <ul class="hub-list">
+    {% for link in links %}
+      <li>
+        <a class="hub-link" href="{{ link.href }}">
+          <p class="hub-link-title">{{ link.title }}</p>
+          {% if link.description %}
+            <p class="hub-link-desc">{{ link.description }}</p>
+          {% endif %}
+        </a>
+      </li>
+    {% endfor %}
+  </ul>
+{% endblock %}
