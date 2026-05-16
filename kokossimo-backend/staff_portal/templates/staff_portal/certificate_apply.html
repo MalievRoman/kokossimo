@@ -74,13 +74,12 @@
 
 {% block content %}
   <h1>Применение сертификата</h1>
-  <p class="sub">Офлайн в точке продаж: проверка сертификата, расчёт по сумме покупки и списание баланса.</p>
+  <p class="sub">Офлайн в точке продаж: проверка, применение по сумме чека и списание баланса.</p>
 
   <ol class="steps">
     <li class="{% if certificate %}is-done{% elif not application %}is-current{% endif %}">1. Сертификат</li>
-    <li class="{% if preview or application %}is-done{% elif certificate %}is-current{% endif %}">2. Сумма покупки</li>
-    <li class="{% if application %}is-done{% elif preview %}is-current{% endif %}">3. Применение</li>
-    <li class="{% if success_message and finalized_certificate %}is-done{% elif application %}is-current{% endif %}">4. Списание</li>
+    <li class="{% if application %}is-done{% elif certificate %}is-current{% endif %}">2. Применение</li>
+    <li class="{% if success_message and finalized_certificate %}is-done{% elif application %}is-current{% endif %}">3. Списание</li>
   </ol>
 
   {% if success_message %}
@@ -156,10 +155,10 @@
   </div>
 
   <div class="card">
-    <h2 style="margin: 0 0 1rem; font-size: 1.05rem;">Шаг 2 — Сумма покупки</h2>
+    <h2 style="margin: 0 0 1rem; font-size: 1.05rem;">Шаг 2 — Применить к покупке</h2>
     <form method="post" action="">
       {% csrf_token %}
-      <input type="hidden" name="action" value="calculate">
+      <input type="hidden" name="action" value="apply">
       <input type="hidden" name="certificate_number" value="{{ certificate.display_id }}">
       <div class="field">
         <label for="purchase_total">Сумма покупки в точке</label>
@@ -171,30 +170,10 @@
           inputmode="decimal"
           placeholder="5000"
           autofocus
+          required
         >
-        <p class="field-hint">Сумма чека в рублях. Заказ в базе не нужен.</p>
+        <p class="field-hint">Сумма чека в рублях. Списание рассчитается автоматически.</p>
       </div>
-      <div class="row-actions">
-        <button type="submit">Рассчитать списание</button>
-      </div>
-    </form>
-  </div>
-  {% endif %}
-
-  {% if preview and not application %}
-  <div class="card">
-    <h2 style="margin: 0 0 1rem; font-size: 1.05rem;">Шаг 3 — Расчёт списания</h2>
-    <dl>
-      <dt>Сумма покупки</dt><dd>{{ preview.purchase_total }} {{ preview.currency }}</dd>
-      <dt>Остаток сертификата</dt><dd>{{ preview.certificate_balance }} {{ preview.currency }}</dd>
-      <dt>К списанию</dt><dd class="amount-highlight">{{ preview.redeemable_amount }} {{ preview.currency }}</dd>
-      <dt>К оплате наличными/картой</dt><dd>{{ preview.amount_due_after }} {{ preview.currency }}</dd>
-    </dl>
-    <form method="post" action="" style="margin-top: 1.25rem;">
-      {% csrf_token %}
-      <input type="hidden" name="action" value="apply">
-      <input type="hidden" name="certificate_number" value="{{ certificate.display_id }}">
-      <input type="hidden" name="purchase_total" value="{{ preview.purchase_total }}">
       <div class="row-actions">
         <button type="submit">Применить сертификат</button>
       </div>
@@ -204,7 +183,7 @@
 
   {% if application %}
   <div class="card">
-    <h2 style="margin: 0 0 1rem; font-size: 1.05rem;">Ожидает списания</h2>
+    <h2 style="margin: 0 0 1rem; font-size: 1.05rem;">Шаг 3 — Списание</h2>
     <dl>
       <dt>Сертификат</dt><dd>{{ application.certificate_id }}</dd>
       <dt>Сумма покупки</dt><dd>{{ application.purchase_total }} {{ application.currency }}</dd>

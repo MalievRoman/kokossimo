@@ -1,3 +1,4 @@
+from django.db.utils import ProgrammingError
 from django.shortcuts import render
 from django.views.decorators.http import require_http_methods
 
@@ -6,7 +7,6 @@ from shop.models import OrderCertificateApplication
 from .certificate_redeem import (
     CertificateRedeemError,
     apply_certificate,
-    build_redeem_preview,
     cancel_certificate_application,
     finalize_certificate_application,
     parse_purchase_total,
@@ -30,17 +30,28 @@ def _base_form(
     }
 
 
+def _load_pending_applications() -> list[OrderCertificateApplication]:
+    try:
+        return list(
+            OrderCertificateApplication.objects.filter(
+                status=OrderCertificateApplication.Status.PENDING,
+            ).order_by("-created_at")[:10]
+        )
+    except ProgrammingError:
+        return []
+
+
 @require_http_methods(["GET", "POST"])
 def certificate_apply(request):
-    """Офлайн-применение сертификата: проверка, расчёт по сумме покупки, списание при финализации."""
+    """Офлайн-применение сертификата: проверка, применение по сумме покупки, списание."""
     errors: list[str] = []
     form = _base_form()
     certificate = None
     certificate_owner = None
-    preview = None
     application = None
     finalized_certificate = None
     success_message = None
+    migration_required = False
 
     performed_by = request.user.pk if request.user.is_authenticated else None
 
@@ -61,6 +72,8 @@ def certificate_apply(request):
                 )
             except (ValueError, OrderCertificateApplication.DoesNotExist):
                 errors.append("Применение не найдено или уже обработано.")
+            except ProgrammingError:
+                migration_required = True
             else:
                 try:
                     cancel_certificate_application(application)
@@ -80,6 +93,8 @@ def certificate_apply(request):
                 )
             except (ValueError, OrderCertificateApplication.DoesNotExist):
                 errors.append("Применение не найдено или уже обработано.")
+            except ProgrammingError:
+                migration_required = True
             else:
                 try:
                     finalized_certificate = finalize_certificate_application(
@@ -90,6 +105,8 @@ def certificate_apply(request):
                     errors.append(str(exc))
                     certificate = get_certificate_by_id(application.certificate_id)
                     certificate_owner = certificate_owner_info(certificate)
+                except ProgrammingError:
+                    migration_required = True
                 else:
                     success_message = (
                         f"Баланс списан. Списано {application.amount} {application.currency}. "
@@ -108,6 +125,8 @@ def certificate_apply(request):
                 except CertificateRedeemError as exc:
                     errors.append(str(exc))
                 else:
+                    certificate = get_certificate_by_id(cert_id)
+                    certificate_owner = certificate_owner_info(certificate)
                     try:
                         application = apply_certificate(
                             certificate_id=cert_id,
@@ -116,39 +135,14 @@ def certificate_apply(request):
                         )
                     except CertificateRedeemError as exc:
                         errors.append(str(exc))
-                        certificate = get_certificate_by_id(cert_id)
-                        certificate_owner = certificate_owner_info(certificate)
-                        if certificate:
-                            try:
-                                preview = build_redeem_preview(certificate, purchase_total)
-                            except CertificateRedeemError:
-                                preview = None
+                    except ProgrammingError:
+                        migration_required = True
                     else:
                         success_message = (
                             f"Сертификат применён. К списанию: {application.amount} "
-                            f"{application.currency}. Нажмите «Списать», чтобы завершить."
+                            f"{application.currency}, к оплате: {application.amount_due_after} "
+                            f"{application.currency}. Нажмите «Списать»."
                         )
-                        certificate = get_certificate_by_id(application.certificate_id)
-                        certificate_owner = certificate_owner_info(certificate)
-
-        elif action == "calculate":
-            if not is_valid_certificate_number(cert_id):
-                errors.append("Сначала укажите корректный номер сертификата.")
-            else:
-                certificate = get_certificate_by_id(cert_id)
-                if certificate is None:
-                    errors.append("Сертификат с таким номером не найден.")
-                else:
-                    certificate_owner = certificate_owner_info(certificate)
-                    try:
-                        purchase_total = parse_purchase_total(form["purchase_total"])
-                    except CertificateRedeemError as exc:
-                        errors.append(str(exc))
-                    else:
-                        try:
-                            preview = build_redeem_preview(certificate, purchase_total)
-                        except CertificateRedeemError as exc:
-                            errors.append(str(exc))
 
         else:
             if not cert_id:
@@ -177,12 +171,17 @@ def certificate_apply(request):
                 certificate_owner = certificate_owner_info(certificate)
             form["certificate_number"] = cert_id[:16]
 
-    pending_applications = (
-        OrderCertificateApplication.objects.filter(
-            status=OrderCertificateApplication.Status.PENDING,
+    pending_applications = _load_pending_applications()
+    if not pending_applications and not migration_required:
+        try:
+            OrderCertificateApplication.objects.exists()
+        except ProgrammingError:
+            migration_required = True
+
+    if migration_required:
+        errors.append(
+            "Таблица применений сертификатов не создана. Выполните: python manage.py migrate shop"
         )
-        .order_by("-created_at")[:10]
-    )
 
     return render(
         request,
@@ -192,7 +191,6 @@ def certificate_apply(request):
             "errors": errors,
             "certificate": certificate,
             "certificate_owner": certificate_owner,
-            "preview": preview,
             "application": application,
             "finalized_certificate": finalized_certificate,
             "success_message": success_message,
