@@ -218,7 +218,22 @@
           <dt>Текущий остаток</dt><dd>{% if certificate.current_balance is not None %}{{ certificate.current_balance }} {{ certificate.currency }}{% else %}—{% endif %}</dd>
           <dt>Истекает</dt><dd>{% if certificate.expires_at %}{{ certificate.expires_at|date:"d.m.Y H:i" }}{% else %}—{% endif %}</dd>
           <dt>Создан</dt><dd>{{ certificate.created_at|date:"d.m.Y H:i" }}</dd>
-          <dt>Клиент (id)</dt><dd>{% if certificate.owner_customer_id %}{{ certificate.owner_customer_id }}{% else %}—{% endif %}</dd>
+          <dt>Клиент</dt>
+          <dd>
+            {% if certificate_owner %}
+              {% if certificate_owner.found %}
+                {% if certificate_owner.last_name or certificate_owner.first_name %}
+                  {{ certificate_owner.last_name }}{% if certificate_owner.last_name and certificate_owner.first_name %} {% endif %}{{ certificate_owner.first_name }}
+                {% else %}
+                  <span style="color: var(--muted);">имя не указано</span>
+                {% endif %}
+              {% else %}
+                <span style="color: var(--muted);">пользователь не найден</span>
+              {% endif %}
+            {% else %}
+              —
+            {% endif %}
+          </dd>
         </dl>
         {% if certificate.can_redeem_in_pos %}
         <form method="post" action="" style="margin-top: 1.25rem;" onsubmit="return confirm('Отметить сертификат {{ certificate.display_id|escapejs }} как полностью списанный?');">

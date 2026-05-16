@@ -1,5 +1,7 @@
 import re
+from typing import Any
 
+from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models import F
 from django.db.models.functions import RTrim
@@ -33,6 +35,41 @@ def _get_certificate_by_id(cert_id: str):
                 .first()
             )
     return c
+
+
+def _certificate_owner_info(certificate: Certificate | None) -> dict[str, Any] | None:
+    if certificate is None or not certificate.owner_customer_id:
+        return None
+    owner_id = certificate.owner_customer_id
+    user = (
+        get_user_model()
+        .objects.select_related("profile")
+        .filter(pk=owner_id)
+        .first()
+    )
+    if user is None:
+        return {
+            "id": owner_id,
+            "first_name": "",
+            "last_name": "",
+            "found": False,
+        }
+    profile = getattr(user, "profile", None)
+    first_name = ((profile.first_name if profile else user.first_name) or "").strip()
+    last_name = ((profile.last_name if profile else user.last_name) or "").strip()
+    return {
+        "id": owner_id,
+        "first_name": first_name,
+        "last_name": last_name,
+        "found": True,
+    }
+
+
+def _lookup_context(certificate: Certificate | None, **extra: Any) -> dict[str, Any]:
+    return {
+        "certificate_owner": _certificate_owner_info(certificate),
+        **extra,
+    }
 
 
 @require_http_methods(["GET", "POST"])
@@ -89,18 +126,19 @@ def certificate_lookup(request):
         return render(
             request,
             "staff_portal/certificate_lookup.html",
-            {
-                "certificate": certificate,
-                "not_found": False,
-                "invalid_format": False,
-                "empty_input": False,
-                "certificate_number": cert_num_field[:16],
-                "marked_used": marked_used,
-                "already_used_notice": already_used_notice,
-                "expired_notice": expired_notice,
-                "blocked_notice": blocked_notice,
-                "mark_missing": mark_missing,
-            },
+            _lookup_context(
+                certificate,
+                certificate=certificate,
+                not_found=False,
+                invalid_format=False,
+                empty_input=False,
+                certificate_number=cert_num_field[:16],
+                marked_used=marked_used,
+                already_used_notice=already_used_notice,
+                expired_notice=expired_notice,
+                blocked_notice=blocked_notice,
+                mark_missing=mark_missing,
+            ),
         )
 
     certificate = None
@@ -140,16 +178,17 @@ def certificate_lookup(request):
     return render(
         request,
         "staff_portal/certificate_lookup.html",
-        {
-            "certificate": certificate,
-            "not_found": not_found,
-            "invalid_format": invalid_format,
-            "empty_input": empty_input,
-            "certificate_number": input_value,
-            "marked_used": False,
-            "already_used_notice": False,
-            "expired_notice": False,
-            "blocked_notice": False,
-            "mark_missing": False,
-        },
+        _lookup_context(
+            certificate,
+            certificate=certificate,
+            not_found=not_found,
+            invalid_format=invalid_format,
+            empty_input=empty_input,
+            certificate_number=input_value,
+            marked_used=False,
+            already_used_notice=False,
+            expired_notice=False,
+            blocked_notice=False,
+            mark_missing=False,
+        ),
     )
