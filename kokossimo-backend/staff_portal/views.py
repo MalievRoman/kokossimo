@@ -10,6 +10,7 @@ from shop.models import Certificate
 
 from .certificate_utils import (
     certificate_owner_info,
+    certificate_transactions_for_display,
     get_certificate_by_id,
     strip_certificate_input,
 )
@@ -22,6 +23,7 @@ def _lookup_context(**context: Any) -> dict[str, Any]:
     certificate = context.get("certificate")
     return {
         "certificate_owner": certificate_owner_info(certificate),
+        "certificate_transactions": certificate_transactions_for_display(certificate),
         **context,
     }
 

@@ -100,6 +100,45 @@
     input[type="text"].input-invalid {
       border-color: #d97706;
     }
+    .tx-wrap {
+      overflow-x: auto;
+      margin: 0 -0.15rem;
+    }
+    .tx-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+    .tx-table th,
+    .tx-table td {
+      padding: 0.5rem 0.55rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    .tx-table th {
+      color: var(--muted);
+      font-weight: 500;
+      font-size: 0.8rem;
+      white-space: nowrap;
+    }
+    .tx-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+    .tx-table .tx-amount {
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    .tx-table .tx-balance {
+      color: var(--muted);
+      font-size: 0.82rem;
+      white-space: nowrap;
+    }
+    .tx-empty {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
     @media (max-width: 520px) {
       dl { grid-template-columns: 1fr; }
       dt { margin-top: 0.35rem; }
@@ -213,6 +252,51 @@
           class="btn"
         >Использовать</a>
       </div>
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <h2 style="margin: 0 0 1rem; font-size: 1.05rem;">История операций</h2>
+      {% if certificate_transactions %}
+      <div class="tx-wrap">
+        <table class="tx-table">
+          <thead>
+            <tr>
+              <th>Дата</th>
+              <th>Операция</th>
+              <th>Сумма</th>
+              <th>Остаток</th>
+              <th>Комментарий</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for tx in certificate_transactions %}
+            <tr>
+              <td>{% if tx.created_at %}{{ tx.created_at|date:"d.m.Y H:i" }}{% else %}—{% endif %}</td>
+              <td>{{ tx.type_label }}</td>
+              <td class="tx-amount">
+                {% if tx.amount is not None %}{{ tx.amount }} {{ tx.currency }}{% else %}—{% endif %}
+              </td>
+              <td class="tx-balance">
+                {% if tx.balance_before is not None or tx.balance_after is not None %}
+                  {% if tx.balance_before is not None %}{{ tx.balance_before }}{% else %}—{% endif %}
+                  →
+                  {% if tx.balance_after is not None %}{{ tx.balance_after }}{% else %}—{% endif %}
+                  {{ tx.currency }}
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+              <td>
+                {% if tx.reason %}{{ tx.reason }}{% elif tx.order_id %}Заказ №{{ tx.order_id }}{% else %}—{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="tx-empty">Операций по этому сертификату пока нет.</p>
       {% endif %}
     </div>
   {% elif not_found %}

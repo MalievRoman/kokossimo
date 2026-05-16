@@ -5,10 +5,20 @@ from django.contrib.auth import get_user_model
 from django.db.models import F
 from django.db.models.functions import RTrim
 
-from shop.models import Certificate
+from shop.models import Certificate, CertificateTransaction
 
 _CERT_NUMBER_RE = re.compile(r"^[A-Za-z0-9]{16}$")
 _CERTIFICATES_DB = "certificates"
+
+_TRANSACTION_TYPE_LABELS: dict[str, str] = {
+    "issue": "Выпуск",
+    "redeem": "Списание",
+    "refund": "Возврат",
+    "adjustment": "Корректировка",
+    "block": "Блокировка",
+    "unblock": "Разблокировка",
+    "expire": "Истечение срока",
+}
 
 
 def _certificates_qs():
@@ -41,6 +51,42 @@ def get_certificate_by_id(cert_id: str) -> Certificate | None:
                 .first()
             )
     return c
+
+
+def transaction_type_label(tx_type: str | None) -> str:
+    if not tx_type:
+        return "—"
+    return _TRANSACTION_TYPE_LABELS.get(tx_type, tx_type)
+
+
+def get_certificate_transactions(certificate: Certificate) -> list[CertificateTransaction]:
+    return list(
+        CertificateTransaction.objects.using(_CERTIFICATES_DB)
+        .filter(certificate_id=certificate.pk)
+        .order_by("-created_at", "-id")
+    )
+
+
+def certificate_transactions_for_display(
+    certificate: Certificate | None,
+) -> list[dict[str, Any]]:
+    if certificate is None:
+        return []
+    rows: list[dict[str, Any]] = []
+    for tx in get_certificate_transactions(certificate):
+        rows.append(
+            {
+                "created_at": tx.created_at,
+                "type_label": transaction_type_label(tx.type),
+                "amount": tx.amount,
+                "currency": tx.currency or certificate.currency or "RUB",
+                "balance_before": tx.balance_before,
+                "balance_after": tx.balance_after,
+                "reason": (tx.reason or "").strip(),
+                "order_id": tx.order_id,
+            }
+        )
+    return rows
 
 
 def certificate_owner_info(certificate: Certificate | None) -> dict[str, Any] | None:
