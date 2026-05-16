@@ -2,14 +2,11 @@ from django.db.utils import OperationalError, ProgrammingError
 from django.shortcuts import render
 from django.views.decorators.http import require_http_methods
 
-from shop.models import OrderCertificateApplication
-
 from .certificate_redeem import (
     CertificateRedeemError,
-    apply_certificate,
-    cancel_certificate_application,
-    finalize_certificate_application,
     parse_purchase_total,
+    redeem_certificate,
+    validate_certificate_for_apply,
 )
 from .certificate_utils import (
     certificate_owner_info,
@@ -32,23 +29,14 @@ def _base_form(
     }
 
 
-def _load_pending_applications() -> list[OrderCertificateApplication]:
-    return list(
-        OrderCertificateApplication.objects.filter(
-            status=OrderCertificateApplication.Status.PENDING,
-        ).order_by("-created_at")[:10]
-    )
-
-
 @require_http_methods(["GET", "POST"])
 def certificate_apply(request):
-    """Офлайн-применение сертификата: проверка, применение по сумме покупки, списание."""
+    """Офлайн-применение сертификата: проверка и списание по сумме покупки."""
     errors: list[str] = []
     form = _base_form()
     certificate = None
     certificate_owner = None
-    application = None
-    finalized_certificate = None
+    redeem_result = None
     success_message = None
     performed_by = request.user.pk if request.user.is_authenticated else None
 
@@ -60,60 +48,7 @@ def certificate_apply(request):
         )
         cert_id = strip_certificate_input(form["certificate_number"])
 
-        if action == "cancel_application":
-            app_id = request.POST.get("application_id", "").strip()
-            try:
-                application = OrderCertificateApplication.objects.get(
-                    pk=int(app_id),
-                    status=OrderCertificateApplication.Status.PENDING,
-                )
-            except (ValueError, OrderCertificateApplication.DoesNotExist):
-                errors.append("Применение не найдено или уже обработано.")
-            except _DB_ERRORS:
-                errors.append("Ошибка базы данных.")
-            else:
-                try:
-                    cancel_certificate_application(application)
-                except CertificateRedeemError as exc:
-                    errors.append(str(exc))
-                else:
-                    success_message = "Применение сертификата отменено."
-                    form = _base_form()
-                    application = None
-
-        elif action == "finalize":
-            app_id = request.POST.get("application_id", "").strip()
-            try:
-                application = OrderCertificateApplication.objects.get(
-                    pk=int(app_id),
-                    status=OrderCertificateApplication.Status.PENDING,
-                )
-            except (ValueError, OrderCertificateApplication.DoesNotExist):
-                errors.append("Применение не найдено или уже обработано.")
-            except _DB_ERRORS:
-                errors.append("Ошибка базы данных.")
-            else:
-                try:
-                    finalized_certificate = finalize_certificate_application(
-                        application,
-                        performed_by=performed_by,
-                    )
-                except CertificateRedeemError as exc:
-                    errors.append(str(exc))
-                    certificate = get_certificate_by_id(application.certificate_id)
-                    certificate_owner = certificate_owner_info(certificate)
-                except _DB_ERRORS:
-                    errors.append("Ошибка базы данных.")
-                else:
-                    success_message = (
-                        f"Баланс списан. Списано {application.amount} {application.currency}. "
-                        f"Остаток на сертификате: {finalized_certificate.current_balance or 0} "
-                        f"{finalized_certificate.currency}."
-                    )
-                    form = _base_form()
-                    application = None
-
-        elif action == "apply":
+        if action == "redeem":
             if not is_valid_certificate_number(cert_id):
                 errors.append("Номер сертификата: ровно 16 латинских букв или цифр.")
             else:
@@ -125,7 +60,7 @@ def certificate_apply(request):
                     certificate = get_certificate_by_id(cert_id)
                     certificate_owner = certificate_owner_info(certificate)
                     try:
-                        application = apply_certificate(
+                        redeem_result = redeem_certificate(
                             certificate_id=cert_id,
                             purchase_total=purchase_total,
                             performed_by=performed_by,
@@ -136,10 +71,15 @@ def certificate_apply(request):
                         errors.append("Ошибка базы данных.")
                     else:
                         success_message = (
-                            f"Сертификат применён. К списанию: {application.amount} "
-                            f"{application.currency}, к оплате: {application.amount_due_after} "
-                            f"{application.currency}. Нажмите «Списать»."
+                            f"Списано {redeem_result.redeemed_amount} {redeem_result.currency}. "
+                            f"К оплате: {redeem_result.amount_due_after} {redeem_result.currency}. "
+                            f"Остаток на сертификате: "
+                            f"{redeem_result.certificate.current_balance or 0} "
+                            f"{redeem_result.currency}."
                         )
+                        form = _base_form()
+                        certificate = None
+                        certificate_owner = None
 
         else:
             if not cert_id:
@@ -152,8 +92,6 @@ def certificate_apply(request):
                     errors.append("Сертификат с таким номером не найден.")
                 else:
                     try:
-                        from .certificate_redeem import validate_certificate_for_apply
-
                         validate_certificate_for_apply(certificate)
                     except CertificateRedeemError as exc:
                         errors.append(str(exc))
@@ -168,8 +106,6 @@ def certificate_apply(request):
                 certificate_owner = certificate_owner_info(certificate)
             form["certificate_number"] = cert_id[:16]
 
-    pending_applications = _load_pending_applications()
-
     return render(
         request,
         "staff_portal/certificate_apply.html",
@@ -178,9 +114,7 @@ def certificate_apply(request):
             "errors": errors,
             "certificate": certificate,
             "certificate_owner": certificate_owner,
-            "application": application,
-            "finalized_certificate": finalized_certificate,
+            "redeem_result": redeem_result,
             "success_message": success_message,
-            "pending_applications": pending_applications,
         },
     )

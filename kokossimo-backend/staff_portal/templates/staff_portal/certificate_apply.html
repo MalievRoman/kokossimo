@@ -43,29 +43,6 @@
       color: var(--muted);
       font-size: 0.85rem;
     }
-    .pending-list {
-      list-style: none;
-      margin: 0;
-      padding: 0;
-    }
-    .pending-list li {
-      padding: 0.65rem 0;
-      border-bottom: 1px solid var(--border);
-      font-size: 0.92rem;
-    }
-    .pending-list li:last-child { border-bottom: none; }
-    .inline-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      margin-top: 0.75rem;
-    }
-    button.btn-secondary {
-      background: #fff;
-      color: var(--text);
-      border: 1px solid var(--border);
-    }
-    button.btn-secondary:hover { filter: none; background: #f3f4f6; }
     @media (max-width: 520px) {
       dl { grid-template-columns: 1fr; }
     }
@@ -74,12 +51,11 @@
 
 {% block content %}
   <h1>Применение сертификата</h1>
-  <p class="sub">Офлайн в точке продаж: проверка, применение по сумме чека и списание баланса.</p>
+  <p class="sub">Офлайн в точке продаж: проверка сертификата и списание по сумме чека.</p>
 
   <ol class="steps">
-    <li class="{% if certificate %}is-done{% elif not application %}is-current{% endif %}">1. Сертификат</li>
-    <li class="{% if application %}is-done{% elif certificate %}is-current{% endif %}">2. Применение</li>
-    <li class="{% if success_message and finalized_certificate %}is-done{% elif application %}is-current{% endif %}">3. Списание</li>
+    <li class="{% if certificate or redeem_result %}is-done{% else %}is-current{% endif %}">1. Сертификат</li>
+    <li class="{% if redeem_result %}is-done{% elif certificate %}is-current{% endif %}">2. Списание</li>
   </ol>
 
   {% if success_message %}
@@ -112,11 +88,11 @@
           maxlength="16"
           pattern="[A-Za-z0-9]{16}"
           placeholder="16 символов"
-          {% if not application %}autofocus{% endif %}
+          {% if not certificate %}autofocus{% endif %}
         >
         <p class="field-hint">Ровно 16 символов: латинские буквы и цифры.</p>
       </div>
-      {% if not application %}
+      {% if not certificate %}
       <div class="row-actions">
         <button type="submit">Проверить сертификат</button>
       </div>
@@ -124,7 +100,7 @@
     </form>
   </div>
 
-  {% if certificate and not application %}
+  {% if certificate %}
   <div class="card">
     <h2 style="margin: 0 0 1rem; font-size: 1.05rem;">Данные сертификата</h2>
     <dl>
@@ -155,10 +131,10 @@
   </div>
 
   <div class="card">
-    <h2 style="margin: 0 0 1rem; font-size: 1.05rem;">Шаг 2 — Применить к покупке</h2>
-    <form method="post" action="">
+    <h2 style="margin: 0 0 1rem; font-size: 1.05rem;">Шаг 2 — Списать по сумме чека</h2>
+    <form method="post" action="" id="redeem-form">
       {% csrf_token %}
-      <input type="hidden" name="action" value="apply">
+      <input type="hidden" name="action" value="redeem">
       <input type="hidden" name="certificate_number" value="{{ certificate.display_id }}">
       <div class="field">
         <label for="purchase_total">Сумма покупки в точке</label>
@@ -172,60 +148,12 @@
           autofocus
           required
         >
-        <p class="field-hint">Сумма чека в рублях. Списание рассчитается автоматически.</p>
+        <p class="field-hint">После подтверждения баланс спишется сразу.</p>
       </div>
       <div class="row-actions">
-        <button type="submit">Применить сертификат</button>
+        <button type="submit">Списать с сертификата</button>
       </div>
     </form>
-  </div>
-  {% endif %}
-
-  {% if application %}
-  <div class="card">
-    <h2 style="margin: 0 0 1rem; font-size: 1.05rem;">Шаг 3 — Списание</h2>
-    <dl>
-      <dt>Сертификат</dt><dd>{{ application.certificate_id }}</dd>
-      <dt>Сумма покупки</dt><dd>{{ application.purchase_total }} {{ application.currency }}</dd>
-      <dt>К списанию</dt><dd class="amount-highlight">{{ application.amount }} {{ application.currency }}</dd>
-      <dt>К оплате</dt><dd>{{ application.amount_due_after }} {{ application.currency }}</dd>
-    </dl>
-    <p class="field-hint" style="margin-top: 0.75rem;">
-      Подтвердите списание после оплаты клиентом оставшейся суммы.
-    </p>
-    <div class="inline-actions">
-      <form method="post" action="" onsubmit="return confirm('Списать {{ application.amount }} {{ application.currency }} с сертификата {{ application.certificate_id|escapejs }}?');">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="finalize">
-        <input type="hidden" name="application_id" value="{{ application.pk }}">
-        <button type="submit">Списать с сертификата</button>
-      </form>
-      <form method="post" action="" onsubmit="return confirm('Отменить применение сертификата {{ application.certificate_id|escapejs }}?');">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="cancel_application">
-        <input type="hidden" name="application_id" value="{{ application.pk }}">
-        <button type="submit" class="btn-secondary">Отменить</button>
-      </form>
-    </div>
-  </div>
-  {% endif %}
-
-  {% if pending_applications and not application %}
-  <div class="card">
-    <h2 style="margin: 0 0 0.75rem; font-size: 1.05rem;">Ожидают списания</h2>
-    <ul class="pending-list">
-      {% for item in pending_applications %}
-        <li>
-          {{ item.certificate_id }} · покупка {{ item.purchase_total }} · списать {{ item.amount }} {{ item.currency }}
-          <form method="post" action="" style="display: inline;">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="finalize">
-            <input type="hidden" name="application_id" value="{{ item.pk }}">
-            <button type="submit" class="btn-secondary" style="padding: 0.35rem 0.65rem; font-size: 0.85rem; margin-left: 0.5rem;">Списать</button>
-          </form>
-        </li>
-      {% endfor %}
-    </ul>
   </div>
   {% endif %}
 {% endblock %}
@@ -233,15 +161,26 @@
 {% block extra_js %}
   <script>
     (function () {
-      var el = document.getElementById("certificate_number");
-      if (!el) return;
-      function filterValue(s) {
-        return s.replace(/[^A-Za-z0-9]/g, "").slice(0, 16);
+      var certEl = document.getElementById("certificate_number");
+      if (certEl) {
+        function filterValue(s) {
+          return s.replace(/[^A-Za-z0-9]/g, "").slice(0, 16);
+        }
+        certEl.addEventListener("input", function () {
+          var next = filterValue(certEl.value);
+          if (certEl.value !== next) certEl.value = next;
+        });
       }
-      el.addEventListener("input", function () {
-        var next = filterValue(el.value);
-        if (el.value !== next) el.value = next;
-      });
+
+      var redeemForm = document.getElementById("redeem-form");
+      if (redeemForm) {
+        redeemForm.addEventListener("submit", function (e) {
+          var total = (document.getElementById("purchase_total") || {}).value || "";
+          var cert = (redeemForm.querySelector('[name="certificate_number"]') || {}).value || "";
+          var msg = "Списать средства с сертификата " + cert + " по чеку на " + total + " ₽?";
+          if (!confirm(msg)) e.preventDefault();
+        });
+      }
     })();
   </script>
 {% endblock %}
