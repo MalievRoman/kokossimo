@@ -1,0 +1,269 @@
+{% extends "staff_portal/base.html" %}
+
+{% block title %}Создание сертификата — Kokossimo{% endblock %}
+
+{% block nav %}
+  <p class="nav-back"><a href="{% url 'staff_portal:hub' %}">← Портал сотрудников</a></p>
+{% endblock %}
+
+{% block extra_css %}
+  <style>
+    .customer-search-wrap { position: relative; }
+    .customer-results {
+      list-style: none;
+      margin: 0.35rem 0 0;
+      padding: 0;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--card);
+      max-height: 14rem;
+      overflow-y: auto;
+      display: none;
+    }
+    .customer-results.is-open { display: block; }
+    .customer-results li button {
+      width: 100%;
+      text-align: left;
+      background: transparent;
+      color: var(--text);
+      border: none;
+      border-radius: 0;
+      padding: 0.65rem 0.75rem;
+      font-weight: 400;
+      font-size: 0.92rem;
+      cursor: pointer;
+    }
+    .customer-results li button:hover {
+      background: #f3f4f6;
+      filter: none;
+    }
+    .customer-selected {
+      margin-top: 0.5rem;
+      padding: 0.55rem 0.75rem;
+      background: #ecfdf5;
+      border: 1px solid var(--success-border);
+      border-radius: 6px;
+      font-size: 0.92rem;
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+    .customer-selected.is-visible { display: flex; }
+    .customer-selected-clear {
+      background: transparent;
+      color: var(--muted);
+      border: none;
+      padding: 0;
+      font-size: 0.85rem;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    .customer-selected-clear:hover { color: var(--text); filter: none; }
+    .created-box {
+      margin-bottom: 1.25rem;
+    }
+    .created-box code {
+      font-size: 1.05rem;
+      letter-spacing: 0.06em;
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+  <h1>Создание подарочного сертификата</h1>
+  <p class="sub">Номер сертификата генерируется автоматически (16 символов: цифры и строчные латинские буквы).</p>
+
+  {% if created_certificate %}
+    <div class="msg msg-success created-box">
+      Сертификат создан. Номер: <code>{{ created_certificate.display_id }}</code>
+      <div class="row-actions" style="margin-top: 0.75rem;">
+        <a class="btn" href="{% url 'staff_portal:certificate_lookup' %}?certificate_number={{ created_certificate.display_id }}">Проверить сертификат</a>
+      </div>
+    </div>
+  {% endif %}
+
+  {% if errors %}
+    <div class="msg msg-warn">
+      <ul class="error-list">
+        {% for error in errors %}
+          <li>{{ error }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  <div class="card">
+    <form method="post" action="" id="certificate-create-form">
+      {% csrf_token %}
+
+      <div class="field">
+        <label for="initial_amount">Номинал</label>
+        <input
+          type="text"
+          id="initial_amount"
+          name="initial_amount"
+          value="{{ form.initial_amount }}"
+          inputmode="decimal"
+          placeholder="5000"
+          required
+        >
+        <p class="field-hint">Сумма на сертификате.</p>
+      </div>
+
+      <div class="field">
+        <label for="currency">Валюта</label>
+        <select id="currency" name="currency" required>
+          {% for code, label in currency_choices %}
+            <option value="{{ code }}"{% if form.currency == code %} selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="expires_at">Срок действия (дата окончания)</label>
+        <input
+          type="date"
+          id="expires_at"
+          name="expires_at"
+          value="{{ form.expires_at }}"
+          min="{{ min_expires_date }}"
+          required
+        >
+        <p class="field-hint">Действует до конца выбранного дня (UTC).</p>
+      </div>
+
+      <div class="field">
+        <label for="customer_query">Получатель (поиск клиента)</label>
+        <div class="customer-search-wrap">
+          <input
+            type="text"
+            id="customer_query"
+            name="customer_query"
+            value="{{ form.customer_query }}"
+            autocomplete="off"
+            placeholder="Имя, фамилия, email или телефон"
+          >
+          <ul class="customer-results" id="customer_results" role="listbox"></ul>
+        </div>
+        <input type="hidden" id="owner_customer_id" name="owner_customer_id" value="{{ form.owner_customer_id }}">
+        <input type="hidden" id="selected_customer_label" name="selected_customer_label" value="{{ form.selected_customer_label }}">
+        <div class="customer-selected{% if form.selected_customer_label %} is-visible{% endif %}" id="customer_selected">
+          <span id="customer_selected_text">{{ form.selected_customer_label }}</span>
+          <button type="button" class="customer-selected-clear" id="customer_clear">Сбросить</button>
+        </div>
+        <p class="field-hint">Необязательно. Выберите клиента из результатов поиска.</p>
+      </div>
+
+      <div class="field">
+        <label for="comment">Комментарий</label>
+        <textarea id="comment" name="comment" placeholder="Служебный комментарий">{{ form.comment }}</textarea>
+        <p class="field-hint">Сохраняется в metadata сертификата.</p>
+      </div>
+
+      <div class="row-actions">
+        <button type="submit">Создать сертификат</button>
+      </div>
+    </form>
+  </div>
+{% endblock %}
+
+{% block extra_js %}
+  <script>
+    (function () {
+      var searchUrl = "{{ customer_search_url|escapejs }}";
+      var queryEl = document.getElementById("customer_query");
+      var resultsEl = document.getElementById("customer_results");
+      var ownerIdEl = document.getElementById("owner_customer_id");
+      var labelInputEl = document.getElementById("selected_customer_label");
+      var selectedBox = document.getElementById("customer_selected");
+      var selectedText = document.getElementById("customer_selected_text");
+      var clearBtn = document.getElementById("customer_clear");
+      var debounceTimer = null;
+
+      function openResults() {
+        resultsEl.classList.add("is-open");
+      }
+
+      function closeResults() {
+        resultsEl.classList.remove("is-open");
+        resultsEl.innerHTML = "";
+      }
+
+      function selectCustomer(item) {
+        ownerIdEl.value = String(item.id);
+        labelInputEl.value = item.label;
+        selectedText.textContent = item.label;
+        selectedBox.classList.add("is-visible");
+        queryEl.value = "";
+        closeResults();
+      }
+
+      function clearCustomer() {
+        ownerIdEl.value = "";
+        labelInputEl.value = "";
+        selectedText.textContent = "";
+        selectedBox.classList.remove("is-visible");
+      }
+
+      function renderResults(items) {
+        resultsEl.innerHTML = "";
+        if (!items.length) {
+          var empty = document.createElement("li");
+          var btn = document.createElement("button");
+          btn.type = "button";
+          btn.disabled = true;
+          btn.textContent = "Ничего не найдено";
+          empty.appendChild(btn);
+          resultsEl.appendChild(empty);
+          openResults();
+          return;
+        }
+        items.forEach(function (item) {
+          var li = document.createElement("li");
+          var btn = document.createElement("button");
+          btn.type = "button";
+          btn.textContent = item.label;
+          btn.addEventListener("click", function () {
+            selectCustomer(item);
+          });
+          li.appendChild(btn);
+          resultsEl.appendChild(li);
+        });
+        openResults();
+      }
+
+      function fetchCustomers(q) {
+        var url = searchUrl + "?q=" + encodeURIComponent(q);
+        fetch(url, { headers: { Accept: "application/json" } })
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            renderResults(data.results || []);
+          })
+          .catch(function () {
+            closeResults();
+          });
+      }
+
+      queryEl.addEventListener("input", function () {
+        var q = queryEl.value.trim();
+        if (debounceTimer) clearTimeout(debounceTimer);
+        if (q.length < 2) {
+          closeResults();
+          return;
+        }
+        debounceTimer = setTimeout(function () {
+          fetchCustomers(q);
+        }, 280);
+      });
+
+      clearBtn.addEventListener("click", clearCustomer);
+
+      document.addEventListener("click", function (ev) {
+        if (!resultsEl.contains(ev.target) && ev.target !== queryEl) {
+          closeResults();
+        }
+      });
+    })();
+  </script>
+{% endblock %}
