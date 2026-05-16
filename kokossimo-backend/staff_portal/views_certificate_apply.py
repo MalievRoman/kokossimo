@@ -36,6 +36,7 @@ def certificate_apply(request):
     form = _base_form()
     certificate = None
     certificate_owner = None
+    certificate_can_apply = False
     redeem_result = None
     success_message = None
     performed_by = request.user.pk if request.user.is_authenticated else None
@@ -53,23 +54,26 @@ def certificate_apply(request):
                 errors.append("Номер сертификата: ровно 16 латинских букв или цифр.")
             else:
                 certificate = get_certificate_by_id(cert_id)
-                certificate_owner = certificate_owner_info(certificate)
-                purchase_total = None
-                if action == "redeem_all":
-                    if certificate is None:
-                        errors.append("Сертификат с таким номером не найден.")
-                    else:
-                        try:
-                            validation = validate_certificate_for_apply(certificate)
-                        except CertificateRedeemError as exc:
-                            errors.append(str(exc))
-                        else:
-                            purchase_total = validation.balance
+                if certificate is None:
+                    errors.append("Сертификат с таким номером не найден.")
                 else:
+                    certificate_owner = certificate_owner_info(certificate)
                     try:
-                        purchase_total = parse_purchase_total(form["purchase_total"])
+                        validation = validate_certificate_for_apply(certificate)
                     except CertificateRedeemError as exc:
                         errors.append(str(exc))
+                    else:
+                        certificate_can_apply = True
+
+                purchase_total = None
+                if certificate_can_apply:
+                    if action == "redeem_all":
+                        purchase_total = validation.balance
+                    else:
+                        try:
+                            purchase_total = parse_purchase_total(form["purchase_total"])
+                        except CertificateRedeemError as exc:
+                            errors.append(str(exc))
 
                 if purchase_total is not None and not errors:
                     try:
@@ -109,14 +113,23 @@ def certificate_apply(request):
                         errors.append(str(exc))
                     else:
                         certificate_owner = certificate_owner_info(certificate)
+                        certificate_can_apply = True
 
     elif request.GET.get("certificate_number"):
         cert_id = strip_certificate_input(request.GET.get("certificate_number", ""))
         if is_valid_certificate_number(cert_id):
             certificate = get_certificate_by_id(cert_id)
-            if certificate:
-                certificate_owner = certificate_owner_info(certificate)
             form["certificate_number"] = cert_id[:16]
+            if certificate is None:
+                errors.append("Сертификат с таким номером не найден.")
+            else:
+                certificate_owner = certificate_owner_info(certificate)
+                try:
+                    validate_certificate_for_apply(certificate)
+                except CertificateRedeemError as exc:
+                    errors.append(str(exc))
+                else:
+                    certificate_can_apply = True
 
     return render(
         request,
@@ -126,6 +139,7 @@ def certificate_apply(request):
             "errors": errors,
             "certificate": certificate,
             "certificate_owner": certificate_owner,
+            "certificate_can_apply": certificate_can_apply,
             "redeem_result": redeem_result,
             "success_message": success_message,
         },

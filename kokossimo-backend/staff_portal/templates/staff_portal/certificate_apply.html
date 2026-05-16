@@ -43,6 +43,15 @@
       color: var(--muted);
       font-size: 0.85rem;
     }
+    .btn-muted {
+      background: #fff;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-muted:hover {
+      filter: none;
+      background: #f9fafb;
+    }
     @media (max-width: 520px) {
       dl { grid-template-columns: 1fr; }
     }
@@ -54,8 +63,10 @@
   <p class="sub">Офлайн в точке продаж: проверка сертификата и списание по сумме чека.</p>
 
   <ol class="steps">
-    <li class="{% if certificate or redeem_result %}is-done{% else %}is-current{% endif %}">1. Сертификат</li>
-    <li class="{% if redeem_result %}is-done{% elif certificate %}is-current{% endif %}">2. Списание</li>
+    <li class="{% if certificate_can_apply or redeem_result %}is-done{% else %}is-current{% endif %}">1. Сертификат</li>
+    {% if certificate_can_apply or redeem_result %}
+    <li class="{% if redeem_result %}is-done{% else %}is-current{% endif %}">2. Списание</li>
+    {% endif %}
   </ol>
 
   {% if success_message %}
@@ -92,11 +103,14 @@
         >
         <p class="field-hint">Ровно 16 символов: латинские буквы и цифры.</p>
       </div>
-      {% if not certificate %}
       <div class="row-actions">
+        {% if not certificate %}
         <button type="submit">Проверить сертификат</button>
+        {% endif %}
+        {% if certificate or form.certificate_number %}
+        <a href="{% url 'staff_portal:certificate_apply' %}" class="btn btn-muted">Отмена</a>
+        {% endif %}
       </div>
-      {% endif %}
     </form>
   </div>
 
@@ -130,6 +144,7 @@
     </dl>
   </div>
 
+  {% if certificate_can_apply %}
   <div class="card">
     <h2 style="margin: 0 0 1rem; font-size: 1.05rem;">Шаг 2 — Списать по сумме чека</h2>
     <form method="post" action="" id="redeem-form">
@@ -155,6 +170,7 @@
       </div>
     </form>
   </div>
+  {% endif %}
   {% endif %}
 {% endblock %}
 
