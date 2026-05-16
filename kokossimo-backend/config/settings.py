@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     'corsheaders',      # Чтобы React мог подключаться
     'shop.apps.ShopConfig',             # Наше приложение
     'erp_analytics.apps.ErpAnalyticsConfig',
+    'staff_portal.apps.StaffPortalConfig',
 ]
 
 
