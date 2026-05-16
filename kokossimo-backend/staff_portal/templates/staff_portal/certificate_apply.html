@@ -124,7 +124,7 @@
     </form>
   </div>
 
-  {% if certificate and not application %}
+  {% if certificate and not application and db_ready %}
   <div class="card">
     <h2 style="margin: 0 0 1rem; font-size: 1.05rem;">Данные сертификата</h2>
     <dl>

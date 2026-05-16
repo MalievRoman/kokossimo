@@ -1,9 +1,13 @@
-from django.db.utils import ProgrammingError
+from django.db.utils import OperationalError, ProgrammingError
 from django.shortcuts import render
 from django.views.decorators.http import require_http_methods
 
 from shop.models import OrderCertificateApplication
 
+from .certificate_application_db import (
+    certificate_application_db_error_message,
+    certificate_application_table_status,
+)
 from .certificate_redeem import (
     CertificateRedeemError,
     apply_certificate,
@@ -18,6 +22,8 @@ from .certificate_utils import (
     strip_certificate_input,
 )
 
+_DB_ERRORS = (ProgrammingError, OperationalError)
+
 
 def _base_form(
     *,
@@ -31,14 +37,13 @@ def _base_form(
 
 
 def _load_pending_applications() -> list[OrderCertificateApplication]:
-    try:
-        return list(
-            OrderCertificateApplication.objects.filter(
-                status=OrderCertificateApplication.Status.PENDING,
-            ).order_by("-created_at")[:10]
-        )
-    except ProgrammingError:
+    if certificate_application_table_status() != "ready":
         return []
+    return list(
+        OrderCertificateApplication.objects.filter(
+            status=OrderCertificateApplication.Status.PENDING,
+        ).order_by("-created_at")[:10]
+    )
 
 
 @require_http_methods(["GET", "POST"])
@@ -51,11 +56,14 @@ def certificate_apply(request):
     application = None
     finalized_certificate = None
     success_message = None
-    migration_required = False
+
+    table_status = certificate_application_table_status()
+    if table_status != "ready":
+        errors.append(certificate_application_db_error_message(table_status))
 
     performed_by = request.user.pk if request.user.is_authenticated else None
 
-    if request.method == "POST":
+    if request.method == "POST" and table_status == "ready":
         action = (request.POST.get("action") or "check_certificate").strip()
         form = _base_form(
             certificate_number=request.POST.get("certificate_number", ""),
@@ -72,8 +80,8 @@ def certificate_apply(request):
                 )
             except (ValueError, OrderCertificateApplication.DoesNotExist):
                 errors.append("Применение не найдено или уже обработано.")
-            except ProgrammingError:
-                migration_required = True
+            except _DB_ERRORS:
+                errors.append(certificate_application_db_error_message("outdated"))
             else:
                 try:
                     cancel_certificate_application(application)
@@ -93,8 +101,8 @@ def certificate_apply(request):
                 )
             except (ValueError, OrderCertificateApplication.DoesNotExist):
                 errors.append("Применение не найдено или уже обработано.")
-            except ProgrammingError:
-                migration_required = True
+            except _DB_ERRORS:
+                errors.append(certificate_application_db_error_message("outdated"))
             else:
                 try:
                     finalized_certificate = finalize_certificate_application(
@@ -105,8 +113,8 @@ def certificate_apply(request):
                     errors.append(str(exc))
                     certificate = get_certificate_by_id(application.certificate_id)
                     certificate_owner = certificate_owner_info(certificate)
-                except ProgrammingError:
-                    migration_required = True
+                except _DB_ERRORS:
+                    errors.append(certificate_application_db_error_message("outdated"))
                 else:
                     success_message = (
                         f"Баланс списан. Списано {application.amount} {application.currency}. "
@@ -135,8 +143,8 @@ def certificate_apply(request):
                         )
                     except CertificateRedeemError as exc:
                         errors.append(str(exc))
-                    except ProgrammingError:
-                        migration_required = True
+                    except _DB_ERRORS:
+                        errors.append(certificate_application_db_error_message("outdated"))
                     else:
                         success_message = (
                             f"Сертификат применён. К списанию: {application.amount} "
@@ -172,16 +180,6 @@ def certificate_apply(request):
             form["certificate_number"] = cert_id[:16]
 
     pending_applications = _load_pending_applications()
-    if not pending_applications and not migration_required:
-        try:
-            OrderCertificateApplication.objects.exists()
-        except ProgrammingError:
-            migration_required = True
-
-    if migration_required:
-        errors.append(
-            "Таблица применений сертификатов не создана. Выполните: python manage.py migrate shop"
-        )
 
     return render(
         request,
@@ -195,5 +193,6 @@ def certificate_apply(request):
             "finalized_certificate": finalized_certificate,
             "success_message": success_message,
             "pending_applications": pending_applications,
+            "db_ready": table_status == "ready",
         },
     )
