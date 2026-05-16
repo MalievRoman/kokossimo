@@ -176,11 +176,20 @@
   {% if certificate_can_apply %}
   <div class="card">
     <h2 style="margin: 0 0 1rem; font-size: 1.05rem;">Шаг 2 — Списать по сумме чека</h2>
-    <form method="post" action="" id="redeem-form">
+    <form
+      method="post"
+      action=""
+      id="redeem-form"
+      data-cert="{{ certificate.display_id }}"
+      data-balance="{% if certificate.current_balance is not None %}{{ certificate.current_balance }}{% endif %}"
+      data-currency="{{ certificate.currency }}"
+    >
       {% csrf_token %}
       <input type="hidden" name="certificate_number" value="{{ certificate.display_id }}">
-      <div class="field">
-        <label for="purchase_total">Сумма покупки в точке</label>
+
+      <div id="redeem-entry">
+        <div class="field">
+          <label for="purchase_total">Сумма покупки в точке</label>
         <input
           type="text"
           id="purchase_total"
@@ -196,10 +205,23 @@
           ({% if certificate.current_balance is not None %}{{ certificate.current_balance }} {{ certificate.currency }}{% else %}—{% endif %}).
           После подтверждения баланс спишется сразу.
         </p>
+        </div>
+        <div id="redeem-inline-error" class="redeem-inline-error" hidden></div>
+        <div class="row-actions">
+          <button type="button" class="js-redeem-preview" data-action="redeem">Списать с сертификата</button>
+          <button type="button" class="js-redeem-preview" data-action="redeem_all">Списать все</button>
+        </div>
       </div>
-      <div class="row-actions">
-        <button type="submit" name="action" value="redeem">Списать с сертификата</button>
-        <button type="submit" name="action" value="redeem_all" formnovalidate>Списать все</button>
+
+      <div id="redeem-confirm" hidden>
+        <div class="redeem-confirm-box">
+          <p class="redeem-confirm-box__title">Подтвердите списание</p>
+          <p class="redeem-confirm-box__text" id="redeem-confirm-text"></p>
+        </div>
+        <div class="row-actions">
+          <button type="submit" name="action" id="redeem-confirm-submit" value="">Подтвердить списание</button>
+          <button type="button" class="btn btn-muted" id="redeem-confirm-back">Назад</button>
+        </div>
       </div>
     </form>
   </div>
@@ -223,15 +245,92 @@
 
       var redeemForm = document.getElementById("redeem-form");
       if (redeemForm) {
-        redeemForm.addEventListener("submit", function (e) {
-          var action = e.submitter && e.submitter.name === "action" ? e.submitter.value : "redeem";
-          var cert = (redeemForm.querySelector('[name="certificate_number"]') || {}).value || "";
-          var msg = action === "redeem_all"
-            ? "Списать весь остаток с сертификата " + cert + "?"
-            : "Списать средства с сертификата " + cert + " по чеку на "
-              + ((document.getElementById("purchase_total") || {}).value || "") + " ₽?";
-          if (!confirm(msg)) e.preventDefault();
+        var entryEl = document.getElementById("redeem-entry");
+        var confirmEl = document.getElementById("redeem-confirm");
+        var confirmText = document.getElementById("redeem-confirm-text");
+        var confirmSubmit = document.getElementById("redeem-confirm-submit");
+        var confirmBack = document.getElementById("redeem-confirm-back");
+        var inlineError = document.getElementById("redeem-inline-error");
+        var totalEl = document.getElementById("purchase_total");
+        var cert = redeemForm.getAttribute("data-cert") || "";
+        var balanceRaw = redeemForm.getAttribute("data-balance") || "";
+        var currency = redeemForm.getAttribute("data-currency") || "RUB";
+        var maxBal = balanceRaw ? parseFloat(String(balanceRaw).replace(",", ".")) : NaN;
+
+        function parseAmount(raw) {
+          var s = String(raw || "").replace(",", ".").trim();
+          if (!s) return NaN;
+          return parseFloat(s);
+        }
+
+        function showInlineError(msg) {
+          if (!inlineError) return;
+          inlineError.textContent = msg;
+          inlineError.hidden = false;
+        }
+
+        function hideInlineError() {
+          if (!inlineError) return;
+          inlineError.hidden = true;
+          inlineError.textContent = "";
+        }
+
+        function showConfirm(action) {
+          hideInlineError();
+          var msg;
+          if (action === "redeem_all") {
+            msg = "Списать весь остаток"
+              + (balanceRaw ? " (" + balanceRaw + " " + currency + ")" : "")
+              + " с сертификата " + cert + "?";
+          } else {
+            var total = totalEl ? totalEl.value : "";
+            msg = "Списать средства с сертификата " + cert + " по чеку на "
+              + total + " " + currency + "?";
+          }
+          if (confirmText) confirmText.textContent = msg;
+          if (confirmSubmit) confirmSubmit.value = action;
+          if (entryEl) entryEl.hidden = true;
+          if (confirmEl) confirmEl.hidden = false;
+          if (confirmSubmit) confirmSubmit.focus();
+        }
+
+        function hideConfirm() {
+          if (entryEl) entryEl.hidden = false;
+          if (confirmEl) confirmEl.hidden = true;
+        }
+
+        redeemForm.querySelectorAll(".js-redeem-preview").forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            var action = btn.getAttribute("data-action") || "redeem";
+            hideInlineError();
+            if (action === "redeem") {
+              if (totalEl && !totalEl.value.trim()) {
+                totalEl.focus();
+                if (typeof totalEl.reportValidity === "function") totalEl.reportValidity();
+                return;
+              }
+              var totalVal = parseAmount(totalEl ? totalEl.value : "");
+              if (isNaN(totalVal) || totalVal <= 0) {
+                showInlineError("Укажите корректную сумму покупки (положительное число).");
+                if (totalEl) totalEl.focus();
+                return;
+              }
+              if (!isNaN(maxBal) && totalVal > maxBal) {
+                showInlineError(
+                  "Сумма списания не может быть больше остатка на сертификате "
+                  + "(" + balanceRaw + " " + currency + ")."
+                );
+                if (totalEl) totalEl.focus();
+                return;
+              }
+            }
+            showConfirm(action);
+          });
         });
+
+        if (confirmBack) {
+          confirmBack.addEventListener("click", hideConfirm);
+        }
       }
     })();
   </script>
