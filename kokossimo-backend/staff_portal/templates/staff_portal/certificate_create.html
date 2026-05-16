@@ -71,9 +71,7 @@
 {% endblock %}
 
 {% block content %}
-  <h1>Создание подарочного сертификата</h1>
-  <p class="sub">Номер сертификата генерируется автоматически (16 символов: цифры и строчные латинские буквы).</p>
-
+  <h1>Создание сертификата</h1>
   {% if created_certificate %}
     <div class="msg msg-success created-box">
       Сертификат создан. Номер: <code>{{ created_certificate.display_id }}</code>
