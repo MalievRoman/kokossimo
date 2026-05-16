@@ -74,11 +74,11 @@
 
 {% block content %}
   <h1>Применение сертификата</h1>
-  <p class="sub">Проверка, расчёт суммы списания, привязка к заказу и списание баланса при финализации.</p>
+  <p class="sub">Офлайн в точке продаж: проверка сертификата, расчёт по сумме покупки и списание баланса.</p>
 
   <ol class="steps">
     <li class="{% if certificate %}is-done{% elif not application %}is-current{% endif %}">1. Сертификат</li>
-    <li class="{% if preview or application %}is-done{% elif certificate %}is-current{% endif %}">2. Заказ</li>
+    <li class="{% if preview or application %}is-done{% elif certificate %}is-current{% endif %}">2. Сумма покупки</li>
     <li class="{% if application %}is-done{% elif preview %}is-current{% endif %}">3. Применение</li>
     <li class="{% if success_message and finalized_certificate %}is-done{% elif application %}is-current{% endif %}">4. Списание</li>
   </ol>
@@ -156,25 +156,26 @@
   </div>
 
   <div class="card">
-    <h2 style="margin: 0 0 1rem; font-size: 1.05rem;">Шаг 2 — Заказ</h2>
+    <h2 style="margin: 0 0 1rem; font-size: 1.05rem;">Шаг 2 — Сумма покупки</h2>
     <form method="post" action="">
       {% csrf_token %}
-      <input type="hidden" name="action" value="load_order">
+      <input type="hidden" name="action" value="calculate">
       <input type="hidden" name="certificate_number" value="{{ certificate.display_id }}">
       <div class="field">
-        <label for="order_id">Номер заказа</label>
+        <label for="purchase_total">Сумма покупки в точке</label>
         <input
           type="text"
-          id="order_id"
-          name="order_id"
-          value="{{ form.order_id }}"
-          inputmode="numeric"
-          placeholder="Например, 42"
+          id="purchase_total"
+          name="purchase_total"
+          value="{{ form.purchase_total }}"
+          inputmode="decimal"
+          placeholder="5000"
           autofocus
         >
+        <p class="field-hint">Сумма чека в рублях. Заказ в базе не нужен.</p>
       </div>
       <div class="row-actions">
-        <button type="submit">Загрузить заказ и рассчитать</button>
+        <button type="submit">Рассчитать списание</button>
       </div>
     </form>
   </div>
@@ -184,19 +185,18 @@
   <div class="card">
     <h2 style="margin: 0 0 1rem; font-size: 1.05rem;">Шаг 3 — Расчёт списания</h2>
     <dl>
-      <dt>Заказ</dt><dd>#{{ preview.order.id }} · {{ preview.order.get_status_display }}</dd>
-      <dt>Сумма заказа</dt><dd>{{ preview.order_total }} {{ preview.currency }}</dd>
+      <dt>Сумма покупки</dt><dd>{{ preview.purchase_total }} {{ preview.currency }}</dd>
       <dt>Остаток сертификата</dt><dd>{{ preview.certificate_balance }} {{ preview.currency }}</dd>
       <dt>К списанию</dt><dd class="amount-highlight">{{ preview.redeemable_amount }} {{ preview.currency }}</dd>
-      <dt>К оплате после</dt><dd>{{ preview.amount_due_after }} {{ preview.currency }}</dd>
+      <dt>К оплате наличными/картой</dt><dd>{{ preview.amount_due_after }} {{ preview.currency }}</dd>
     </dl>
     <form method="post" action="" style="margin-top: 1.25rem;">
       {% csrf_token %}
       <input type="hidden" name="action" value="apply">
       <input type="hidden" name="certificate_number" value="{{ certificate.display_id }}">
-      <input type="hidden" name="order_id" value="{{ preview.order.id }}">
+      <input type="hidden" name="purchase_total" value="{{ preview.purchase_total }}">
       <div class="row-actions">
-        <button type="submit">Применить к заказу</button>
+        <button type="submit">Применить сертификат</button>
       </div>
     </form>
   </div>
@@ -204,31 +204,28 @@
 
   {% if application %}
   <div class="card">
-    <h2 style="margin: 0 0 1rem; font-size: 1.05rem;">Ожидает финализации</h2>
+    <h2 style="margin: 0 0 1rem; font-size: 1.05rem;">Ожидает списания</h2>
     <dl>
       <dt>Сертификат</dt><dd>{{ application.certificate_id }}</dd>
-      <dt>Заказ</dt><dd>#{{ application.order_id }}</dd>
-      <dt>Сумма заказа</dt><dd>{{ application.order.total_price }} {{ application.currency }}</dd>
+      <dt>Сумма покупки</dt><dd>{{ application.purchase_total }} {{ application.currency }}</dd>
       <dt>К списанию</dt><dd class="amount-highlight">{{ application.amount }} {{ application.currency }}</dd>
-      <dt>К оплате после</dt><dd>{{ application.amount_due_after }} {{ application.currency }}</dd>
+      <dt>К оплате</dt><dd>{{ application.amount_due_after }} {{ application.currency }}</dd>
     </dl>
     <p class="field-hint" style="margin-top: 0.75rem;">
-      Сертификат привязан к заказу. Нажмите «Завершить заказ», чтобы списать баланс и создать транзакцию.
+      Подтвердите списание после оплаты клиентом оставшейся суммы.
     </p>
     <div class="inline-actions">
       <form method="post" action="" onsubmit="return confirm('Списать {{ application.amount }} {{ application.currency }} с сертификата {{ application.certificate_id|escapejs }}?');">
         {% csrf_token %}
         <input type="hidden" name="action" value="finalize">
         <input type="hidden" name="application_id" value="{{ application.pk }}">
-        <input type="hidden" name="certificate_number" value="{{ application.certificate_id }}">
-        <input type="hidden" name="order_id" value="{{ application.order_id }}">
-        <button type="submit">Завершить заказ (списать)</button>
+        <button type="submit">Списать с сертификата</button>
       </form>
-      <form method="post" action="" onsubmit="return confirm('Отменить применение сертификата к заказу #{{ application.order_id }}?');">
+      <form method="post" action="" onsubmit="return confirm('Отменить применение сертификата {{ application.certificate_id|escapejs }}?');">
         {% csrf_token %}
         <input type="hidden" name="action" value="cancel_application">
         <input type="hidden" name="application_id" value="{{ application.pk }}">
-        <button type="submit" class="btn-secondary">Отменить применение</button>
+        <button type="submit" class="btn-secondary">Отменить</button>
       </form>
     </div>
   </div>
@@ -240,7 +237,7 @@
     <ul class="pending-list">
       {% for item in pending_applications %}
         <li>
-          Заказ #{{ item.order_id }} · сертификат {{ item.certificate_id }} · {{ item.amount }} {{ item.currency }}
+          {{ item.certificate_id }} · покупка {{ item.purchase_total }} · списать {{ item.amount }} {{ item.currency }}
           <form method="post" action="" style="display: inline;">
             {% csrf_token %}
             <input type="hidden" name="action" value="finalize">

@@ -1,14 +1,15 @@
 from django.shortcuts import render
 from django.views.decorators.http import require_http_methods
 
-from shop.models import Order, OrderCertificateApplication
+from shop.models import OrderCertificateApplication
 
 from .certificate_redeem import (
     CertificateRedeemError,
-    apply_certificate_to_order,
+    apply_certificate,
     build_redeem_preview,
     cancel_certificate_application,
     finalize_certificate_application,
+    parse_purchase_total,
 )
 from .certificate_utils import (
     certificate_owner_info,
@@ -18,36 +19,24 @@ from .certificate_utils import (
 )
 
 
-def _parse_order_id(raw: str) -> int | None:
-    value = (raw or "").strip()
-    if not value:
-        return None
-    try:
-        order_id = int(value)
-    except ValueError:
-        return None
-    return order_id if order_id > 0 else None
-
-
 def _base_form(
     *,
     certificate_number: str = "",
-    order_id: str = "",
+    purchase_total: str = "",
 ) -> dict[str, str]:
     return {
         "certificate_number": certificate_number,
-        "order_id": order_id,
+        "purchase_total": purchase_total,
     }
 
 
 @require_http_methods(["GET", "POST"])
 def certificate_apply(request):
-    """Применение сертификата к заказу: проверка, расчёт, привязка, списание при финализации."""
+    """Офлайн-применение сертификата: проверка, расчёт по сумме покупки, списание при финализации."""
     errors: list[str] = []
     form = _base_form()
     certificate = None
     certificate_owner = None
-    order = None
     preview = None
     application = None
     finalized_certificate = None
@@ -59,14 +48,14 @@ def certificate_apply(request):
         action = (request.POST.get("action") or "check_certificate").strip()
         form = _base_form(
             certificate_number=request.POST.get("certificate_number", ""),
-            order_id=request.POST.get("order_id", ""),
+            purchase_total=request.POST.get("purchase_total", ""),
         )
         cert_id = strip_certificate_input(form["certificate_number"])
 
         if action == "cancel_application":
             app_id = request.POST.get("application_id", "").strip()
             try:
-                application = OrderCertificateApplication.objects.select_related("order").get(
+                application = OrderCertificateApplication.objects.get(
                     pk=int(app_id),
                     status=OrderCertificateApplication.Status.PENDING,
                 )
@@ -85,7 +74,7 @@ def certificate_apply(request):
         elif action == "finalize":
             app_id = request.POST.get("application_id", "").strip()
             try:
-                application = OrderCertificateApplication.objects.select_related("order").get(
+                application = OrderCertificateApplication.objects.get(
                     pk=int(app_id),
                     status=OrderCertificateApplication.Status.PENDING,
                 )
@@ -100,7 +89,6 @@ def certificate_apply(request):
                 except CertificateRedeemError as exc:
                     errors.append(str(exc))
                     certificate = get_certificate_by_id(application.certificate_id)
-                    order = application.order
                     certificate_owner = certificate_owner_info(certificate)
                 else:
                     success_message = (
@@ -115,40 +103,35 @@ def certificate_apply(request):
             if not is_valid_certificate_number(cert_id):
                 errors.append("Номер сертификата: ровно 16 латинских букв или цифр.")
             else:
-                order_pk = _parse_order_id(form["order_id"])
-                if order_pk is None:
-                    errors.append("Укажите корректный номер заказа.")
+                try:
+                    purchase_total = parse_purchase_total(form["purchase_total"])
+                except CertificateRedeemError as exc:
+                    errors.append(str(exc))
                 else:
                     try:
-                        application = apply_certificate_to_order(
+                        application = apply_certificate(
                             certificate_id=cert_id,
-                            order_id=order_pk,
+                            purchase_total=purchase_total,
                             performed_by=performed_by,
                         )
-                        application = OrderCertificateApplication.objects.select_related(
-                            "order"
-                        ).get(pk=application.pk)
                     except CertificateRedeemError as exc:
                         errors.append(str(exc))
                         certificate = get_certificate_by_id(cert_id)
-                        order = Order.objects.filter(pk=order_pk).first()
                         certificate_owner = certificate_owner_info(certificate)
-                        if certificate and order:
+                        if certificate:
                             try:
-                                preview = build_redeem_preview(certificate, order)
+                                preview = build_redeem_preview(certificate, purchase_total)
                             except CertificateRedeemError:
                                 preview = None
                     else:
                         success_message = (
-                            f"Сертификат применён к заказу #{application.order_id}. "
-                            f"К списанию: {application.amount} {application.currency}. "
-                            "Нажмите «Завершить заказ», чтобы списать баланс."
+                            f"Сертификат применён. К списанию: {application.amount} "
+                            f"{application.currency}. Нажмите «Списать», чтобы завершить."
                         )
                         certificate = get_certificate_by_id(application.certificate_id)
-                        order = application.order
                         certificate_owner = certificate_owner_info(certificate)
 
-        elif action == "load_order":
+        elif action == "calculate":
             if not is_valid_certificate_number(cert_id):
                 errors.append("Сначала укажите корректный номер сертификата.")
             else:
@@ -157,18 +140,15 @@ def certificate_apply(request):
                     errors.append("Сертификат с таким номером не найден.")
                 else:
                     certificate_owner = certificate_owner_info(certificate)
-                    order_pk = _parse_order_id(form["order_id"])
-                    if order_pk is None:
-                        errors.append("Укажите корректный номер заказа.")
+                    try:
+                        purchase_total = parse_purchase_total(form["purchase_total"])
+                    except CertificateRedeemError as exc:
+                        errors.append(str(exc))
                     else:
-                        order = Order.objects.filter(pk=order_pk).first()
-                        if order is None:
-                            errors.append("Заказ не найден.")
-                        else:
-                            try:
-                                preview = build_redeem_preview(certificate, order)
-                            except CertificateRedeemError as exc:
-                                errors.append(str(exc))
+                        try:
+                            preview = build_redeem_preview(certificate, purchase_total)
+                        except CertificateRedeemError as exc:
+                            errors.append(str(exc))
 
         else:
             if not cert_id:
@@ -201,7 +181,6 @@ def certificate_apply(request):
         OrderCertificateApplication.objects.filter(
             status=OrderCertificateApplication.Status.PENDING,
         )
-        .select_related("order")
         .order_by("-created_at")[:10]
     )
 
@@ -213,7 +192,6 @@ def certificate_apply(request):
             "errors": errors,
             "certificate": certificate,
             "certificate_owner": certificate_owner,
-            "order": order,
             "preview": preview,
             "application": application,
             "finalized_certificate": finalized_certificate,

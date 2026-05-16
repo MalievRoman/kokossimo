@@ -1,7 +1,7 @@
 import uuid
 from dataclasses import dataclass
 from datetime import timezone as dt_timezone
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 from django.db import transaction
 from django.utils import timezone
@@ -9,14 +9,13 @@ from django.utils import timezone
 from shop.models import (
     Certificate,
     CertificateTransaction,
-    Order,
     OrderCertificateApplication,
 )
 
+from .certificate_issue import parse_amount
 from .certificate_utils import get_certificate_by_id
 
-_APPLICABLE_ORDER_STATUSES = frozenset({"new", "awaiting_payment", "processing"})
-_ORDER_CURRENCY = "RUB"
+_POS_CURRENCY = "RUB"
 
 
 class CertificateRedeemError(Exception):
@@ -33,8 +32,7 @@ class CertificateValidation:
 @dataclass(frozen=True)
 class RedeemPreview:
     certificate: Certificate
-    order: Order
-    order_total: Decimal
+    purchase_total: Decimal
     certificate_balance: Decimal
     redeemable_amount: Decimal
     amount_due_after: Decimal
@@ -55,6 +53,15 @@ def _certificate_balance(certificate: Certificate) -> Decimal:
     return Decimal(balance).quantize(Decimal("0.01"))
 
 
+def parse_purchase_total(raw: str) -> Decimal:
+    try:
+        return parse_amount(raw)
+    except (ValueError, InvalidOperation) as exc:
+        raise CertificateRedeemError(
+            "Укажите корректную сумму покупки (положительное число)."
+        ) from exc
+
+
 def validate_certificate_for_apply(certificate: Certificate) -> CertificateValidation:
     if certificate.status == Certificate.Status.BLOCKED:
         raise CertificateRedeemError("Сертификат заблокирован.")
@@ -69,10 +76,10 @@ def validate_certificate_for_apply(certificate: Certificate) -> CertificateValid
     if balance <= 0:
         raise CertificateRedeemError("На сертификате нет доступного остатка.")
 
-    currency = (certificate.currency or _ORDER_CURRENCY).strip().upper()
-    if currency != _ORDER_CURRENCY:
+    currency = (certificate.currency or _POS_CURRENCY).strip().upper()
+    if currency != _POS_CURRENCY:
         raise CertificateRedeemError(
-            f"Валюта сертификата ({currency}) не совпадает с валютой заказа ({_ORDER_CURRENCY})."
+            f"Валюта сертификата ({currency}) не поддерживается в точке продаж."
         )
 
     return CertificateValidation(
@@ -82,52 +89,40 @@ def validate_certificate_for_apply(certificate: Certificate) -> CertificateValid
     )
 
 
-def _validate_order_for_apply(order: Order) -> None:
-    if order.status == "cancelled":
-        raise CertificateRedeemError("Заказ отменён.")
-    if order.status not in _APPLICABLE_ORDER_STATUSES:
-        raise CertificateRedeemError(
-            f"К заказу в статусе «{order.get_status_display()}» нельзя применить сертификат."
-        )
-    if OrderCertificateApplication.objects.filter(
-        order=order,
-        status=OrderCertificateApplication.Status.PENDING,
-    ).exists():
-        raise CertificateRedeemError("К этому заказу уже применён сертификат (ожидает списания).")
-    if (order.certificate_discount or 0) > 0:
-        raise CertificateRedeemError("По этому заказу сертификат уже был списан.")
-
-
 def calculate_redeemable_amount(
     certificate: Certificate,
-    order_total: Decimal,
+    purchase_total: Decimal,
 ) -> Decimal:
     validation = validate_certificate_for_apply(certificate)
-    total = Decimal(order_total).quantize(Decimal("0.01"))
+    total = Decimal(purchase_total).quantize(Decimal("0.01"))
     if total <= 0:
         return Decimal("0")
     return min(validation.balance, total)
 
 
-def build_redeem_preview(certificate: Certificate, order: Order) -> RedeemPreview:
+def build_redeem_preview(
+    certificate: Certificate,
+    purchase_total: Decimal,
+) -> RedeemPreview:
     validate_certificate_for_apply(certificate)
-    _validate_order_for_apply(order)
 
-    order_total = Decimal(order.total_price or 0).quantize(Decimal("0.01"))
+    total = Decimal(purchase_total).quantize(Decimal("0.01"))
+    if total <= 0:
+        raise CertificateRedeemError("Сумма покупки должна быть больше нуля.")
+
     balance = _certificate_balance(certificate)
-    redeemable = calculate_redeemable_amount(certificate, order_total)
+    redeemable = calculate_redeemable_amount(certificate, total)
     if redeemable <= 0:
-        raise CertificateRedeemError("Сумма заказа равна нулю или сертификат не покрывает заказ.")
+        raise CertificateRedeemError("Сертификат не покрывает покупку.")
 
-    currency = (certificate.currency or _ORDER_CURRENCY).strip().upper()
-    amount_due = (order_total - redeemable).quantize(Decimal("0.01"))
+    currency = (certificate.currency or _POS_CURRENCY).strip().upper()
+    amount_due = (total - redeemable).quantize(Decimal("0.01"))
     if amount_due < 0:
         amount_due = Decimal("0")
 
     return RedeemPreview(
         certificate=certificate,
-        order=order,
-        order_total=order_total,
+        purchase_total=total,
         certificate_balance=balance,
         redeemable_amount=redeemable,
         amount_due_after=amount_due,
@@ -136,34 +131,29 @@ def build_redeem_preview(certificate: Certificate, order: Order) -> RedeemPrevie
 
 
 @transaction.atomic
-def apply_certificate_to_order(
+def apply_certificate(
     *,
     certificate_id: str,
-    order_id: int,
+    purchase_total: Decimal,
     performed_by: int | None,
 ) -> OrderCertificateApplication:
     certificate = get_certificate_by_id(certificate_id)
     if certificate is None:
         raise CertificateRedeemError("Сертификат не найден.")
 
-    try:
-        order = Order.objects.get(pk=order_id)
-    except Order.DoesNotExist as exc:
-        raise CertificateRedeemError("Заказ не найден.") from exc
-
-    preview = build_redeem_preview(certificate, order)
+    preview = build_redeem_preview(certificate, purchase_total)
 
     if OrderCertificateApplication.objects.filter(
         certificate_id=certificate.pk,
         status=OrderCertificateApplication.Status.PENDING,
     ).exists():
         raise CertificateRedeemError(
-            "Этот сертификат уже применён к другому заказу (ожидает списания)."
+            "Этот сертификат уже применён (ожидает списания). Завершите или отмените предыдущее применение."
         )
 
     return OrderCertificateApplication.objects.create(
-        order=order,
         certificate_id=certificate.pk,
+        purchase_total=preview.purchase_total,
         amount=preview.redeemable_amount,
         currency=preview.currency,
         status=OrderCertificateApplication.Status.PENDING,
@@ -224,22 +214,21 @@ def finalize_certificate_application(
             balance_before=balance_before,
             balance_after=balance_after,
             currency=application.currency,
-            order_id=application.order_id,
+            order_id=None,
             performed_by=performed_by,
-            reason=f"Списание по заказу #{application.order_id}",
+            reason="Списание в точке продаж",
             idempotency_key=f"staff-redeem-{application.pk}-{uuid.uuid4().hex}",
             created_at=now,
-            metadata={"source": "staff_portal", "application_id": application.pk},
+            metadata={
+                "source": "staff_portal",
+                "application_id": application.pk,
+                "purchase_total": str(application.purchase_total),
+            },
         )
 
-    with transaction.atomic():
-        application.status = OrderCertificateApplication.Status.FINALIZED
-        application.finalized_at = timezone.now()
-        application.save(update_fields=["status", "finalized_at"])
-
-        order = application.order
-        order.certificate_discount = amount
-        order.save(update_fields=["certificate_discount", "updated_at"])
+    application.status = OrderCertificateApplication.Status.FINALIZED
+    application.finalized_at = timezone.now()
+    application.save(update_fields=["status", "finalized_at"])
 
     refreshed = get_certificate_by_id(certificate.pk)
     if refreshed is None:

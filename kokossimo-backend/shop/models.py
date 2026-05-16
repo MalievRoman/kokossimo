@@ -401,20 +401,19 @@ class OrderItem(models.Model):
 
 
 class OrderCertificateApplication(models.Model):
-    """Привязка сертификата к заказу до финального списания баланса."""
+    """Офлайн-применение сертификата до финального списания баланса."""
 
     class Status(models.TextChoices):
         PENDING = "pending", "Ожидает списания"
         FINALIZED = "finalized", "Списано"
         CANCELLED = "cancelled", "Отменено"
 
-    order = models.ForeignKey(
-        Order,
-        on_delete=models.CASCADE,
-        related_name="certificate_applications",
-        verbose_name="Заказ",
-    )
     certificate_id = models.CharField("Номер сертификата", max_length=16)
+    purchase_total = models.DecimalField(
+        "Сумма покупки",
+        max_digits=10,
+        decimal_places=2,
+    )
     amount = models.DecimalField("Сумма списания", max_digits=10, decimal_places=2)
     currency = models.CharField("Валюта", max_length=3, default="RUB")
     status = models.CharField(
@@ -428,15 +427,10 @@ class OrderCertificateApplication(models.Model):
     finalized_at = models.DateTimeField("Списано", null=True, blank=True)
 
     class Meta:
-        verbose_name = "Применение сертификата к заказу"
-        verbose_name_plural = "Применения сертификатов к заказам"
+        verbose_name = "Применение сертификата"
+        verbose_name_plural = "Применения сертификатов"
         ordering = ["-created_at", "-id"]
         constraints = [
-            models.UniqueConstraint(
-                fields=["order"],
-                condition=models.Q(status="pending"),
-                name="uniq_pending_cert_application_per_order",
-            ),
             models.UniqueConstraint(
                 fields=["certificate_id"],
                 condition=models.Q(status="pending"),
@@ -445,11 +439,11 @@ class OrderCertificateApplication(models.Model):
         ]
 
     def __str__(self):
-        return f"Заказ #{self.order_id} · {self.certificate_id} · {self.amount}"
+        return f"{self.certificate_id} · {self.amount} · {self.get_status_display()}"
 
     @property
     def amount_due_after(self):
-        due = (self.order.total_price or 0) - (self.amount or 0)
+        due = (self.purchase_total or 0) - (self.amount or 0)
         return due if due > 0 else 0
 
 
