@@ -88,6 +88,15 @@
       font-size: 0.8rem;
       color: var(--muted);
     }
+    .client-details {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    .client-details__label {
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
     input[type="text"].input-invalid {
       border-color: #d97706;
     }
@@ -171,11 +180,24 @@
         <dd>
           {% if certificate_owner %}
             {% if certificate_owner.found %}
-              {% if certificate_owner.last_name or certificate_owner.first_name %}
-                {{ certificate_owner.last_name }}{% if certificate_owner.last_name and certificate_owner.first_name %} {% endif %}{{ certificate_owner.first_name }}
-              {% else %}
-                <span style="color: var(--muted);">имя не указано</span>
-              {% endif %}
+              <div class="client-details">
+                <div>
+                  <span class="client-details__label">ФИО: </span>
+                  {% if certificate_owner.last_name or certificate_owner.first_name %}
+                    {{ certificate_owner.last_name }}{% if certificate_owner.last_name and certificate_owner.first_name %} {% endif %}{{ certificate_owner.first_name }}
+                  {% else %}
+                    <span style="color: var(--muted);">не указано</span>
+                  {% endif %}
+                </div>
+                <div>
+                  <span class="client-details__label">Почта: </span>
+                  {% if certificate_owner.email %}{{ certificate_owner.email }}{% else %}<span style="color: var(--muted);">не указана</span>{% endif %}
+                </div>
+                <div>
+                  <span class="client-details__label">Телефон: </span>
+                  {% if certificate_owner.phone %}{{ certificate_owner.phone }}{% else %}<span style="color: var(--muted);">не указан</span>{% endif %}
+                </div>
+              </div>
             {% else %}
               <span style="color: var(--muted);">пользователь не найден</span>
             {% endif %}

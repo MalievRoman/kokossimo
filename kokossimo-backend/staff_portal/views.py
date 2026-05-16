@@ -54,15 +54,21 @@ def _certificate_owner_info(certificate: Certificate | None) -> dict[str, Any] |
             "id": owner_id,
             "first_name": "",
             "last_name": "",
+            "email": "",
+            "phone": "",
             "found": False,
         }
     profile = getattr(user, "profile", None)
     first_name = ((profile.first_name if profile else user.first_name) or "").strip()
     last_name = ((profile.last_name if profile else user.last_name) or "").strip()
+    email = (user.email or "").strip()
+    phone = ((profile.phone if profile else "") or "").strip()
     return {
         "id": owner_id,
         "first_name": first_name,
         "last_name": last_name,
+        "email": email,
+        "phone": phone,
         "found": True,
     }
 
