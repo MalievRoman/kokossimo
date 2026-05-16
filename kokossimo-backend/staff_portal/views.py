@@ -65,10 +65,11 @@ def _certificate_owner_info(certificate: Certificate | None) -> dict[str, Any] |
     }
 
 
-def _lookup_context(certificate: Certificate | None, **extra: Any) -> dict[str, Any]:
+def _lookup_context(**context: Any) -> dict[str, Any]:
+    certificate = context.get("certificate")
     return {
         "certificate_owner": _certificate_owner_info(certificate),
-        **extra,
+        **context,
     }
 
 
@@ -127,7 +128,6 @@ def certificate_lookup(request):
             request,
             "staff_portal/certificate_lookup.html",
             _lookup_context(
-                certificate,
                 certificate=certificate,
                 not_found=False,
                 invalid_format=False,
@@ -179,7 +179,6 @@ def certificate_lookup(request):
         request,
         "staff_portal/certificate_lookup.html",
         _lookup_context(
-            certificate,
             certificate=certificate,
             not_found=not_found,
             invalid_format=invalid_format,
