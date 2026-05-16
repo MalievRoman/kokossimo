@@ -134,7 +134,6 @@
     <h2 style="margin: 0 0 1rem; font-size: 1.05rem;">Шаг 2 — Списать по сумме чека</h2>
     <form method="post" action="" id="redeem-form">
       {% csrf_token %}
-      <input type="hidden" name="action" value="redeem">
       <input type="hidden" name="certificate_number" value="{{ certificate.display_id }}">
       <div class="field">
         <label for="purchase_total">Сумма покупки в точке</label>
@@ -151,7 +150,8 @@
         <p class="field-hint">После подтверждения баланс спишется сразу.</p>
       </div>
       <div class="row-actions">
-        <button type="submit">Списать с сертификата</button>
+        <button type="submit" name="action" value="redeem">Списать с сертификата</button>
+        <button type="submit" name="action" value="redeem_all" formnovalidate>Списать все</button>
       </div>
     </form>
   </div>
@@ -175,9 +175,12 @@
       var redeemForm = document.getElementById("redeem-form");
       if (redeemForm) {
         redeemForm.addEventListener("submit", function (e) {
-          var total = (document.getElementById("purchase_total") || {}).value || "";
           var cert = (redeemForm.querySelector('[name="certificate_number"]') || {}).value || "";
-          var msg = "Списать средства с сертификата " + cert + " по чеку на " + total + " ₽?";
+          var action = e.submitter && e.submitter.name === "action" ? e.submitter.value : "redeem";
+          var msg = action === "redeem_all"
+            ? "Списать весь остаток с сертификата " + cert + "?"
+            : "Списать средства с сертификата " + cert + " по чеку на "
+              + ((document.getElementById("purchase_total") || {}).value || "") + " ₽?";
           if (!confirm(msg)) e.preventDefault();
         });
       }

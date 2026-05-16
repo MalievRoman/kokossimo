@@ -207,12 +207,12 @@
         </dd>
       </dl>
       {% if certificate.can_redeem_in_pos %}
-      <form method="post" action="" style="margin-top: 1.25rem;" onsubmit="return confirm('Отметить сертификат {{ certificate.display_id|escapejs }} как полностью списанный?');">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="mark_used">
-        <input type="hidden" name="certificate_id" value="{{ certificate.id }}">
-        <button type="submit">Использовать</button>
-      </form>
+      <div class="row-actions" style="margin-top: 1.25rem;">
+        <a
+          href="{% url 'staff_portal:certificate_apply' %}?certificate_number={{ certificate.display_id }}"
+          class="btn"
+        >Использовать</a>
+      </div>
       {% endif %}
     </div>
   {% elif not_found %}

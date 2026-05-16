@@ -48,17 +48,30 @@ def certificate_apply(request):
         )
         cert_id = strip_certificate_input(form["certificate_number"])
 
-        if action == "redeem":
+        if action in ("redeem", "redeem_all"):
             if not is_valid_certificate_number(cert_id):
                 errors.append("Номер сертификата: ровно 16 латинских букв или цифр.")
             else:
-                try:
-                    purchase_total = parse_purchase_total(form["purchase_total"])
-                except CertificateRedeemError as exc:
-                    errors.append(str(exc))
+                certificate = get_certificate_by_id(cert_id)
+                certificate_owner = certificate_owner_info(certificate)
+                purchase_total = None
+                if action == "redeem_all":
+                    if certificate is None:
+                        errors.append("Сертификат с таким номером не найден.")
+                    else:
+                        try:
+                            validation = validate_certificate_for_apply(certificate)
+                        except CertificateRedeemError as exc:
+                            errors.append(str(exc))
+                        else:
+                            purchase_total = validation.balance
                 else:
-                    certificate = get_certificate_by_id(cert_id)
-                    certificate_owner = certificate_owner_info(certificate)
+                    try:
+                        purchase_total = parse_purchase_total(form["purchase_total"])
+                    except CertificateRedeemError as exc:
+                        errors.append(str(exc))
+
+                if purchase_total is not None and not errors:
                     try:
                         redeem_result = redeem_certificate(
                             certificate_id=cert_id,
@@ -72,7 +85,6 @@ def certificate_apply(request):
                     else:
                         success_message = (
                             f"Списано {redeem_result.redeemed_amount} {redeem_result.currency}. "
-                            f"К оплате: {redeem_result.amount_due_after} {redeem_result.currency}. "
                             f"Остаток на сертификате: "
                             f"{redeem_result.certificate.current_balance or 0} "
                             f"{redeem_result.currency}."
