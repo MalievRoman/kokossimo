@@ -1,0 +1,271 @@
+{% extends "staff_portal/base.html" %}
+
+{% block title %}Применение сертификата — Kokossimo{% endblock %}
+
+{% block nav %}
+  <p class="nav-back"><a href="{% url 'staff_portal:hub' %}">← Портал сотрудников</a></p>
+{% endblock %}
+
+{% block extra_css %}
+  <style>
+    .steps {
+      margin: 0 0 1.25rem;
+      padding: 0;
+      list-style: none;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem 1rem;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    .steps li.is-done { color: var(--accent); font-weight: 500; }
+    .steps li.is-current { color: var(--text); font-weight: 600; }
+    dl {
+      margin: 0;
+      display: grid;
+      grid-template-columns: 11rem 1fr;
+      gap: 0.45rem 1rem;
+      font-size: 0.95rem;
+    }
+    dt { margin: 0; color: var(--muted); font-weight: 500; }
+    dd { margin: 0; }
+    .amount-highlight {
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: var(--accent);
+    }
+    .client-details {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+    .client-details__label {
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+    .pending-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .pending-list li {
+      padding: 0.65rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.92rem;
+    }
+    .pending-list li:last-child { border-bottom: none; }
+    .inline-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+    }
+    button.btn-secondary {
+      background: #fff;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    button.btn-secondary:hover { filter: none; background: #f3f4f6; }
+    @media (max-width: 520px) {
+      dl { grid-template-columns: 1fr; }
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+  <h1>Применение сертификата</h1>
+  <p class="sub">Проверка, расчёт суммы списания, привязка к заказу и списание баланса при финализации.</p>
+
+  <ol class="steps">
+    <li class="{% if certificate %}is-done{% elif not application %}is-current{% endif %}">1. Сертификат</li>
+    <li class="{% if preview or application %}is-done{% elif certificate %}is-current{% endif %}">2. Заказ</li>
+    <li class="{% if application %}is-done{% elif preview %}is-current{% endif %}">3. Применение</li>
+    <li class="{% if success_message and finalized_certificate %}is-done{% elif application %}is-current{% endif %}">4. Списание</li>
+  </ol>
+
+  {% if success_message %}
+    <div class="msg msg-success">{{ success_message }}</div>
+  {% endif %}
+
+  {% if errors %}
+    <div class="msg msg-warn">
+      <ul class="error-list">
+        {% for error in errors %}
+          <li>{{ error }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  <div class="card">
+    <h2 style="margin: 0 0 1rem; font-size: 1.05rem;">Шаг 1 — Номер сертификата</h2>
+    <form method="post" action="">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="check_certificate">
+      <div class="field">
+        <label for="certificate_number">Код сертификата</label>
+        <input
+          type="text"
+          id="certificate_number"
+          name="certificate_number"
+          value="{{ form.certificate_number }}"
+          autocomplete="off"
+          maxlength="16"
+          pattern="[A-Za-z0-9]{16}"
+          placeholder="16 символов"
+          {% if not application %}autofocus{% endif %}
+        >
+        <p class="field-hint">Ровно 16 символов: латинские буквы и цифры.</p>
+      </div>
+      {% if not application %}
+      <div class="row-actions">
+        <button type="submit">Проверить сертификат</button>
+      </div>
+      {% endif %}
+    </form>
+  </div>
+
+  {% if certificate and not application %}
+  <div class="card">
+    <h2 style="margin: 0 0 1rem; font-size: 1.05rem;">Данные сертификата</h2>
+    <dl>
+      <dt>Номер</dt><dd>{{ certificate.display_id }}</dd>
+      <dt>Остаток</dt>
+      <dd class="amount-highlight">
+        {% if certificate.current_balance is not None %}{{ certificate.current_balance }} {{ certificate.currency }}{% else %}—{% endif %}
+      </dd>
+      <dt>Статус</dt><dd>{{ certificate.get_status_display }}</dd>
+      <dt>Истекает</dt>
+      <dd>{% if certificate.expires_at %}{{ certificate.expires_at|date:"d.m.Y H:i" }}{% else %}—{% endif %}</dd>
+      {% if certificate_owner %}
+      <dt>Клиент</dt>
+      <dd>
+        <div class="client-details">
+          <div>
+            <span class="client-details__label">ФИО: </span>
+            {% if certificate_owner.last_name or certificate_owner.first_name %}
+              {{ certificate_owner.last_name }}{% if certificate_owner.last_name and certificate_owner.first_name %} {% endif %}{{ certificate_owner.first_name }}
+            {% else %}<span style="color: var(--muted);">не указано</span>{% endif %}
+          </div>
+          <div><span class="client-details__label">Почта: </span>{% if certificate_owner.email %}{{ certificate_owner.email }}{% else %}<span style="color: var(--muted);">не указана</span>{% endif %}</div>
+          <div><span class="client-details__label">Телефон: </span>{% if certificate_owner.phone %}{{ certificate_owner.phone }}{% else %}<span style="color: var(--muted);">не указан</span>{% endif %}</div>
+        </div>
+      </dd>
+      {% endif %}
+    </dl>
+  </div>
+
+  <div class="card">
+    <h2 style="margin: 0 0 1rem; font-size: 1.05rem;">Шаг 2 — Заказ</h2>
+    <form method="post" action="">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="load_order">
+      <input type="hidden" name="certificate_number" value="{{ certificate.display_id }}">
+      <div class="field">
+        <label for="order_id">Номер заказа</label>
+        <input
+          type="text"
+          id="order_id"
+          name="order_id"
+          value="{{ form.order_id }}"
+          inputmode="numeric"
+          placeholder="Например, 42"
+          autofocus
+        >
+      </div>
+      <div class="row-actions">
+        <button type="submit">Загрузить заказ и рассчитать</button>
+      </div>
+    </form>
+  </div>
+  {% endif %}
+
+  {% if preview and not application %}
+  <div class="card">
+    <h2 style="margin: 0 0 1rem; font-size: 1.05rem;">Шаг 3 — Расчёт списания</h2>
+    <dl>
+      <dt>Заказ</dt><dd>#{{ preview.order.id }} · {{ preview.order.get_status_display }}</dd>
+      <dt>Сумма заказа</dt><dd>{{ preview.order_total }} {{ preview.currency }}</dd>
+      <dt>Остаток сертификата</dt><dd>{{ preview.certificate_balance }} {{ preview.currency }}</dd>
+      <dt>К списанию</dt><dd class="amount-highlight">{{ preview.redeemable_amount }} {{ preview.currency }}</dd>
+      <dt>К оплате после</dt><dd>{{ preview.amount_due_after }} {{ preview.currency }}</dd>
+    </dl>
+    <form method="post" action="" style="margin-top: 1.25rem;">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="apply">
+      <input type="hidden" name="certificate_number" value="{{ certificate.display_id }}">
+      <input type="hidden" name="order_id" value="{{ preview.order.id }}">
+      <div class="row-actions">
+        <button type="submit">Применить к заказу</button>
+      </div>
+    </form>
+  </div>
+  {% endif %}
+
+  {% if application %}
+  <div class="card">
+    <h2 style="margin: 0 0 1rem; font-size: 1.05rem;">Ожидает финализации</h2>
+    <dl>
+      <dt>Сертификат</dt><dd>{{ application.certificate_id }}</dd>
+      <dt>Заказ</dt><dd>#{{ application.order_id }}</dd>
+      <dt>Сумма заказа</dt><dd>{{ application.order.total_price }} {{ application.currency }}</dd>
+      <dt>К списанию</dt><dd class="amount-highlight">{{ application.amount }} {{ application.currency }}</dd>
+      <dt>К оплате после</dt><dd>{{ application.amount_due_after }} {{ application.currency }}</dd>
+    </dl>
+    <p class="field-hint" style="margin-top: 0.75rem;">
+      Сертификат привязан к заказу. Нажмите «Завершить заказ», чтобы списать баланс и создать транзакцию.
+    </p>
+    <div class="inline-actions">
+      <form method="post" action="" onsubmit="return confirm('Списать {{ application.amount }} {{ application.currency }} с сертификата {{ application.certificate_id|escapejs }}?');">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="finalize">
+        <input type="hidden" name="application_id" value="{{ application.pk }}">
+        <input type="hidden" name="certificate_number" value="{{ application.certificate_id }}">
+        <input type="hidden" name="order_id" value="{{ application.order_id }}">
+        <button type="submit">Завершить заказ (списать)</button>
+      </form>
+      <form method="post" action="" onsubmit="return confirm('Отменить применение сертификата к заказу #{{ application.order_id }}?');">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="cancel_application">
+        <input type="hidden" name="application_id" value="{{ application.pk }}">
+        <button type="submit" class="btn-secondary">Отменить применение</button>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if pending_applications and not application %}
+  <div class="card">
+    <h2 style="margin: 0 0 0.75rem; font-size: 1.05rem;">Ожидают списания</h2>
+    <ul class="pending-list">
+      {% for item in pending_applications %}
+        <li>
+          Заказ #{{ item.order_id }} · сертификат {{ item.certificate_id }} · {{ item.amount }} {{ item.currency }}
+          <form method="post" action="" style="display: inline;">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="finalize">
+            <input type="hidden" name="application_id" value="{{ item.pk }}">
+            <button type="submit" class="btn-secondary" style="padding: 0.35rem 0.65rem; font-size: 0.85rem; margin-left: 0.5rem;">Списать</button>
+          </form>
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+{% endblock %}
+
+{% block extra_js %}
+  <script>
+    (function () {
+      var el = document.getElementById("certificate_number");
+      if (!el) return;
+      function filterValue(s) {
+        return s.replace(/[^A-Za-z0-9]/g, "").slice(0, 16);
+      }
+      el.addEventListener("input", function () {
+        var next = filterValue(el.value);
+        if (el.value !== next) el.value = next;
+      });
+    })();
+  </script>
+{% endblock %}
