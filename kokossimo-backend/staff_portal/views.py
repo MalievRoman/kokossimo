@@ -1,82 +1,27 @@
 import re
 from typing import Any
 
-from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.db.models import F
-from django.db.models.functions import RTrim
 from django.shortcuts import render
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
 from shop.models import Certificate
 
+from .certificate_utils import (
+    certificate_owner_info,
+    get_certificate_by_id,
+    strip_certificate_input,
+)
 from .hub import staff_hub_links
 
 _CERT_NUMBER_RE = re.compile(r"^[A-Za-z0-9]{16}$")
 
 
-def _strip_certificate_input(raw: str) -> str:
-    return (raw or "").strip().replace(" ", "").replace("\u00a0", "")
-
-
-def _get_certificate_by_id(cert_id: str):
-    c = Certificate.objects.filter(pk=cert_id).first()
-    if c is None:
-        c = Certificate.objects.filter(pk__iexact=cert_id).first()
-    if c is None and cert_id:
-        c = (
-            Certificate.objects.annotate(_rid=RTrim(F("id")))
-            .filter(_rid=cert_id)
-            .first()
-        )
-        if c is None:
-            c = (
-                Certificate.objects.annotate(_rid=RTrim(F("id")))
-                .filter(_rid__iexact=cert_id)
-                .first()
-            )
-    return c
-
-
-def _certificate_owner_info(certificate: Certificate | None) -> dict[str, Any] | None:
-    if certificate is None or not certificate.owner_customer_id:
-        return None
-    owner_id = certificate.owner_customer_id
-    user = (
-        get_user_model()
-        .objects.select_related("profile")
-        .filter(pk=owner_id)
-        .first()
-    )
-    if user is None:
-        return {
-            "id": owner_id,
-            "first_name": "",
-            "last_name": "",
-            "email": "",
-            "phone": "",
-            "found": False,
-        }
-    profile = getattr(user, "profile", None)
-    first_name = ((profile.first_name if profile else user.first_name) or "").strip()
-    last_name = ((profile.last_name if profile else user.last_name) or "").strip()
-    email = (user.email or "").strip()
-    phone = ((profile.phone if profile else "") or "").strip()
-    return {
-        "id": owner_id,
-        "first_name": first_name,
-        "last_name": last_name,
-        "email": email,
-        "phone": phone,
-        "found": True,
-    }
-
-
 def _lookup_context(**context: Any) -> dict[str, Any]:
     certificate = context.get("certificate")
     return {
-        "certificate_owner": _certificate_owner_info(certificate),
+        "certificate_owner": certificate_owner_info(certificate),
         **context,
     }
 
@@ -102,11 +47,11 @@ def certificate_lookup(request):
         mark_missing = False
         certificate = None
 
-        cid = _strip_certificate_input(request.POST.get("certificate_id", ""))
+        cid = strip_certificate_input(request.POST.get("certificate_id", ""))
         if not _CERT_NUMBER_RE.fullmatch(cid):
             mark_missing = True
         else:
-            certificate = _get_certificate_by_id(cid)
+            certificate = get_certificate_by_id(cid)
             if certificate is None:
                 mark_missing = True
             elif not certificate.can_redeem_in_pos:
@@ -134,7 +79,7 @@ def certificate_lookup(request):
                     marked_used = True
                 else:
                     already_used_notice = True
-                certificate = _get_certificate_by_id(certificate.pk)
+                certificate = get_certificate_by_id(certificate.pk)
 
         cert_num_field = ""
         if certificate is not None:
@@ -169,7 +114,7 @@ def certificate_lookup(request):
     else:
         raw_input = request.GET.get("certificate_number", "")
 
-    stripped = _strip_certificate_input(raw_input)
+    stripped = strip_certificate_input(raw_input)
     cert_id = None
     if request.method == "POST" and not stripped:
         empty_input = True
@@ -180,7 +125,7 @@ def certificate_lookup(request):
             invalid_format = True
 
     if cert_id:
-        certificate = _get_certificate_by_id(cert_id)
+        certificate = get_certificate_by_id(cert_id)
         if certificate is None:
             not_found = True
 

@@ -356,6 +356,12 @@ class Order(models.Model):
     comment = models.TextField("Комментарий", blank=True)
 
     total_price = models.DecimalField("Сумма заказа", max_digits=10, decimal_places=2, default=0)
+    certificate_discount = models.DecimalField(
+        "Скидка по сертификату",
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -366,6 +372,11 @@ class Order(models.Model):
 
     def __str__(self):
         return f"Заказ #{self.id}"
+
+    @property
+    def amount_due(self):
+        due = (self.total_price or 0) - (self.certificate_discount or 0)
+        return due if due > 0 else 0
 
 
 class OrderItem(models.Model):
@@ -387,6 +398,59 @@ class OrderItem(models.Model):
     @property
     def line_total(self):
         return self.price * self.quantity
+
+
+class OrderCertificateApplication(models.Model):
+    """Привязка сертификата к заказу до финального списания баланса."""
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Ожидает списания"
+        FINALIZED = "finalized", "Списано"
+        CANCELLED = "cancelled", "Отменено"
+
+    order = models.ForeignKey(
+        Order,
+        on_delete=models.CASCADE,
+        related_name="certificate_applications",
+        verbose_name="Заказ",
+    )
+    certificate_id = models.CharField("Номер сертификата", max_length=16)
+    amount = models.DecimalField("Сумма списания", max_digits=10, decimal_places=2)
+    currency = models.CharField("Валюта", max_length=3, default="RUB")
+    status = models.CharField(
+        "Статус",
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
+    )
+    performed_by = models.IntegerField("Кто применил (user id)", null=True, blank=True)
+    created_at = models.DateTimeField("Создано", auto_now_add=True)
+    finalized_at = models.DateTimeField("Списано", null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Применение сертификата к заказу"
+        verbose_name_plural = "Применения сертификатов к заказам"
+        ordering = ["-created_at", "-id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["order"],
+                condition=models.Q(status="pending"),
+                name="uniq_pending_cert_application_per_order",
+            ),
+            models.UniqueConstraint(
+                fields=["certificate_id"],
+                condition=models.Q(status="pending"),
+                name="uniq_pending_cert_application_per_certificate",
+            ),
+        ]
+
+    def __str__(self):
+        return f"Заказ #{self.order_id} · {self.certificate_id} · {self.amount}"
+
+    @property
+    def amount_due_after(self):
+        due = (self.order.total_price or 0) - (self.amount or 0)
+        return due if due > 0 else 0
 
 
 class Feedback(models.Model):

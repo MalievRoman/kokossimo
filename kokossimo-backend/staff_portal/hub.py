@@ -11,6 +11,11 @@ STAFF_HUB_ITEMS = (
         "description": "Выпуск нового подарочного сертификата для клиента",
         "url_name": "certificate_create",
     },
+    {
+        "title": "Применение сертификата",
+        "description": "Привязка к заказу, расчёт суммы и списание баланса при финализации",
+        "url_name": "certificate_apply",
+    },
 )
 
 
