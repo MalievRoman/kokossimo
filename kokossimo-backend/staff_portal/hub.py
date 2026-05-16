@@ -6,6 +6,11 @@ STAFF_HUB_ITEMS = (
         "description": "Поиск по номеру, данные и списание в точке продаж",
         "url_name": "certificate_lookup",
     },
+    {
+        "title": "Создание сертификата",
+        "description": "Выпуск нового подарочного сертификата для клиента",
+        "url_name": "certificate_create",
+    },
 )
 
 

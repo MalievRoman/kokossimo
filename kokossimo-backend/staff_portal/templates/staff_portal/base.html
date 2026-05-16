@@ -104,6 +104,72 @@
       font-size: 0.88rem;
       color: var(--muted);
     }
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 500;
+      margin-bottom: 0.4rem;
+    }
+    .field {
+      margin-bottom: 1rem;
+    }
+    .field:last-child { margin-bottom: 0; }
+    input[type="text"],
+    input[type="number"],
+    input[type="date"],
+    input[type="email"],
+    input[type="tel"],
+    select,
+    textarea {
+      width: 100%;
+      padding: 0.55rem 0.65rem;
+      font-size: 1rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-family: inherit;
+    }
+    input:focus,
+    select:focus,
+    textarea:focus {
+      outline: 2px solid rgba(45, 106, 79, 0.25);
+      border-color: var(--accent);
+    }
+    textarea {
+      min-height: 4.5rem;
+      resize: vertical;
+    }
+    .field-hint {
+      margin: 0.35rem 0 0;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    .row-actions {
+      margin-top: 1.25rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      align-items: center;
+    }
+    .msg {
+      padding: 0.85rem 1rem;
+      border-radius: 8px;
+      font-size: 0.92rem;
+      margin-bottom: 1.25rem;
+    }
+    .msg-warn {
+      background: #fff8e6;
+      border: 1px solid #fcd34d;
+      color: var(--warn);
+    }
+    .msg-success {
+      background: var(--success-bg);
+      border: 1px solid var(--success-border);
+      color: var(--success-text);
+    }
+    .error-list {
+      margin: 0;
+      padding-left: 1.2rem;
+    }
   </style>
   {% block extra_css %}{% endblock %}
 </head>
